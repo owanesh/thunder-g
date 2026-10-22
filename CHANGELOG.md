@@ -59,6 +59,11 @@
   enlarge the click target without moving the icon, and cancel queued reader opens
   when the arrow is used. Refresh page boundaries on native thread-change events.
 
+- Keep the final Date column divider visible and enabled beside the column picker.
+  Dragging the Subject divider redistributes space to Date during the drag and
+  saves the balancing width through native column storage without overflowing
+  the mail pane.
+
 - Stop pagination from reopening collapsed threads on every repaint. Page totals
   count the messages inside collapsed threads while scrolling uses visible rows.
   Threads crossing page boundaries remain reachable, and explicit page selection
@@ -88,6 +93,12 @@
   pages. Every activation changed the thread state once and message totals stayed
   unchanged. Regression tests also cover canceling queued reader opens and native
   structure changes with unchanged row counts.
+
+- Live Thunderbird column checks covered the exposed final Date divider,
+  redistribution from Subject to Date, native width persistence and retaining
+  the resized layout across next/previous page changes. The table stayed within
+  the mail pane. Regression coverage includes native divider re-enabling,
+  explicitly fixed columns, drag-time balancing and cleanup.
 
 - 72 automated tests pass, covering pagination, column sizing and copy scope,
   conversation labels, read/unread state, compose lifecycle, DKIM bridge and BIMI.

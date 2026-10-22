@@ -98,6 +98,9 @@ function installResponsiveColumns(win) {
   if (!tree || !win.ResizeObserver) return {close(){}};
   const saved = new Map();
   const preferred = new Map();
+  const enabledSplitters = new Map();
+  let dragWidths = null;
+  let subjectDrag = null;
   let currentTable = null;
   let manualWidth = null;
   let closed = false, frame = null;
@@ -105,13 +108,23 @@ function installResponsiveColumns(win) {
     if (!saved.has(element)) saved.set(element,new Map());
     const properties = saved.get(element);
     if (!properties.has(name)) properties.set(name,[element.style.getPropertyValue(name),element.style.getPropertyPriority(name)]);
-    element.style.setProperty(name,value,'important');
+    if(element.style.getPropertyValue(name)!==value || element.style.getPropertyPriority(name)!=='important')
+      element.style.setProperty(name,value,'important');
   }
   function restore() {
     for (const [element,properties] of saved) for (const [name,[value,priority]] of properties) {
       if (value) element.style.setProperty(name,value,priority); else element.style.removeProperty(name);
     }
     saved.clear();
+    const last = [...(currentTable?.querySelectorAll('thead th') || [])].filter(item =>
+      !item.hidden && item.dataset.type !== 'icon' &&
+      currentTable.columns?.find(column => column.id === item.id)?.resizable !== false).at(-1);
+    for (const [header,wasResizable] of enabledSplitters) {
+      delete header.dataset.gmLastResizable;
+      // Native layout enables this column itself if it is no longer last.
+      if (header === last && !wasResizable) header.resizable = false;
+    }
+    enabledSplitters.clear();
   }
   function fit() {
     frame = null;
@@ -123,6 +136,17 @@ function installResponsiveColumns(win) {
     if (table !== currentTable) {restore();preferred.clear();currentTable=table;}
     const headers = [...table.querySelectorAll('thead th')].filter(header =>
       !header.hidden && win.getComputedStyle(header).display !== 'none');
+    const lastResizable = headers.filter(header => header.dataset.type !== 'icon' &&
+      table.columns?.find(column => column.id === header.id)?.resizable !== false).at(-1);
+    for (const header of enabledSplitters.keys()) if (header !== lastResizable) {
+      delete header.dataset.gmLastResizable;
+      enabledSplitters.delete(header);
+    }
+    if (lastResizable && typeof lastResizable.resizable === 'boolean') {
+      if (!enabledSplitters.has(lastResizable)) enabledSplitters.set(lastResizable,lastResizable.resizable);
+      if(lastResizable.dataset.gmLastResizable!=='true')lastResizable.dataset.gmLastResizable = 'true';
+      if (!lastResizable.resizable) lastResizable.resizable = true;
+    }
     for (const header of headers) {
       const value=parseFloat(header.style.getPropertyValue(`--${header.id}Splitter-width`));
       if(Number.isFinite(value) && value>0){
@@ -157,13 +181,17 @@ function installResponsiveColumns(win) {
   }
   function schedule() { if (!closed && frame === null) frame=win.requestAnimationFrame(fit); }
   function manualResize(event) {
-    if (!event.target.closest?.('hr[is="pane-splitter"]')) return;
+    const splitter = event.target.closest?.('hr[is="pane-splitter"]');
+    if (!splitter) return;
     // Hand the native splitter the CURRENT geometry, never the old wide layout.
     manualWidth = tree.clientWidth;
     if (frame !== null) { win.cancelAnimationFrame(frame); frame = null; }
     const headers = [...(tree.table?.querySelectorAll('thead th') || [])].filter(header =>
       !header.hidden && header.dataset.type !== 'icon' && win.getComputedStyle(header).display !== 'none');
     const widths = headers.map(header=>header.getBoundingClientRect().width);
+    dragWidths = new Map(headers.map((header,index)=>[header.id,widths[index]]));
+    subjectDrag = splitter.resizeElement?.id === 'subjectCol' && Number.isFinite(event.clientX) ?
+      {x:event.clientX,date:headers.find(header=>header.id==='dateCol'),rtl:win.getComputedStyle(tree).direction==='rtl'} : null;
     headers.forEach((header,index) => {
       const variable = `--${header.id}Splitter-width`;
       set(header,variable,`${widths[index]}px`);
@@ -171,8 +199,37 @@ function installResponsiveColumns(win) {
       set(header,'inline-size',`var(${variable})`);
     });
   }
+  function resizingSubject(event) {
+    if (!subjectDrag?.date || !dragWidths) return;
+    const delta = (event.clientX-subjectDrag.x)*(subjectDrag.rtl?-1:1);
+    // Balance while dragging: a fixed-width HTML table would otherwise give
+    // the freed space straight back to Subject before the native splitter reads it.
+    const width = Math.max(48,Math.min(dragWidths.get('dateCol')+dragWidths.get('subjectCol')-100,
+      dragWidths.get('dateCol')-delta));
+    subjectDrag.date.style.setProperty('--dateColSplitter-width',`${width}px`);
+    subjectDrag.width = width;
+  }
+  function finishResize() {
+    if (manualWidth === null) return;
+    if (Number.isFinite(subjectDrag?.width) && Math.abs(subjectDrag.width-dragWidths.get('dateCol')) >= 1) {
+      tree.table?.setColumnsWidths?.('messenger',{detail:{column:'dateCol',splitter:{width:subjectDrag.width}}});
+    }
+    manualWidth = null;
+    subjectDrag = null;
+    schedule();
+  }
   function resizedColumn(event) {
     const {column,splitter} = event.detail || {};
+    // Subject fills the remaining space. Its native divider must redistribute
+    // that space to Date rather than have the next fit undo the user's drag.
+    if (column === 'subjectCol' && Number.isFinite(splitter?.width) && dragWidths?.has('dateCol')) {
+      const date = [...(tree.table?.querySelectorAll('thead th') || [])].find(item=>item.id==='dateCol');
+      const width = Math.max(48,dragWidths.get('dateCol')+dragWidths.get('subjectCol')-splitter.width);
+      if (date) {
+        date.style.setProperty('--dateColSplitter-width',`${width}px`);
+        tree.table.setColumnsWidths?.('messenger',{detail:{column:'dateCol',splitter:{width}}});
+      }
+    }
     if (column && Number.isFinite(splitter?.width) && splitter.width > 0) {
       preferred.set(column,splitter.width);
       const header = [...(tree.table?.querySelectorAll('thead th') || [])].find(item=>item.id===column);
@@ -186,16 +243,27 @@ function installResponsiveColumns(win) {
     // Refit after the native drag finishes, including a drag of the last
     // column: its preferred width must not push the table beyond the pane.
     manualWidth = null;
+    dragWidths = null;
+    subjectDrag = null;
     schedule();
   }
   tree.addEventListener('pointerdown',manualResize,true);
   tree.addEventListener('column-resized',resizedColumn);
+  win.addEventListener?.('mousemove',resizingSubject,true);
+  win.addEventListener?.('mouseup',finishResize);
   const resize = new win.ResizeObserver(schedule); resize.observe(tree);
-  const changes = new win.MutationObserver(schedule);
+  const changes = new win.MutationObserver(records=>{
+    // Row text, previews and recycled cells do not change the column layout.
+    if(records.some(record=>record.target===tree || record.target===tree.table ||
+      record.target.closest?.('thead')))schedule();
+  });
   changes.observe(tree,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden','data-resizable']});
+  tree.addEventListener('viewchange',schedule);
   schedule();
   return {close(){closed=true;resize.disconnect();changes.disconnect();if(frame!==null)win.cancelAnimationFrame(frame);
-    tree.removeEventListener('pointerdown',manualResize,true);tree.removeEventListener('column-resized',resizedColumn);restore();}};
+    win.removeEventListener?.('mousemove',resizingSubject,true);win.removeEventListener?.('mouseup',finishResize);
+    tree.removeEventListener('pointerdown',manualResize,true);tree.removeEventListener('column-resized',resizedColumn);
+    tree.removeEventListener('viewchange',schedule);restore();}};
 }
 
 // Copy view includes the visible column layout, using Thunderbird's own folder

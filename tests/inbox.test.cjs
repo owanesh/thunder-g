@@ -150,23 +150,31 @@ test('preview queue yields between messages, skips stale rows, retries unavailab
   assert.equal(queue.get(header,()=>true,()=>{}),'');
 });
 
-test('responsive columns fit the pane on resize, reserve date space and restore saved widths without persistence',()=>{
-  function element(id,type,width){const values=new Map([['width',[`${width}px`,'']]]);return {id,dataset:{type},
+function columnElement(id,type,width){const values=new Map([['width',[`${width}px`,'']]]);return {id,dataset:{type},
     style:{getPropertyValue:n=>values.get(n)?.[0]||'',getPropertyPriority:n=>values.get(n)?.[1]||'',setProperty:(n,v,p='')=>values.set(n,[v,p]),removeProperty:n=>values.delete(n)},
     getBoundingClientRect(){return {width:this.width()}},
     width(){const value=values.get('width')?.[0]||'0';const match=value.match(/^var\(([^)]+)\)$/);return parseFloat(match?values.get(match[1])?.[0]:value)},values};}
-  const icons=element('selectCol','icon',32),sender=element('senderCol','text',260),subject=element('subjectCol','text',900),date=element('dateCol','text',120);
-  const headers=[icons,sender,subject,date],table=element('table','',1400);table.querySelectorAll=()=>headers;
+
+test('responsive columns fit the pane on resize, reserve date space and restore saved widths without persistence',()=>{
+
+  const icons=columnElement('selectCol','icon',32),sender=columnElement('senderCol','text',260),subject=columnElement('subjectCol','text',900),date=columnElement('dateCol','text',120);
+  const headers=[icons,sender,subject,date],table=columnElement('table','',1400);table.querySelectorAll=()=>headers;
   const events={};
   const tree={table,clientWidth:640,addEventListener:(n,fn)=>events[n]=fn,removeEventListener:n=>delete events[n]};let resized,changed;const frames=[];
   const win={document:{getElementById:()=>tree},getComputedStyle:()=>({display:'table-cell',fontSize:'14px'}),
     ResizeObserver:class{constructor(fn){resized=fn}observe(){}disconnect(){}},
-    MutationObserver:class{constructor(fn){changed=fn}observe(){}disconnect(){}},
+    MutationObserver:class{constructor(fn){changed=(records=[{type:'childList',target:tree}])=>fn(records)}observe(){}disconnect(){}},
     requestAnimationFrame:fn=>{frames.push(fn);return frames.length},cancelAnimationFrame(){}};
   const controller=scope.installResponsiveColumns(win);frames.shift()();
   const size=h=>h.width();
   assert.equal(size(table),640);assert.equal(size(date),112);
   assert.ok(size(sender)+size(subject)+size(date)+32<=640,'date remains inside available width');
+  const cell={closest:()=>null};
+  for(let i=0;i<200;i++)changed([{type:'childList',target:cell}]);
+  changed([{type:'attributes',attributeName:'hidden',target:cell}]);
+  assert.equal(frames.length,0,'preview/text/cell changes must not schedule column layout work');
+  changed([{type:'childList',target:{closest:selector=>selector==='thead'?{}:null}}]);
+  assert.equal(frames.length,1,'native header changes still refit the columns');frames.shift()();
   tree.clientWidth=420;resized();frames.shift()();
   assert.ok(size(sender)+size(subject)+size(date)+32<=420,'shrinking reallocates text columns');
   tree.clientWidth=1200;resized();frames.shift()();
@@ -203,9 +211,9 @@ test('responsive columns fit the pane on resize, reserve date space and restore 
   tree.clientWidth=500;changed();frames.shift()();fits();
   sender.style.setProperty('--senderColSplitter-width','190px');changed();frames.shift()();
   assert.equal(size(sender),190,'a native restored width overrides the previous folder preference');
-  const nextHeaders=[element('selectCol','icon',32),element('senderCol','text',200),element('subjectCol','text',700),element('dateCol','text',100)];
+  const nextHeaders=[columnElement('selectCol','icon',32),columnElement('senderCol','text',200),columnElement('subjectCol','text',700),columnElement('dateCol','text',100)];
   nextHeaders[1].style.setProperty('--senderColSplitter-width','140px');
-  const nextTable=element('next-table','',1032);nextTable.querySelectorAll=()=>nextHeaders;tree.table=nextTable;changed();frames.shift()();
+  const nextTable=columnElement('next-table','',1032);nextTable.querySelectorAll=()=>nextHeaders;tree.table=nextTable;changed();frames.shift()();
   assert.equal(size(nextHeaders[1]),140,'rebuilding columns uses the destination native widths');
   assert.equal(size(nextTable),500);controller.close();
   assert.equal(size(subject),900);assert.equal(size(table),1400);assert.equal(size(sender),190,'disable preserves the latest native width');
@@ -225,4 +233,38 @@ test('Copy view also copies native columns across accounts and keeps descendant 
  pane._applyView(null);assert.equal(calls.length,0);
  win.gFolder=null;pane._applyView(target);assert.equal(calls.length,0);
  controller.close();assert.equal(pane._applyView,original);
+});
+test('native final-column splitter stays enabled and subject dragging gives space to Date',()=>{
+ const sender=columnElement('senderCol','text',180),subject=columnElement('subjectCol','text',600),date=columnElement('dateCol','text',112);
+ const headers=[sender,subject,date],table=columnElement('table','',900),persisted=[];
+ table.querySelectorAll=()=>headers;table.columns=headers.map(header=>({id:header.id}));
+ table.setColumnsWidths=(url,event)=>persisted.push([url,event.detail.column,event.detail.splitter.width]);
+ date.resizable=false;
+ const events={},mouse={},frames=[];let changed;
+ const tree={table,clientWidth:900,addEventListener:(name,fn)=>events[name]=fn,removeEventListener:name=>delete events[name]};
+ const win={document:{getElementById:()=>tree},getComputedStyle:()=>({display:'table-cell',fontSize:'14px'}),
+ addEventListener:(name,fn)=>mouse[name]=fn,removeEventListener:name=>delete mouse[name],
+ ResizeObserver:class{observe(){}disconnect(){}},MutationObserver:class{constructor(fn){changed=(records=[{type:'childList',target:tree}])=>fn(records)}observe(){}disconnect(){}},
+ requestAnimationFrame(fn){frames.push(fn);return frames.length},cancelAnimationFrame(){}};
+ const controller=scope.installResponsiveColumns(win),flush=()=>{while(frames.length)frames.shift()()};flush();
+ assert.equal(date.resizable,true,'native fit-to-pane disabling is overridden');
+ assert.equal(date.dataset.gmLastResizable,'true','CSS can expose the native final splitter beside the picker');
+ date.resizable=false;changed();flush();assert.equal(date.resizable,true,'native column updates cannot disable the final grip again');
+ const initialSubject=subject.width(),initialDate=date.width();
+ events.pointerdown({clientX:1000,target:{closest:()=>({resizeElement:subject})}});
+ mouse.mousemove({clientX:940});assert.equal(date.style.getPropertyValue('--dateColSplitter-width'),`${initialDate+60}px`,'space is balanced before the native splitter measures the subject');
+ subject.style.setProperty('--subjectColSplitter-width',`${initialSubject-60}px`);
+ events['column-resized']({detail:{column:'subjectCol',splitter:{width:initialSubject-60}}});flush();
+ assert.equal(date.width(),initialDate+60);assert.equal(subject.width(),initialSubject-60,'the subject divider no longer springs back');
+ assert.deepEqual(persisted,[['messenger','dateCol',initialDate+60]],'the balancing width uses native persistence');
+ changed();flush();assert.equal(date.width(),initialDate+60,'repainting preserves the resized width');
+ events.pointerdown({clientX:1000,target:{closest:()=>({resizeElement:subject})}});
+ mouse.mousemove({clientX:980});mouse.mouseup();flush();
+ assert.equal(date.width(),initialDate+80,'mouse release refits even when the native widget omits column-resized');
+ assert.deepEqual(persisted.at(-1),['messenger','dateCol',initialDate+80],'mouse release persists the balancing width');
+ controller.close();assert.equal(date.resizable,false);assert.equal(date.dataset.gmLastResizable,undefined);assert.equal(Object.keys(mouse).length,0);
+ date.resizable=true;const enabled=scope.installResponsiveColumns(win);flush();assert.equal(date.dataset.gmLastResizable,'true','a natively enabled final splitter is also exposed');enabled.close();assert.equal(date.resizable,true);
+ // Explicitly non-resizable columns remain native even when physically last.
+ table.columns.at(-1).resizable=false;date.resizable=false;
+ const disabled=scope.installResponsiveColumns(win);flush();assert.equal(date.resizable,false);disabled.close();
 });

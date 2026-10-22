@@ -4,6 +4,15 @@
   text-shadow: none !important;
 }
 
+/* Native fit-to-pane layout hides the final divider. Leave the column picker
+   its own target and expose the enabled native resize handle just beside it. */
+#threadTree th.last-column[data-gm-last-resizable="true"]:not(.column-dragging) > hr[is="pane-splitter"] {
+  display: block !important;
+  inset-inline-end: 32px !important;
+  z-index: 2;
+  cursor: col-resize;
+}
+
 /* Give the thread arrow a larger target without shifting its icon or text. */
 #threadTree tr.table-layout .thread-container > button.twisty {
   position: relative;
