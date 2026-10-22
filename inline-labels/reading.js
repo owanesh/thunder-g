@@ -281,15 +281,8 @@ function installReadingMode(win) {
     button.addEventListener('click', () => {
       if (command === 'cmd_addTag' && !sameSelection()) { tagPopup.hidePopup(); return; }
       tagPopup.hidePopup();
-      if (command === 'cmd_addTag' && pickerConversation) {
-        win.top.openDialog('chrome://messenger/content/newTagDialog.xhtml', '',
-          'chrome,titlebar,modal,centerscreen', {result:'', okCallback:(name, color) => {
-            if (!sameSelection()) return false;
-            MailServices.tags.addTag(name, color, '');
-            applyPickerLabel(MailServices.tags.getKeyForTag(name), true);
-            return true;
-          }});
-      } else win.commandController.doCommand(command);
+      if (command === 'cmd_addTag') showNewLabel(button);
+      else win.commandController.doCommand(command);
     });
     footer.append(button);
   }
@@ -326,16 +319,24 @@ function installReadingMode(win) {
     return !pickerConversation || (conversationDocument() === pickerConversation &&
       sameLabelMessages(resolveConversation(pickerConversation), pickerMessages));
   }
+  const collapsedLabels=new Set();
   function renderTags() {
     tagList.replaceChildren();
-    for (const tag of pickerTags.filter(tag => labelMatchesQuery(tag.tag, search.value))) {
+    for (const entry of nestedLabelRows(pickerTags, search.value, collapsedLabels)) {
+      const tag=entry.tag;
       const row = doc.createElement('label'); row.className = 'gm-label-option';
       const checkbox = doc.createElement('input'); checkbox.type = 'checkbox';
       const state = labelAssignmentState(tag, pickerMessages);
       checkbox.checked = state.checked; checkbox.indeterminate = state.mixed;
       checkbox.setAttribute('aria-label', tag.tag);
-      const name = doc.createElement('span'); name.textContent = tag.tag;
-      row.append(checkbox, name); tagList.append(row);
+      const name = doc.createElement('span'); name.textContent = search.value.trim()?tag.tag:entry.name;
+      row.title=tag.tag;row.style.paddingInlineStart=`${8+entry.depth*20}px`;
+      const toggle=doc.createElement('button');toggle.type='button';toggle.className='gm-label-disclosure';
+      toggle.textContent=entry.children.length?(collapsedLabels.has(entry.path)?'▸':'▾'):'';
+      toggle.disabled=!entry.children.length;toggle.setAttribute('aria-label',`Expand or collapse ${tag.tag}`);
+      if(entry.children.length)toggle.setAttribute('aria-expanded',String(!collapsedLabels.has(entry.path)));
+      toggle.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();if(collapsedLabels.has(entry.path))collapsedLabels.delete(entry.path);else collapsedLabels.add(entry.path);renderTags();});
+      row.append(toggle,checkbox, name); tagList.append(row);
       checkbox.addEventListener('change', () => {
         if (!sameSelection()) { tagPopup.hidePopup(); return; }
         try {
@@ -378,6 +379,46 @@ function installReadingMode(win) {
     returnFocus = doc.activeElement; search.value = ''; renderTags();
     tagPopup.openPopup(anchor, 'after_start', 0, 0, false, false);
   }
+  const createPopup=doc.createXULElement('panel');createPopup.classList.add('gm-label-panel');
+  createPopup.setAttribute('aria-label','New label');doc.documentElement.append(createPopup);popups.push(createPopup);
+  const form=doc.createElement('form');form.className='gm-new-label';
+  const title=doc.createElement('h2');title.textContent='New label';
+  const nameLabel=doc.createElement('label');nameLabel.textContent='Please enter a new label name:';
+  const newName=doc.createElement('input');newName.type='text';newName.setAttribute('aria-label','New label name');nameLabel.append(newName);
+  const nestLabel=doc.createElement('label');nestLabel.className='gm-nest-label';
+  const nest=doc.createElement('input');nest.type='checkbox';const nestText=doc.createElement('span');nestText.textContent='Nest label under:';nestLabel.append(nest,nestText);
+  const parent=doc.createElement('select');parent.setAttribute('aria-label','Parent label');parent.disabled=true;
+  const error=doc.createElement('p');error.setAttribute('role','alert');error.hidden=true;
+  const buttons=doc.createElement('div');buttons.className='gm-new-label-buttons';
+  const cancel=doc.createElement('button');cancel.type='button';cancel.textContent='Cancel';
+  const create=doc.createElement('button');create.type='submit';create.textContent='Create';
+  buttons.append(cancel,create);form.append(title,nameLabel,nestLabel,parent,error,buttons);createPopup.append(form);
+  function validateNewLabel(){
+    create.disabled=!newName.value.trim() || (nest.checked && !parent.value);
+    parent.disabled=!nest.checked;
+  }
+  function showNewLabel(anchor){
+    newName.value='';nest.checked=false;parent.replaceChildren();error.hidden=true;
+    const placeholder=doc.createElement('option');placeholder.value='';placeholder.textContent='Choose a parent label';parent.append(placeholder);
+    for(const entry of nestedLabelRows(MailServices.tags.getAllTags())){
+      const option=doc.createElement('option');option.value=entry.path;option.textContent=entry.path;parent.append(option);
+    }
+    validateNewLabel();createPopup.openPopup(labelsButton,'after_start',0,0,false,false);
+  }
+  newName.addEventListener('input',validateNewLabel);nest.addEventListener('change',validateNewLabel);parent.addEventListener('change',validateNewLabel);
+  cancel.addEventListener('click',()=>createPopup.hidePopup());
+  createPopup.addEventListener('popupshown',()=>newName.focus());
+  form.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();createPopup.hidePopup();}});
+  form.addEventListener('submit',event=>{
+    event.preventDefault();
+    if(!sameSelection()){error.hidden=false;error.textContent='Message selection changed. Close this panel and try again.';return;}
+    try {
+      const path=nestedLabelName(newName.value,nest.checked?parent.value:'',MailServices.tags.getAllTags());
+      MailServices.tags.addTag(path,'','');
+      applyPickerLabel(MailServices.tags.getKeyForTag(path),true);
+      createPopup.hidePopup();
+    }catch(failure){error.hidden=false;error.textContent=failure.message || 'Could not create or apply this label.';}
+  });
   const labelsButton = action('Labels… (L)', 'M3 4h9l9 8-9 8H3z M7 10v4', showLabels);
   search.addEventListener('input', renderTags);
   tagPopup.addEventListener('popupshown', () => { pickerOpen = true; search.focus(); });
@@ -388,7 +429,7 @@ function installReadingMode(win) {
   picker.addEventListener('keydown', event => {
     if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); tagPopup.hidePopup(); }
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-      const options = [search, ...tagList.querySelectorAll('input')];
+      const options = [search, ...tagList.querySelectorAll('input,button:not(:disabled)')];
       const index = options.indexOf(doc.activeElement);
       const step = event.key === 'ArrowDown' ? 1 : -1;
       options[(index + step + options.length) % options.length]?.focus();
@@ -420,6 +461,15 @@ function installReadingMode(win) {
     watchKeys(doc); win.addEventListener('load', documentLoaded, true);
   }
   style.textContent += `
+    .gm-label-disclosure { border:0; background:transparent; color:inherit; width:20px; padding:0; flex:none; cursor:pointer; }
+    .gm-label-disclosure:disabled { opacity:0; }
+    .gm-new-label { width:min(420px,80vw); padding:24px; color:var(--layout-color-0,#202124); background:var(--layout-background-0,#fff); }
+    .gm-new-label h2 { margin:0 0 24px; font-size:22px; font-weight:400; }
+    .gm-new-label input[type=text],.gm-new-label select { display:block; box-sizing:border-box; width:100%; padding:10px; margin:10px 0 18px; color:inherit; background:var(--layout-background-0,#fff); border:1px solid var(--layout-border-0,#888); border-radius:4px; font:inherit; }
+    .gm-nest-label { display:flex; align-items:center; gap:8px; }
+    .gm-new-label-buttons { display:flex; justify-content:flex-end; gap:12px; margin-top:24px; }
+    .gm-new-label button { padding:8px 16px; border:0; border-radius:18px; font:inherit; color:inherit; background:var(--layout-background-1,#f1f3f4); cursor:pointer; }
+    .gm-new-label button:disabled { opacity:.5; cursor:default; }
     .gm-label-panel { --panel-padding:0; --panel-border-radius:4px; }
     .gm-label-picker { width:400px; max-width:80vw; padding:16px 0 8px; box-sizing:border-box;
       background:var(--layout-background-0, white); color:var(--layout-color-0, #3c4043);
