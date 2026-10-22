@@ -7,3 +7,7 @@ recovery/
 .gmail-skin-install*/
 *.xpi.sha256
 *.zip.sha256
+
+# Local screenshots and recovery archives are not source artifacts.
+*.xpi.bak
+docs/resources/thunder-g-*.png

@@ -2,6 +2,68 @@
 
 ## Unreleased
 
+### Added
+
+- Opt-in Gmail-style conversation reader, independent of Thunderbird Conversations,
+  with local-index grouping and a folder-thread fallback. Includes discovered sent
+  replies, compact message cards, account/contact avatars, subject labels, native
+  message bodies and attachments, printing, and reply actions below the messages.
+  The most recent message stays expanded.
+- Configurable inline Reply and Reply all using Thunderbird's native composer,
+  account identity, signatures, formatting, attachments and draft machinery.
+  Replies start below the conversation, can detach into a floating panel and
+  return inline, or transfer through a saved native draft to a separate compose
+  window. Navigation preserves an open reply; closing honors native draft prompts.
+- Configurable native draft autosave interval, with restoration of prior native
+  preferences when the feature is disabled or unloaded.
+- DKIM status chips for verified, unsigned, failed and unchecked messages, using
+  the optional local DKIM Verifier compatibility bridge. The separate DKIM button
+  is hidden; ordinary DKIM Verifier installations do not provide this bridge.
+- Opt-in BIMI domain logos with explicit disclosure of DNS lookups and logo
+  downloads, bounded caching and fallback avatars. Only the advertised logo is
+  downloaded; no external logo lookup service is used. See integrations/README.md
+  for provider requirements and validation limits.
+
+### Changed
+
+- Pagination uses Thunderbird's original virtual message list. Controls sit beside
+  Quick Filter; page size is configurable and native font-size shortcuts remain
+  available outside text fields.
+- Copy view also copies native column visibility and order to the destination,
+  respecting the selected descendant scope. The native Copy columns command and
+  outgoing-folder From/Recipient handling remain available.
+- Reply-panel controls use visible labels and panel/window icons instead of
+  standalone arrows. The attachment paperclip is rotated 90 degrees.
+- Per-message More uses a spaced vertical-ellipsis button. Conversation labels sit
+  beside the subject, with removable chips and compact message headers.
+
+### Fixed
+
+- Pagination totals and page boundaries preserve all native message rows, including
+  expanded threads. Short final pages no longer retain a full page of blank space;
+  switching pages resets scroll without a smooth-scroll animation.
+- Resizing the last column keeps the table within the pane. Responsive sizing reads
+  native saved widths instead of overriding them with stale preferences. The reader
+  no longer forces checkbox-column visibility/order or hides native Tag/Spam columns.
+- Conversation-wide L label operations include resolved sent replies; individual
+  message tag shortcuts target the opened message rather than the first message.
+- Read/unread actions use current message flags, including mixed selections and
+  delayed automatic marking. Failed draft transfers retain the embedded reply.
+
+### Validation
+
+- 69 automated tests pass, covering pagination, column sizing and copy scope,
+  conversation labels, read/unread state, compose lifecycle, DKIM bridge and BIMI.
+- Live Thunderbird checks covered inline/floating transitions and transfer to a
+  native compose window with identity, recipient, subject and quoted body intact.
+  Attachments were saved/reopened in a native draft; attachment transfer through
+  the new separate-window action and the cross-account Copy view workflow still
+  need live confirmation. Native signature text was not configured in the accounts
+  used for testing. No messages were sent.
+- Betterbird was not tested or changed during this work. Compatibility with
+  third-party compose add-ons and the full supported Thunderbird version range
+  remains unverified.
+
 ## 0.8.0
 
 - Renamed the companion to **Thunder-G**, with a new icon, refined Gmail-style
