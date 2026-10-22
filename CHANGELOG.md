@@ -4,6 +4,19 @@
 
 ### Added
 
+- Floating composers remember their chosen size across messages and restarts,
+  adapting to the available space beside the sidebar. Size preferences are saved
+  after a resize gesture, not on every pointer move.
+
+- In-window draft status for native manual save and configurable autosave:
+  Saving…, a green ✓ Saved only after confirmed success, Unsaved changes after
+  edits, and Save failed on errors. Editing during autosave cannot leave a stale
+  Saved confirmation. Native signatures, attachments and Drafts folders are retained.
+
+- Resizable floating composers with top/side edge handles, a visible corner grip
+  and keyboard resizing. Sizes stay within the message area beside the sidebar
+  and are retained across detach/return transitions.
+
 - Shared in-memory preview cache for the message list and conversation reader:
   up to 300 short text previews, expiring after five minutes, with local reads
   reused across consumers and replacement-message checks.
@@ -85,6 +98,10 @@
   Threads crossing page boundaries remain reachable, and explicit page selection
   reveals only affected threads to avoid selecting hidden off-page messages.
 
+- Anchor the embedded composer attachment picker to the main mail window on
+  macOS so the native file chooser opens correctly. Native attachment conversion,
+  multiple-file selection and the last attachment directory are preserved.
+
 - Size the message-list scrollbar to the current page, reset it on page changes,
   and hide it when the displayed messages fit without scrolling.
 
@@ -123,6 +140,13 @@
   pages. Every activation changed the thread state once and message totals stayed
   unchanged. Regression tests also cover canceling queued reader opens and native
   structure changes with unchanged row counts.
+
+- Live Thunderbird checks confirmed the native one-minute autosave setting,
+  Saved after actual draft success, clearing confirmation on new edits,
+  manual Save draft, floating resize with the sidebar visible and expansion/return.
+  The native autosave handler was invoked directly for the check; no mail was sent.
+  Regression tests cover failure with an existing draft URI, edits during autosave,
+  native field updates, viewport limits, pointer capture, keyboard resize and cleanup.
 
 - Live Thunderbird column checks covered the exposed final Date divider,
   redistribution from Subject to Date, native width persistence and retaining

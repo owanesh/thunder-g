@@ -102,12 +102,182 @@ function saveInlineReplyDraft(native,clock,timeoutMs=60000) {
     Promise.resolve().then(()=>native.GenericSendMessage(Ci.nsIMsgCompDeliverMode.SaveAsDraft)).catch(error=>finish(error));
   });
 }
+
+// Observe native saves; never report success merely because a timer fired or
+// an older draft URI exists. Thunderbird keeps ownership of autosave and MIME.
+function installComposeDraftStatus(native,status,clock,modes=Ci.nsIMsgCompDeliverMode) {
+  const compose=native.gMsgCompose;
+  let closed=false,pending=false,started=0,timer=null,completion=null,state='';
+  function show(next) {
+    if(closed || state===next)return;
+    state=next;status.dataset.state=next;
+    status.textContent={saved:'✓ Saved',saving:'Saving…',dirty:'Unsaved changes',error:'Save failed',initial:'Not saved'}[next];
+    status.title={saved:'Saved to Drafts',saving:'Saving to Drafts',dirty:'Changes have not been saved yet',error:'Could not save to Drafts. Use Save draft to retry.',initial:'Draft has not been saved yet'}[next];
+    status.style.color=next==='saved'?'light-dark(#137333,#81c995)':next==='error'?'light-dark(#b3261e,#f2b8b5)':'light-dark(#5f6368,#bdc1c6)';
+  }
+  const dirty=()=>!!(native.gContentChanged || compose.bodyModified);
+  function edited(event) {
+    // Native draft serialization also dispatches field updates. Only genuine
+    // typing should clear confirmation before Thunderbird updates dirty flags.
+    if((event?.type==='input' || event?.type==='change') && event.isTrusted===false)return;
+    if(!pending && (event?.type==='input' || dirty()))show('dirty');
+  }
+  function saving(event) {
+    if(event.detail?.msgType!==modes.SaveAsDraft && event.detail?.msgType!==modes.AutoSaveAsDraft)return;
+    pending=true;started=Date.now();show('saving');
+  }
+  const listener={NotifyComposeFieldsReady(){},NotifyComposeBodyReady(){},SaveInFolderDone(){},ComposeProcessDone(result){
+    if(!pending || closed)return;
+    if(completion!==null)clock.clearTimeout(completion);
+    // Native listeners may clear modified flags and set draftId in this turn.
+    completion=clock.setTimeout(()=>{
+      completion=null;if(closed)return;pending=false;
+      if(result!==0 || !compose.compFields.draftId)show('error');
+      // Native autosave clears flags at its start and preserves subsequent
+      // edits; manual save locks the editor until completion.
+      else show(dirty()?'dirty':'saved');
+    },0);
+  }};
+  const editorDocument=native.GetCurrentEditor?.()?.document;
+  const documents=[...new Set([native.document,editorDocument].filter(Boolean))];
+  const changes=['input','change','attachments-added','attachments-removed','attachment-renamed','compose-from-changed'];
+  for(const doc of documents)for(const name of changes)doc.addEventListener(name,edited,true);
+  native.addEventListener('compose-send-message',saving);
+  compose.RegisterStateListener(listener);
+  function check() {
+    if(closed)return;
+    if(pending && completion===null && !native.gSaveOperationInProgress && Date.now()-started>2000) {
+      pending=false;show('error');
+    }else if(!pending && dirty() && state!=='error')show('dirty');
+    timer=clock.setTimeout(check,500);
+  }
+  show('initial');check();
+  return {close(){
+    if(closed)return;closed=true;clock.clearTimeout(timer);if(completion!==null)clock.clearTimeout(completion);
+    for(const doc of documents)for(const name of changes)doc.removeEventListener(name,edited,true);
+    native.removeEventListener('compose-send-message',saving);compose.UnregisterStateListener(listener);
+  }};
+}
+
+// Floating panels are anchored beside the sidebar. Resize from their top/left
+// edges so the grip can move naturally without pushing the footer off screen.
+function installFloatingComposeResize(win,panel,prefs=typeof Services==='undefined'?null:Services.prefs) {
+  const doc=win.document,handles=[];
+  const preference='extensions.thunderg.floatingComposeSize';
+  let floating=false,bounds={maxWidth:720,maxHeight:620},preferred=null,drag=null,pendingSave=false,savedSize='';
+  try {
+    const value=JSON.parse(prefs?.getStringPref(preference,'') || 'null');
+    if(value && [value.width,value.height].every(size=>Number.isFinite(size) && size>0)) {
+      preferred={width:value.width,height:value.height};savedSize=JSON.stringify(preferred);
+    }
+  }catch(_){} // An absent or invalid layout preference must never block composition.
+  function clamp(width,height) {
+    return {width:Math.max(Math.min(420,bounds.maxWidth),Math.min(width,bounds.maxWidth)),
+      height:Math.max(Math.min(320,bounds.maxHeight),Math.min(height,bounds.maxHeight))};
+  }
+  function current() {const rect=panel.getBoundingClientRect();return {width:rect.width || 720,height:rect.height || Math.min(620,(win.innerHeight || 768)*.75)};}
+  function apply(size,remember=false) {
+    const fit=clamp(size.width,size.height);
+    if(remember){preferred=fit;pendingSave=true;}
+    panel.style.width=`${fit.width}px`;panel.style.height=`${fit.height}px`;
+    panel.style.minWidth=`${Math.min(420,bounds.maxWidth)}px`;panel.style.minHeight=`${Math.min(320,bounds.maxHeight)}px`;
+    panel.style.maxHeight=`${bounds.maxHeight}px`;
+  }
+  function saveSize() {
+    if(!pendingSave)return;
+    pendingSave=false;
+    const value=JSON.stringify(preferred);
+    if(value===savedSize)return;
+    // Persist one completed gesture, never individual pointer moves or automatic
+    // viewport/sidebar adjustments. Keep the in-memory choice if storage fails.
+    try {prefs?.setStringPref(preference,value);savedSize=value;}catch(_){}
+  }
+  function stop(event) {
+    if(event?.pointerId!=null && drag && event.pointerId!==drag.pointerId)return;
+    const previous=drag;drag=null;
+    if(previous?.handle.hasPointerCapture?.(previous.pointerId))previous.handle.releasePointerCapture(previous.pointerId);
+    saveSize();
+  }
+  function move(event) {
+    if(!drag || event.pointerId!==drag.pointerId)return;
+    const dx=(event.clientX-drag.x)*(drag.rtl?-1:1),dy=event.clientY-drag.y;
+    apply({width:drag.width-(drag.kind==='top'?0:dx),height:drag.height-(drag.kind==='side'?0:dy)},true);
+    event.preventDefault();
+  }
+  for(const kind of ['corner','top','side']) {
+    const handle=doc.createElement('button');handle.type='button';handle.className=`gm-compose-resize gm-compose-resize-${kind}`;
+    handle.setAttribute('aria-label','Resize compose panel');handle.title='Drag to resize; arrow keys resize, Shift makes larger steps';
+    const rtl=doc.documentElement.dir==='rtl',side=rtl?'right':'left';
+    handle.style.cssText=`position:absolute;z-index:2;padding:0;margin:0;border:0;background:transparent;color:light-dark(#80868b,#9aa0a6);touch-action:none;${kind==='top'?'top:0;left:18px;right:0;height:6px;cursor:ns-resize;':kind==='side'?`${side}:0;top:18px;bottom:0;width:6px;cursor:ew-resize;`:`top:0;${side}:0;width:18px;height:18px;cursor:${rtl?'nesw':'nwse'}-resize;font-size:16px;line-height:18px;`}`;
+    handle.tabIndex=kind==='corner'?0:-1;
+    if(kind==='corner') {
+      const icon=doc.createElementNS('http://www.w3.org/2000/svg','svg');icon.setAttribute('viewBox','0 0 18 18');icon.setAttribute('width','18');icon.setAttribute('height','18');icon.setAttribute('aria-hidden','true');
+      if(rtl)icon.style.transform='scaleX(-1)';
+      const lines=doc.createElementNS('http://www.w3.org/2000/svg','path');lines.setAttribute('d','M3 12 12 3 M3 8 8 3 M3 4 4 3');lines.setAttribute('stroke','currentColor');lines.setAttribute('fill','none');icon.append(lines);handle.append(icon);
+    }
+    handle.addEventListener('pointerdown',event=>{
+      if(!floating || event.button!==0)return;
+      event.preventDefault();event.stopPropagation();const size=current();
+      drag={...size,x:event.clientX,y:event.clientY,kind,handle,pointerId:event.pointerId,rtl};handle.setPointerCapture(event.pointerId);
+    });
+    handle.addEventListener('keydown',event=>{
+      if(!floating || !['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key))return;
+      event.preventDefault();event.stopPropagation();const size=current(),step=event.shiftKey?40:16;
+      apply({width:size.width+(['ArrowLeft','ArrowRight'].includes(event.key)?((event.key==='ArrowLeft')!==rtl?step:-step):0),
+        height:size.height+(event.key==='ArrowUp'?step:event.key==='ArrowDown'?-step:0)},true);
+    });
+    handle.addEventListener('keyup',event=>{
+      if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key))saveSize();
+    });
+    handle.addEventListener('blur',saveSize);
+    handle.addEventListener('pointermove',move);
+    handle.addEventListener('pointerup',stop);handle.addEventListener('pointercancel',stop);handle.addEventListener('lostpointercapture',stop);
+    panel.append(handle);handles.push(handle);
+  }
+  return {update(enabled,limits){
+    floating=enabled;bounds={maxWidth:Math.max(0,limits.maxWidth),maxHeight:Math.max(0,limits.maxHeight)};
+    for(const handle of handles)handle.hidden=!enabled;
+    if(!enabled){stop();return;}
+    apply(preferred || current());
+  },close(){stop();for(const handle of handles)handle.remove();}};
+}
+// macOS cannot show a file picker anchored to an embedded compose browsing
+// context. Keep native attachment conversion/handling, but anchor to its host.
+function installEmbeddedAttachmentPicker(native,main,classes=Cc,interfaces=Ci) {
+  const original=native.AttachFile;
+  if(typeof original!=='function')return {close(){}};
+  let closed=false,busy=false;
+  async function attach(){
+    if(closed || busy)return;
+    busy=true;
+    try {
+      const title=await native.document.l10n.formatValue('compose-attach-file-picker-title');
+      if(closed)return;
+      if(native.gAttachmentBucket.itemCount)native.toggleAttachmentPane('show');
+      const picker=classes['@mozilla.org/filepicker;1'].createInstance(interfaces.nsIFilePicker);
+      picker.init(main.browsingContext,title,interfaces.nsIFilePicker.modeOpenMultiple);
+      const directory=native.GetLastAttachDirectory();if(directory)picker.displayDirectory=directory;
+      picker.appendFilters(interfaces.nsIFilePicker.filterAll);
+      picker.open(result=>{
+        busy=false;
+        if(closed || result!==interfaces.nsIFilePicker.returnOK || !picker.files || !native.gMsgCompose)return;
+        const files=[...picker.files];
+        native.AddAttachments(files.map(file=>native.FileToAttachment(file)));
+        if(files.length)native.SetLastAttachDirectory(files.at(-1));
+      });
+    }catch(error){busy=false;console.error('Thunder-G: could not open the attachment picker.',error);}
+  }
+  native.AttachFile=attach;
+  return {close(){closed=true;if(native.AttachFile===attach)native.AttachFile=original;}};
+}
 function createInlineCompose(win) {
   const doc=win.document;let browser=null,panel=null,originalHeader=null,originalCommand=null,ready=false,observer=null;
-  let restoreChrome=null,loadingTimer=null,inlineContainer=null,scrollHost=null,presentation='inline',bar=null,title=null,floatButton=null,windowButton=null,transferBusy=false;
+  let restoreChrome=null,loadingTimer=null,inlineContainer=null,scrollHost=null,presentation='inline',bar=null,title=null,floatButton=null,windowButton=null,transferBusy=false,attachmentPicker=null,draftStatus=null,floatingResize=null;
   const main=win.browsingContext.topChromeWindow;
   function stopObserver(){if(observer){Services.obs.removeObserver(observer,'chrome-document-global-created');observer=null;}}
   function dispose(){
+    draftStatus?.close();draftStatus=null;floatingResize?.close();floatingResize=null;
+    attachmentPicker?.close();attachmentPicker=null;
     stopObserver();if(loadingTimer!==null)win.clearTimeout(loadingTimer);loadingTimer=null;
     restoreChrome?.();restoreChrome=null;
     browser?.remove();panel?.remove();browser=panel=originalHeader=originalCommand=null;ready=false;
@@ -151,6 +321,7 @@ function createInlineCompose(win) {
       panel.style.right=rtl?`${boundary}px`:'0px';
     }
     panel.style.maxWidth=`max(0px,calc(100vw - ${boundary+(presentation==='floating'?32:0)}px))`;
+    floatingResize?.update(presentation==='floating',{maxWidth:(viewport?.width || win.innerWidth || 1024)-boundary-32,maxHeight:(viewport?.height || win.innerHeight || 768)-24});
   }
   const sidebarResize=win.ResizeObserver?new win.ResizeObserver(fitComposeToContent):null;
   const sidebar=doc.getElementById('folderPane');if(sidebar)sidebarResize?.observe(sidebar);
@@ -257,11 +428,14 @@ function createInlineCompose(win) {
       bar=doc.createElement('div');bar.style.cssText='display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:8px 12px;flex:none;';
       title=doc.createElement('strong');title.style.cssText='flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.9em;font-weight:500;';
       title.textContent=isNew?'New message':`${command==='cmd_replyall'?'Reply all':'Reply'} · ${header.mime2DecodedSubject || '(No subject)'}`;
+      const titleGroup=doc.createElement('div');titleGroup.style.cssText='display:flex;align-items:center;gap:10px;flex:1;min-width:100px;overflow:hidden;';
+      const savedStatus=doc.createElement('span');savedStatus.className='gm-compose-draft-status';savedStatus.setAttribute('role','status');savedStatus.setAttribute('aria-live','polite');savedStatus.style.cssText='flex:none;font-size:12px;white-space:nowrap;';
+      titleGroup.append(title,savedStatus);
       const save=button('',()=>browser?.contentWindow.goDoCommand('cmd_saveAsDraft'));save.disabled=true;labelControl(save,'save','Save draft');
       floatButton=button('',()=>{if(presentation!=='floating')float();else returnInline();});
       windowButton=button('',separateWindow);labelControl(windowButton,'window','Separate window',isNew?'Open message in a separate window':'Open reply in a separate window');windowButton.disabled=true;
       const close=button('',requestClose);labelControl(close,'close','Close',isNew?'Close message':'Close reply');
-      bar.append(title,save,floatButton,windowButton,close);panel.append(bar);setPresentation(placement.container?'inline':'floating');
+      bar.append(titleGroup,save,floatButton,windowButton,close);panel.append(bar);floatingResize=installFloatingComposeResize(win,panel);setPresentation(placement.container?'inline':'floating');
       browser=doc.createXULElement('browser');browser.setAttribute('type','content');browser.setAttribute('maychangeremoteness','false');browser.setAttribute('disablehistory','true');browser.setAttribute('flex','1');browser.style.cssText='display:block;flex:1 1 0;min-height:0;min-width:0;width:100%;height:0;border:0;background:light-dark(#ffffff,#18181b);';
       const frame=browser;
       observer={observe(subject){
@@ -273,6 +447,7 @@ function createInlineCompose(win) {
       frame.addEventListener('load',event=>{
         if(browser!==frame || event.target!==frame.contentDocument || !frame.contentDocument.documentURI.includes('messengercompose.xhtml'))return;
         const native=frame.contentWindow;stopObserver();
+        attachmentPicker=installEmbeddedAttachmentPicker(native,main);
         // Restore the application's browser chrome after compose's native startup hook.
         restoreChrome?.();restoreChrome=null;
         const style=frame.contentDocument.createElement('style');style.textContent=`
@@ -296,7 +471,7 @@ function createInlineCompose(win) {
         const started=Date.now();
         const check=()=>{
           if(browser!==frame)return;
-          if(native.gMsgCompose && native.GetCurrentEditor?.()) {ready=true;save.disabled=false;windowButton.disabled=false;if(loadingTimer!==null)win.clearTimeout(loadingTimer);loadingTimer=null;native.SetMsgBodyFrameFocus?.();return;}
+          if(native.gMsgCompose && native.GetCurrentEditor?.()) {ready=true;save.disabled=false;windowButton.disabled=false;draftStatus=installComposeDraftStatus(native,savedStatus,win);if(loadingTimer!==null)win.clearTimeout(loadingTimer);loadingTimer=null;native.SetMsgBodyFrameFocus?.();return;}
           if(Date.now()-started>20000){
             title.textContent='Editor could not finish starting. Close and use a classic reply.';restoreChrome?.();restoreChrome=null;return;
           }

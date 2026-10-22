@@ -18,6 +18,7 @@
 <p>Optional remote image downloads — off by default. Enabling this contacts the logo host, which can see your IP address. After a successful aligned DKIM check, looks up the sender domain's BIMI DNS record and downloads only its HTTPS SVG logo. No logo directories, favicons or certificate downloads. A logo is a DNS-published image, not a certified identity badge.</p>
 <p>Contact photos take priority. Missing or invalid records leave the existing avatar unchanged. Logos and missing results are cached for one hour during this session to avoid repeat requests. Turning this off stops new downloads and restores the usual avatars immediately. Applies immediately.</p>
 <h2>Compose and drafts</h2>
+<p>The editor shows Saving…, then ✓ Saved after confirmation. Floating panels resize from their edges and corner, and remember your size across messages and restarts.</p>
 <label><input id="compose-autosave" type="checkbox"> Automatically save messages in Drafts</label>
 <label>Save every <select id="compose-autosave-minutes"><option value="1">1 minute</option><option value="2">2 minutes</option><option value="5">5 minutes</option><option value="10">10 minutes</option></select></label>
 <p>Enabled by default, every minute. Uses each account's configured Drafts folder and Thunderbird's native autosave. Changes apply to newly opened compose windows. Disabling Thunder-G restores previous Thunderbird settings unless changed independently.</p>
