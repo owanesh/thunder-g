@@ -81,12 +81,13 @@ test('virtual row recycling updates actions, avoids duplicates, and cleanup rest
     createElementNS:()=>element(),querySelectorAll:selector=>selector.includes('table-layout')?[row]:selector==='.gm-has-snippet'?[]:row.line.children.slice()};
   const visibility=[];
   const win={document:doc,quickFilterBar:{filterer:{visible:false},_showFilterBar(value){visibility.push(value)}},
-    customElements:{whenDefined:async()=>{},get:()=>Row},gDBView:{getMsgHdrAt:()=>({isRead:read,getStringProperty:()=>preview})},
+    customElements:{whenDefined:async()=>{},get:()=>Row},gViewWrapper:{showThreaded:true,showGroupedBySort:false},gDBView:{rowCount:3,getLevel:index=>index===1?1:0,isContainer:index=>index===0,isContainerOpen:()=>true,getMsgHdrAt:()=>({isRead:read,getStringProperty:()=>preview})},
     addEventListener(){},removeEventListener(){}};
   const controller=scope.installInboxControls(win);await Promise.resolve();
   assert.equal(Row.ROW_HEIGHT,28,'row geometry includes the added vertical space');
   assert.equal(row.line.children.length,1);
   assert.equal(row.line.children[0].children[2].title,'Mark conversation as read');
+  assert.equal(row.dataset.gmThreadGuide,'start');
   read=true;row.fillRow();
   assert.equal(row.line.children.length,1,'recycled row has only one action group');
   assert.equal(row.line.children[0].children[2].title,'Mark conversation as unread');
@@ -94,7 +95,12 @@ test('virtual row recycling updates actions, avoids duplicates, and cleanup rest
   assert.equal(row.line.children[0].textContent,'— Text <b>only</b>','preview is literal text, not HTML');
   preview='';row.fillRow();
   assert.equal(row.line.children.length,1,'recycled row clears the preceding message preview');
-  row.dataset.properties='dummy';row.fillRow();assert.equal(row.line.children.length,0);
+  row.index=1;row.fillRow();assert.equal(row.dataset.gmThreadGuide,'end');
+  row.index=2;row.fillRow();assert.equal(row.dataset.gmThreadGuide,undefined,'recycling cannot connect an unrelated message');
+  row.index=0;row.fillRow();controller.setThreadGuides(false);assert.equal(row.dataset.gmThreadGuide,undefined);
+  controller.setThreadGuides(true);assert.equal(row.dataset.gmThreadGuide,'start','setting applies without rebuilding rows');
+  win.gViewWrapper.showGroupedBySort=true;row.fillRow();assert.equal(row.dataset.gmThreadGuide,undefined,'sort groups are not conversations');
+  win.gViewWrapper.showGroupedBySort=false;row.dataset.properties='dummy';row.fillRow();assert.equal(row.line.children.length,0);
   controller.close();assert.equal(Row.ROW_HEIGHT,22);assert.equal(resets,2);assert.equal(Row.prototype.fillRow,native);assert.deepEqual(visibility,[false,false]);
 });
 
@@ -234,6 +240,7 @@ test('Copy view also copies native columns across accounts and keeps descendant 
  win.gFolder=null;pane._applyView(target);assert.equal(calls.length,0);
  controller.close();assert.equal(pane._applyView,original);
 });
+
 test('list and conversation preview queues share bounded expiring text without duplicate local reads',()=>{
  let now=0,sequence=0,reads=0,body='first';scope.Date={now:()=>now};
  const timers=new Map(),win={setTimeout(fn){timers.set(++sequence,fn);return sequence},clearTimeout(id){timers.delete(id)}};
@@ -284,4 +291,15 @@ test('native final-column splitter stays enabled and subject dragging gives spac
  // Explicitly non-resizable columns remain native even when physically last.
  table.columns.at(-1).resizable=false;date.resizable=false;
  const disabled=scope.installResponsiveColumns(win);flush();assert.equal(date.resizable,false);disabled.close();
+});
+
+
+test('thread guides follow native expanded-thread boundaries, nested replies and transient views',()=>{
+ const levels=[0,1,2,1,0,0,1,0];let open=true;
+ const view={rowCount:levels.length,getLevel:index=>levels[index],getFlagsAt:()=>0,isContainer:index=>index===0 || index===5,isContainerOpen:()=>open};
+ assert.deepEqual(levels.map((_,index)=>scope.threadGuidePosition(view,index)),['start','middle','middle','end',null,'start','end',null]);
+ open=false;assert.equal(scope.threadGuidePosition(view,0),null,'collapsed threads do not draw a dangling connector');
+ view.getFlagsAt=()=>0x20000000;assert.equal(scope.threadGuidePosition(view,1),null,'dummy rows never receive a guide');
+ view.getFlagsAt=()=>0;view.getLevel=()=>{throw Error('view changed')};assert.equal(scope.threadGuidePosition(view,1),null);
+ assert.equal(scope.threadGuidePosition(view,-1),null);assert.equal(scope.threadGuidePosition(view,99),null);
 });

@@ -7,24 +7,30 @@ browser.inlineLabels.onDkimRequest.addListener(async(request,messageId,domain,ba
 });
 async function startThunderG() {
   // Optional settings must never prevent the companion from starting.
-  let independentReader = false, hideTodayPane = false, messagesPerPage = 0, composeAutosave = true, composeAutosaveMinutes = 1;
+  let threadGuides = true, independentReader = false, hideTodayPane = false, messagesPerPage = 0, composeAutosave = true, composeAutosaveMinutes = 1, bimiEnabled = false, inlineReplyEnabled = false, inlineNewMessageEnabled = false;
   try {
-    const settings = await browser.storage.local.get({independentReader:false,hideTodayPane:false,messagesPerPage:0,composeAutosave:true,composeAutosaveMinutes:1});
+    const settings = await browser.storage.local.get({threadGuides:true,independentReader:false,hideTodayPane:false,messagesPerPage:0,composeAutosave:true,composeAutosaveMinutes:1,bimiEnabled:false,inlineReplyEnabled:false,inlineNewMessageEnabled:false});
+    threadGuides = settings.threadGuides !== false;
+    bimiEnabled = settings.bimiEnabled === true;
+    inlineReplyEnabled = settings.inlineReplyEnabled === true;
+    inlineNewMessageEnabled = settings.inlineNewMessageEnabled === true;
     hideTodayPane = settings.hideTodayPane === true;
     independentReader = settings.independentReader === true;
     messagesPerPage = settings.messagesPerPage;
     composeAutosave = settings.composeAutosave !== false;
     composeAutosaveMinutes = settings.composeAutosaveMinutes;
   } catch (error) { console.warn('Thunder-G: using default settings.',error); }
+  await browser.inlineLabels.setThreadGuides?.(threadGuides);
   await browser.inlineLabels.setHideTodayPane(hideTodayPane);
   await browser.inlineLabels.setComposeAutosave(composeAutosave,composeAutosaveMinutes || 1);
   await browser.inlineLabels.setMessagesPerPage(messagesPerPage || 0);
   await browser.inlineLabels.setIndependentReader(independentReader);
-  await browser.inlineLabels.setBimiEnabled?.((await browser.storage.local.get({bimiEnabled:false})).bimiEnabled===true);
-  await browser.inlineLabels.setInlineReplyEnabled?.((await browser.storage.local.get({inlineReplyEnabled:false})).inlineReplyEnabled===true);
-  await browser.inlineLabels.setInlineNewMessageEnabled?.((await browser.storage.local.get({inlineNewMessageEnabled:false})).inlineNewMessageEnabled===true);
+  await browser.inlineLabels.setBimiEnabled?.(bimiEnabled);
+  await browser.inlineLabels.setInlineReplyEnabled?.(inlineReplyEnabled);
+  await browser.inlineLabels.setInlineNewMessageEnabled?.(inlineNewMessageEnabled);
   await browser.inlineLabels.start();
   browser.storage.onChanged.addListener((changes, area) => {
+    if(area==='local' && changes.threadGuides)browser.inlineLabels.setThreadGuides(changes.threadGuides.newValue!==false).catch(console.error);
     if (area === 'local' && (changes.composeAutosave || changes.composeAutosaveMinutes)) {
       if (changes.composeAutosave) composeAutosave = changes.composeAutosave.newValue !== false;
       if (changes.composeAutosaveMinutes) composeAutosaveMinutes = changes.composeAutosaveMinutes.newValue || 1;

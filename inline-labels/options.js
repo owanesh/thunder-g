@@ -105,3 +105,20 @@ inlineNewMessage.addEventListener('change',async()=>{
  catch(_){inlineNewMessage.checked=!inlineNewMessage.checked;status.textContent='Unable to save. Please try again.';}
  finally{inlineNewMessage.disabled=false;}
 });
+
+const threadGuides = document.getElementById('thread-guides');
+threadGuides.disabled = true;
+browser.storage.local.get({threadGuides:true}).then(settings => {
+  threadGuides.checked = settings.threadGuides !== false;
+  threadGuides.disabled = false;
+}).catch(() => { status.textContent = 'Unable to load settings.'; });
+threadGuides.addEventListener('change', async () => {
+  threadGuides.disabled = true;
+  try {
+    await browser.storage.local.set({threadGuides:threadGuides.checked});
+    status.textContent = 'Saved.';
+  } catch (_) {
+    threadGuides.checked = !threadGuides.checked;
+    status.textContent = 'Unable to save. Please try again.';
+  } finally { threadGuides.disabled = false; }
+});

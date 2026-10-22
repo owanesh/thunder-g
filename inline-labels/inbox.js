@@ -330,7 +330,18 @@ function installThreadToggles(win) {
   }};
 }
 
-function installInboxControls(win) {
+function threadGuidePosition(view,index) {
+  if(!view || !Number.isInteger(index) || index<0 || index>=view.rowCount)return null;
+  try {
+    if((view.getFlagsAt?.(index) || 0)&0x20000000)return null;
+    const level=view.getLevel(index),next=index+1<view.rowCount?view.getLevel(index+1):0;
+    if(level>0)return next>0?'middle':'end';
+    if(view.isContainer(index) && view.isContainerOpen(index) && next>0)return 'start';
+  }catch(_){/* A changing native view can briefly invalidate a virtual row. */}
+  return null;
+}
+
+function installInboxControls(win,{threadGuides=true}={}) {
   const doc = win.document;
   const tree = doc.getElementById('threadTree');
   if (!tree) return {close(){}};
@@ -340,6 +351,18 @@ function installInboxControls(win) {
   const newMessage = installInlineNewMessage(win);
   const threadToggles = installThreadToggles(win);
   let closed = false, prototype, original, wrapped, rowClass, originalHeight;
+  let showThreadGuides=threadGuides===true;
+  function renderThreadGuide(row) {
+    delete row.dataset.gmThreadGuide;
+    if(!showThreadGuides || (row.dataset.properties || '').split(' ').includes('dummy') ||
+      win.gViewWrapper?.showGroupedBySort || win.gViewWrapper?.showThreaded===false)return;
+    const position=threadGuidePosition(win.gDBView,row.index);
+    if(position)row.dataset.gmThreadGuide=position;
+  }
+  function setThreadGuides(enabled) {
+    showThreadGuides=enabled===true;
+    if(!closed)for(const row of doc.querySelectorAll('#threadTree tr.table-layout'))renderThreadGuide(row);
+  }
   const previews = createPreviewQueue(win);
   const filter = win.quickFilterBar;
   const wasVisible = filter?.filterer?.visible;
@@ -401,6 +424,7 @@ function installInboxControls(win) {
   `;
   doc.head.append(style);
   function render(row) {
+    renderThreadGuide(row);
     row.querySelector('.gm-row-actions')?.remove();
     row.querySelector('.gm-message-snippet')?.remove();
     row.querySelector('.subject-line')?.classList?.remove('gm-has-snippet');
@@ -486,6 +510,7 @@ function installInboxControls(win) {
     if (prototype?.fillRow === wrapped) prototype.fillRow = original;
     for (const node of doc.querySelectorAll('.gm-row-actions, .gm-message-snippet')) node.remove();
     for (const line of doc.querySelectorAll('.gm-has-snippet')) line.classList.remove('gm-has-snippet');
+    for (const row of doc.querySelectorAll('#threadTree tr.table-layout')) delete row.dataset.gmThreadGuide;
     style.remove();
     previews.close();
     compose.close();
@@ -506,5 +531,5 @@ function installInboxControls(win) {
   }
   win.addEventListener('focus',refreshPreviews);
   win.addEventListener('unload',close,{once:true});
-  return {close};
+  return {close,setThreadGuides};
 }

@@ -25,6 +25,43 @@
   cursor: pointer;
 }
 
+/* Connect native expanded-thread rows in the existing twisty gutter. These
+   marks neither indent message text nor take pointer events from the arrow. */
+#threadTree tr[data-gm-thread-guide] .subjectcol-column {
+  position: relative;
+  --gm-thread-guide: light-dark(#8ba2c3, #8ba6cc);
+}
+#threadTree tr[data-gm-thread-guide] .subjectcol-column::before,
+#threadTree tr[data-gm-thread-guide]:is([data-gm-thread-guide="middle"], [data-gm-thread-guide="end"]) .subjectcol-column::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  background: var(--gm-thread-guide);
+  pointer-events: none;
+}
+#threadTree tr[data-gm-thread-guide] .subjectcol-column::before {
+  inset-inline-start: 7px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+}
+#threadTree tr[data-gm-thread-guide="start"] .subjectcol-column::before {
+  top: calc(50% + 8px);
+}
+#threadTree tr[data-gm-thread-guide="end"] .subjectcol-column::before {
+  bottom: 50%;
+}
+#threadTree tr[data-gm-thread-guide]:is([data-gm-thread-guide="middle"], [data-gm-thread-guide="end"]) .subjectcol-column::after {
+  inset-inline-start: 8px;
+  top: 50%;
+  width: 8px;
+  height: 1px;
+}
+@media (forced-colors: active) {
+  #threadTree tr[data-gm-thread-guide] .subjectcol-column { --gm-thread-guide: CanvasText; }
+  #threadTree tr[data-gm-thread-guide].selected .subjectcol-column { --gm-thread-guide: HighlightText; }
+}
+
 /* Follow Thunderbird's native UI Font Size control rather than fixed pixels. */
 :root #folderTree, :root #threadTree {
   font-size: 1rem !important;

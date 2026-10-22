@@ -8,6 +8,11 @@
   adapting to the available space beside the sidebar. Size preferences are saved
   after a resize gesture, not on every pointer move.
 
+- Optional thread connection lines in the native message list. Enabled by
+  default and configurable under Inbox, with immediate updates. Connectors follow
+  expanded native thread boundaries, end at each thread’s last reply and leave
+  collapse controls, columns, indentation and pagination unchanged.
+
 - In-window draft status for native manual save and configurable autosave:
   Saving…, a green ✓ Saved only after confirmed success, Unsaved changes after
   edits, and Save failed on errors. Editing during autosave cannot leave a stale
@@ -102,6 +107,9 @@
   macOS so the native file chooser opens correctly. Native attachment conversion,
   multiple-file selection and the last attachment directory are preserved.
 
+- Keep extension startup available with safe defaults if optional preferences
+  cannot be loaded; read all startup preferences together.
+
 - Size the message-list scrollbar to the current page, reset it on page changes,
   and hide it when the displayed messages fit without scrolling.
 
@@ -140,6 +148,11 @@
   pages. Every activation changed the thread state once and message totals stayed
   unchanged. Regression tests also cover canceling queued reader opens and native
   structure changes with unchanged row counts.
+
+- Live Thunderbird checks confirmed immediate thread-guide on/off updates, native
+  collapse/reopen behavior and next/previous pages with unchanged message totals.
+  The redesigned settings and bundled logo were visually checked at normal width
+  and a temporary 560px viewport; the original width was restored afterward.
 
 - Live Thunderbird checks confirmed the native one-minute autosave setting,
   Saved after actual draft success, clearing confirmation on new edits,

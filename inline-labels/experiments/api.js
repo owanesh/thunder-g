@@ -70,7 +70,7 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
     const id = context.extension.id;
     const skinWindows = new Map();
     let hideTodayPane = false;
-    let messagesPerPage = 0, independentReader = false;
+    let messagesPerPage = 0, independentReader = false, threadGuides = true;
     const readers = new Map();
     const pagedDocuments = new Map(), zoomWindows = new Map();
     const fontSize = ChromeUtils.importESModule("resource:///modules/UIFontSize.sys.mjs").UIFontSize;
@@ -133,9 +133,9 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
       pagedDocuments.set(doc,pages); pages.setSize(messagesPerPage);
       const zoom = installMailZoom(doc.defaultView,fontSize);
       const dates = installCompactDates(doc.defaultView);
-      const inbox = installInboxControls(doc.defaultView);
+      const inbox = installInboxControls(doc.defaultView,{threadGuides});
       const conversationBrowser = watchConversationBrowser(doc.defaultView, attach);
-      documents.set(doc, { refresh() { labels.refresh(); dates.refresh(); }, close() {
+      documents.set(doc, { setThreadGuides(enabled){inbox.setThreadGuides(enabled);}, refresh() { labels.refresh(); dates.refresh(); }, close() {
         readers.delete(doc);
         pages.close(); pagedDocuments.delete(doc); zoom.close();
         conversationBrowser.close(); inbox.close(); dates.close(); reader.close(); labels.close();
@@ -194,6 +194,7 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
       documents.clear(); windows.clear();
     }});
     return { inlineLabels: {
+      async setThreadGuides(enabled){threadGuides=enabled===true;for(const controller of documents.values())controller.setThreadGuides(threadGuides);},
       async setInlineReplyEnabled(enabled){inlineReplyEnabled=enabled===true;},
       async setInlineNewMessageEnabled(enabled){inlineNewMessageEnabled=enabled===true;},
       async setBimiEnabled(enabled){independentBimiEnabled=enabled===true;for(const refresh of independentBimiListeners)refresh();},

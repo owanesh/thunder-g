@@ -62,7 +62,7 @@ test('optional settings failures do not prevent permanent companion startup',asy
     const calls=[];
     const scope=vm.createContext({console:{warn(){},error(){}},browser:{
       storage:{local:{async get(){if(fail)throw Error('unavailable');return {hideTodayPane:true}}},onChanged:{addListener(){}}},
-      inlineLabels:{onDkimRequest:{addListener(){}},async setIndependentReader(value){assert.equal(value,false)},async setComposeAutosave(enabled,minutes){assert.equal(enabled,true);assert.equal(minutes,1)},async setMessagesPerPage(){},async setHideTodayPane(value){calls.push(value)},async start(){calls.push('started')}}}});
+      inlineLabels:{onDkimRequest:{addListener(){}},async setIndependentReader(value){assert.equal(value,false)},async setBimiEnabled(value){assert.equal(value,false)},async setInlineReplyEnabled(value){assert.equal(value,false)},async setInlineNewMessageEnabled(value){assert.equal(value,false)},async setComposeAutosave(enabled,minutes){assert.equal(enabled,true);assert.equal(minutes,1)},async setMessagesPerPage(){},async setHideTodayPane(value){calls.push(value)},async start(){calls.push('started')}}}});
     await vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/background.js'),'utf8'),scope);
     assert.deepEqual(calls,[!fail,'started']);
   }
@@ -77,4 +77,29 @@ test('independent reader is opt-in, restored at startup and propagated on prefer
   assert.deepEqual(calls,[true,'started']);
   changed({independentReader:{newValue:false}},'local');assert.deepEqual(calls,[true,'started',false]);
   changed({independentReader:{newValue:true}},'sync');assert.equal(calls.length,3);
+});
+
+test('optional compose and BIMI preferences load once and retain explicit opt-in values',async()=>{
+  let reads=0;const calls=[];
+  const scope=vm.createContext({console,browser:{
+    storage:{local:{async get(){reads++;return {bimiEnabled:true,inlineReplyEnabled:true,inlineNewMessageEnabled:true}}},onChanged:{addListener(){}}},
+    inlineLabels:{onDkimRequest:{addListener(){}},async setHideTodayPane(){},async setComposeAutosave(){},async setMessagesPerPage(){},async setIndependentReader(){},
+      async setBimiEnabled(value){calls.push(['bimi',value])},async setInlineReplyEnabled(value){calls.push(['reply',value])},async setInlineNewMessageEnabled(value){calls.push(['new',value])},async start(){calls.push('started')}}}});
+  await vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/background.js'),'utf8'),scope);
+  assert.equal(reads,1,'a later optional storage read cannot interrupt startup');
+  assert.deepEqual(calls,[['bimi',true],['reply',true],['new',true],'started']);
+});
+
+
+test('thread guide preference defaults on, preserves opt-out and updates live from local storage',async()=>{
+ for(const initial of [undefined,false]){
+  let changed;const calls=[];
+  const scope=vm.createContext({console,browser:{storage:{local:{async get(defaults){return {...defaults,...(initial===undefined?{}:{threadGuides:initial})}}},onChanged:{addListener(fn){changed=fn}}},
+  inlineLabels:{onDkimRequest:{addListener(){}},async setThreadGuides(value){calls.push(value)},async setHideTodayPane(){},async setComposeAutosave(){},async setMessagesPerPage(){},async setIndependentReader(){},async start(){}}}});
+  await vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/background.js'),'utf8'),scope);
+  assert.deepEqual(calls,[initial!==false]);
+  changed({threadGuides:{newValue:false}},'local');changed({threadGuides:{newValue:true}},'local');
+  assert.deepEqual(calls,[initial!==false,false,true]);
+  changed({threadGuides:{newValue:false}},'sync');assert.equal(calls.length,3);
+ }
 });
