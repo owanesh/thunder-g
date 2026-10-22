@@ -7,10 +7,12 @@ test('native keyword notifications refresh open conversations and unsubscribe on
   const mail={mfn:{addListener(value,flags){listener=value;assert.equal(flags,8)},removeListener(value){removed=value}}};
   const support={registerWindowListener(id,value){windows=value},unregisterWindowListener(){}};
   const scope=vm.createContext({ChromeUtils:{importESModule:()=>({
-    ExtensionCommon:{ExtensionAPI:class{}},ExtensionSupport:support,MailServices:mail,ExtensionParent:{}})},
+    ExtensionCommon:{ExtensionAPI:class{},EventManager:class{api(){return {}}}},ExtensionSupport:support,MailServices:mail,ExtensionParent:{}})},
     Services:{prefs:{addObserver(){},removeObserver(){}}},
     Ci:{nsIDOMWindowUtils:{USER_SHEET:1},nsIMsgFolderNotificationService:{msgPropertyChanged:8}},
     GMAIL_SKIN_CSS:'',GMAIL_CONVERSATIONS_CSS:'',
+    createComposeAutosave:()=>({set(enabled,minutes){assert.equal(enabled,true);assert.equal(minutes,1)},close(){}}),
+    installMailZoom:()=>({close(){}}),
     installConversationStyle:()=>({refresh(){refreshed++},close(){disposed++}})});
   vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/experiments/api.js'),'utf8'),scope);
   const api=new scope.inlineLabels().getAPI({extension:{id:'test'},callOnClose(value){cleanup=value}});
@@ -60,8 +62,19 @@ test('optional settings failures do not prevent permanent companion startup',asy
     const calls=[];
     const scope=vm.createContext({console:{warn(){},error(){}},browser:{
       storage:{local:{async get(){if(fail)throw Error('unavailable');return {hideTodayPane:true}}},onChanged:{addListener(){}}},
-      inlineLabels:{async setHideTodayPane(value){calls.push(value)},async start(){calls.push('started')}}}});
+      inlineLabels:{onDkimRequest:{addListener(){}},async setIndependentReader(value){assert.equal(value,false)},async setComposeAutosave(enabled,minutes){assert.equal(enabled,true);assert.equal(minutes,1)},async setMessagesPerPage(){},async setHideTodayPane(value){calls.push(value)},async start(){calls.push('started')}}}});
     await vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/background.js'),'utf8'),scope);
     assert.deepEqual(calls,[!fail,'started']);
   }
+});
+
+test('independent reader is opt-in, restored at startup and propagated on preference changes',async()=>{
+  let changed;const calls=[];
+  const scope=vm.createContext({console,browser:{
+    storage:{local:{async get(){return {independentReader:true,hideTodayPane:false,composeAutosave:true,composeAutosaveMinutes:1,messagesPerPage:0}}},onChanged:{addListener(fn){changed=fn}}},
+    inlineLabels:{onDkimRequest:{addListener(){}},async setIndependentReader(value){calls.push(value)},async setHideTodayPane(){},async setComposeAutosave(){},async setMessagesPerPage(){},async start(){calls.push('started')}}}});
+  await vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/background.js'),'utf8'),scope);
+  assert.deepEqual(calls,[true,'started']);
+  changed({independentReader:{newValue:false}},'local');assert.deepEqual(calls,[true,'started',false]);
+  changed({independentReader:{newValue:true}},'sync');assert.equal(calls.length,3);
 });

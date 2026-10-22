@@ -1,3 +1,6 @@
+var { setTimeout, clearTimeout } = ChromeUtils.importESModule("resource://gre/modules/Timer.sys.mjs");
+var verifyIndependentDkim = null,openIndependentDkimPopup=null;
+var independentBimiEnabled=false,independentBimiListeners=new Set();
 var { ExtensionParent } = ChromeUtils.importESModule("resource://gre/modules/ExtensionParent.sys.mjs");
 var { ExtensionCommon } = ChromeUtils.importESModule("resource://gre/modules/ExtensionCommon.sys.mjs");
 var { ExtensionSupport } = ChromeUtils.importESModule("resource:///modules/ExtensionSupport.sys.mjs");
@@ -30,6 +33,36 @@ function waitForMailPane(doc, onReady) {
 
 var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
   getAPI(context) {
+    const dkimRequests = new Map();let dkimSequence=0,dkimFire=null;
+    verifyIndependentDkim = (header,details=false,popupContext=0) => new Promise((resolve,reject) => {
+      const provider=ExtensionParent.GlobalManager.extensionMap.get('dkim_verifier@pl');
+      if(!provider || !dkimFire){reject(new Error('DKIM Verifier integration unavailable'));return;}
+      const message=typeof header==='string'?{id:0}:provider.messageManager.convert(header),request=++dkimSequence;
+      const timer=setTimeout(()=>{dkimRequests.delete(request);reject(new Error('DKIM verification timed out'));},60000);
+      dkimRequests.set(request,{resolve,reject,timer});
+      dkimFire.async(request,message.id,typeof header==='string'?header:'',typeof header==='string'?Services.eTLD.getBaseDomainFromHost(header):'',details,popupContext).catch(()=>{clearTimeout(timer);dkimRequests.delete(request);reject(new Error('DKIM bridge unavailable'));});
+    });
+    const dkimPopups=new Set();
+    openIndependentDkimPopup=async(header,button)=>{
+      for(const close of [...dkimPopups])close();
+      const result=await verifyIndependentDkim(header,true);
+      const provider=ExtensionParent.GlobalManager.extensionMap.get('dkim_verifier@pl');
+      if(!provider || !Number.isInteger(result.contextId) || result.contextId>=-1000)throw new Error('DKIM popup integration unavailable');
+      if(!button.isConnected){await verifyIndependentDkim(header,false,result.contextId);return;}
+      const {ViewPopup}=ChromeUtils.importESModule('resource:///modules/ExtensionPopups.sys.mjs');
+      const url=provider.baseURI.resolve('content/displayAction.html')+'?thunderGContext='+result.contextId;
+      const popup=new ViewPopup(provider,button.ownerDocument.defaultView.browsingContext.topChromeWindow,url,false,false,false);
+      let disposed=false;
+      const close=()=>{
+        if(disposed)return;disposed=true;dkimPopups.delete(close);
+        popup.viewNode.removeEventListener('popuphidden',close);
+        verifyIndependentDkim?.(header,false,result.contextId).catch(()=>{});
+        popup.destroy();
+      };
+      dkimPopups.add(close);popup.viewNode.addEventListener('popuphidden',close);
+      try {await popup.browserLoaded;await popup.contentReadyAndResized.promise;if(!disposed && button.isConnected)popup.viewNode.openPopup(button,'bottomleft topleft',0,0);else close();}
+      catch(error){close();throw error;}
+    };
     const documents = new Map();
     const pendingDocuments = new Map();
     const windows = new Map();
@@ -37,6 +70,10 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
     const id = context.extension.id;
     const skinWindows = new Map();
     let hideTodayPane = false;
+    let messagesPerPage = 0, independentReader = false;
+    const readers = new Map();
+    const pagedDocuments = new Map(), zoomWindows = new Map();
+    const fontSize = ChromeUtils.importESModule("resource:///modules/UIFontSize.sys.mjs").UIFontSize;
     const todayWindows = new Set();
     const todayURI = 'data:text/css;charset=utf-8,' + encodeURIComponent(
       '#today-pane-panel, #today-splitter, #calendar-show-todaypane-panel { display:none !important; }');
@@ -63,6 +100,7 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
       try { win.windowUtils.removeSheetUsingURIString(cssURI, Ci.nsIDOMWindowUtils.USER_SHEET); }
       catch (_) { /* A destroyed window already discarded its sheets. */ }
     }
+    let composeAutosave = true, composeAutosaveMinutes = 1, autosaveController = null;
     let started = false;
     let closed = false;
     const attach = doc => {
@@ -90,10 +128,16 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
       loadSkin(doc.defaultView);
       const labels = installInlineLabels(doc.defaultView, MailServices);
       const reader = installReadingMode(doc.defaultView);
+      readers.set(doc,reader); reader.setIndependent(independentReader);
+      const pages = installNativePagination(doc.defaultView,reader);
+      pagedDocuments.set(doc,pages); pages.setSize(messagesPerPage);
+      const zoom = installMailZoom(doc.defaultView,fontSize);
       const dates = installCompactDates(doc.defaultView);
       const inbox = installInboxControls(doc.defaultView);
       const conversationBrowser = watchConversationBrowser(doc.defaultView, attach);
       documents.set(doc, { refresh() { labels.refresh(); dates.refresh(); }, close() {
+        readers.delete(doc);
+        pages.close(); pagedDocuments.delete(doc); zoom.close();
         conversationBrowser.close(); inbox.close(); dates.close(); reader.close(); labels.close();
       }});
     };
@@ -106,6 +150,7 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
     };
     const loadWindow = win => {
       loadSkin(win);
+      if (!zoomWindows.has(win)) zoomWindows.set(win,installMailZoom(win,fontSize));
       // Today Pane visibility belongs to the user. Do not persist calendar UI
       // changes when a skin attaches, restarts, or is disabled.
       const listener = event => { if (event.target?.nodeType === 9) attach(event.target); };
@@ -128,7 +173,11 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
       }
     };
     context.callOnClose({ close() {
+      for(const close of [...dkimPopups])close();openIndependentDkimPopup=null;
+      verifyIndependentDkim=null;
+      for(const pending of dkimRequests.values()){clearTimeout(pending.timer);pending.reject(new Error('Reader closed'));}dkimRequests.clear();
       closed = true;
+      try { autosaveController?.close(); } catch (_) { console.warn('Thunder-G: could not restore draft autosave settings.'); }
       if (!started) return;
       ExtensionSupport.unregisterWindowListener(id);
       Services.prefs.removeObserver("mailnews.tags.", observer);
@@ -139,11 +188,33 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
       for (const controller of documents.values()) controller.close();
       for (const controller of conversationDocuments.values()) controller.close();
       conversationDocuments.clear();
+      for (const zoom of zoomWindows.values()) zoom.close(); zoomWindows.clear();
       for (const win of skinWindows.keys()) unloadSkin(win);
       for (const win of todayWindows) removeTodayPaneStyle(win);
       documents.clear(); windows.clear();
     }});
     return { inlineLabels: {
+      async setInlineReplyEnabled(enabled){inlineReplyEnabled=enabled===true;},
+      async setBimiEnabled(enabled){independentBimiEnabled=enabled===true;for(const refresh of independentBimiListeners)refresh();},
+      onDkimRequest: new ExtensionCommon.EventManager({context,name:'inlineLabels.onDkimRequest',register(fire){dkimFire=fire;return()=>{dkimFire=null;};}}).api(),
+      async resolveDkim(request,payload) {
+        const pending=dkimRequests.get(request);if(!pending)return;
+        clearTimeout(pending.timer);dkimRequests.delete(request);
+        try {const value=JSON.parse(payload);if(value.error)pending.reject(new Error(value.error));else pending.resolve(value);}catch(error){pending.reject(error);}
+      },
+      async setIndependentReader(enabled) {
+        independentReader = enabled === true;
+        for (const reader of readers.values()) reader.setIndependent(independentReader);
+      },
+      async setMessagesPerPage(value) {
+        messagesPerPage = [25,50,100].includes(value) ? value : 0;
+        for (const pages of pagedDocuments.values()) pages.setSize(messagesPerPage);
+      },
+      async setComposeAutosave(enabled, minutes) {
+        composeAutosave = enabled === true;
+        composeAutosaveMinutes = Number.isInteger(minutes) && minutes >= 1 && minutes <= 30 ? minutes : 1;
+        autosaveController?.set(composeAutosave,composeAutosaveMinutes);
+      },
       async setHideTodayPane(hidden) {
         if (closed) return;
         hideTodayPane = hidden;
@@ -151,6 +222,10 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
       },
       async start() {
       if (started) return;
+      try {
+        autosaveController = createComposeAutosave(Services.prefs);
+        autosaveController.set(composeAutosave,composeAutosaveMinutes);
+      } catch (_) { console.warn('Thunder-G: could not configure draft autosave settings.'); }
       started = true;
       Services.prefs.addObserver("mailnews.tags.", observer);
       MailServices.mfn.addListener(tagChanges, Ci.nsIMsgFolderNotificationService.msgPropertyChanged);
@@ -158,6 +233,7 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
         chromeURLs: ["chrome://messenger/content/messenger.xhtml"],
         onLoadWindow: loadWindow,
         onUnloadWindow(win) {
+          zoomWindows.get(win)?.close(); zoomWindows.delete(win);
           removeTodayPaneStyle(win);
           unloadSkin(win);
           const listener = windows.get(win);

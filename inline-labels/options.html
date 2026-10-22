@@ -5,4 +5,21 @@
 <label><input id="hide-today-pane" type="checkbox"> Hide Today Pane completely</label>
 <p>Hide the calendar pane, its splitter, and the bottom-right toggle. Applies immediately to all windows.</p>
 <p>Turn this off to restore Thunderbird’s existing visibility setting. That setting is never changed.</p>
+<h2>Conversation reader</h2>
+<label><input id="independent-reader" type="checkbox"> Use Thunder-G's independent Gmail-style reader (experimental)</label>
+<p>Off by default. Requires no Thunderbird Conversations add-on. Messages are grouped using Thunderbird's local index, with a folder-thread fallback when indexing is unavailable. Expand cards to read messages and attachments. Reply, Forward and Print use Thunderbird's native controls.</p>
+<p>List columns, CSS, zoom and density stay native. Switching readers returns to the list. The toolbar above a conversation acts on the messages selected in the list, including when more messages are found in other folders.</p>
+<label><input id="inline-reply-enabled" type="checkbox"> Reply and Reply all in this window (experimental)</label>
+<p>Off by default. Starts a reply below the message with Thunderbird's native editor, preserving account signatures, recipients, formatting, attachments and native draft saving. Detach moves the same editor into a floating panel; its separate-window button saves the draft and opens it in Thunderbird's normal compose window. Forward keeps its usual window. An open reply stays available when navigating; close it before starting another reply. Turning this setting off affects new replies and keeps an existing draft open.</p>
+<h2>Sender logos</h2>
+<label><input id="bimi-enabled" type="checkbox"> Download and show BIMI sender logos</label>
+<p>Optional remote image downloads — off by default. Enabling this contacts the logo host, which can see your IP address. After a successful aligned DKIM check, looks up the sender domain's BIMI DNS record and downloads only its HTTPS SVG logo. No logo directories, favicons or certificate downloads. A logo is a DNS-published image, not a certified identity badge.</p>
+<p>Contact photos take priority. Missing or invalid records leave the existing avatar unchanged. Logos and missing results are cached for one hour during this session to avoid repeat requests. Turning this off stops new downloads and restores the usual avatars immediately. Applies immediately.</p>
+<h2>Compose and drafts</h2>
+<label><input id="compose-autosave" type="checkbox"> Automatically save messages in Drafts</label>
+<label>Save every <select id="compose-autosave-minutes"><option value="1">1 minute</option><option value="2">2 minutes</option><option value="5">5 minutes</option><option value="10">10 minutes</option></select></label>
+<p>Enabled by default, every minute. Uses each account's configured Drafts folder and Thunderbird's native autosave. Changes apply to newly opened compose windows. Disabling Thunder-G restores previous Thunderbird settings unless changed independently.</p>
+<h2>Message list</h2>
+<label>Messages per page <select id="messages-per-page"><option value="0">All (continuous scrolling)</option><option value="25">25</option><option value="50">50</option><option value="100">100</option></select></label>
+<p>Global setting, saved across restarts. Uses the original list, columns and density. Collapsed conversations count as one row. Ctrl/Cmd + plus, minus and zero use Thunderbird's interface font controls outside text fields.</p>
 <p id="status" role="status" aria-live="polite"></p></main><script src="options.js"></script></body></html>
