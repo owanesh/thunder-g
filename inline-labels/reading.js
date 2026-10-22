@@ -583,6 +583,12 @@ function installReadingMode(win) {
     back.focus({preventScroll:true});
   }
   function click(event) {
+    if(event.target.closest('.twisty')) {
+      // A preceding text click may still be waiting for the next frame.
+      // Expanding a thread must cancel it rather than open the reader afterward.
+      if(pending!==null){win.cancelAnimationFrame(pending);pending=null;++openTicket;}
+      return;
+    }
     if (!isReadingClick(event)) return;
     const row = event.target.closest('tr.table-layout');
     if (!row || !tree.contains(row)) return;

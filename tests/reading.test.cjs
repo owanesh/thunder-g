@@ -63,6 +63,11 @@ test('single click opens the current-tab reader, back restores the list, and dou
   win.gDBView=originalView;
 
   tree.events.click({button:0,target:{closest:selector=>selector==='tr.table-layout'?row:null}});
+  tree.events.click({button:0,target:{closest:selector=>selector==='.twisty'?{}:null}});
+  frameQueue.shift()();
+  assert.equal(layout.messagePaneVisible,false,'a thread-arrow click cancels a queued reader open');
+
+  tree.events.click({button:0,target:{closest:selector=>selector==='tr.table-layout'?row:null}});
   frameQueue.shift()();
   assert.equal(layout.messagePaneVisible,true,'click opens conversation');
   assert.equal(refreshes,1,'first single click explicitly displays the selected message');

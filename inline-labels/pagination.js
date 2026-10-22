@@ -4,6 +4,35 @@ function nativePageBounds(total, size, page) {
   page=Math.min(Math.max(0,page),pages-1);
   return {page,pages,start:page*size,end:Math.min(total,(page+1)*size)};
 }
+// Each visible row covers one message, or the whole hidden subtree of a
+// collapsed thread. Page membership counts messages, scroll geometry counts rows.
+function nativePageRows(view) {
+  const spans=[];let total=0;
+  for(let index=0;index<(view?.rowCount || 0);index++) {
+    const dummy=!!(view.getFlagsAt(index)&0x20000000);
+    let count=dummy?0:1;
+    if(view.isContainer?.(index) && !view.isContainerOpen(index)) {
+      try {
+        const header=view.getMsgHdrAt?.(index);
+        const thread=view.getThreadContainingIndex?.(index) || header?.folder.msgDatabase.getThreadContainingMsgHdr(header);
+        count=Math.max(count,(thread?.numChildren || 1)-(dummy?1:0));
+      }catch(_){/* Keep a transiently unavailable row reachable. */}
+    }
+    spans.push({start:total,end:total+count});total+=count;
+  }
+  return {spans,total};
+}
+function nativeMessagePage(rows,size,page) {
+  const range=nativePageBounds(rows.total,size,page),spans=rows.spans;
+  let start=0,end=spans.length;
+  while(start<end){const mid=(start+end)>>1;if(spans[mid].end<=range.start)start=mid+1;else end=mid;}
+  let rowStart=start;
+  // Include a native group header when its first message begins this page.
+  while(rowStart>0 && spans[rowStart-1].start===range.start && spans[rowStart-1].end===range.start)rowStart--;
+  start=rowStart;end=spans.length;
+  while(start<end){const mid=(start+end)>>1;if(spans[mid].start<range.end)start=mid+1;else end=mid;}
+  return {...range,rowStart,rowEnd:start};
+}
 function mailZoomAction(event) {
   if (!(event.ctrlKey || event.metaKey) || event.altKey || event.defaultPrevented || event.isComposing ||
       event.target?.isContentEditable || event.target?.closest?.('input,textarea,select,[contenteditable="true"],[role="textbox"]')) return null;
@@ -26,7 +55,7 @@ function installMailZoom(win, fontSize) {
 function installNativePagination(win, reader) {
   const doc=win.document, tree=doc.getElementById('threadTree');
   if (!tree?.parentNode) return {setSize(){},close(){}};
-  let size=0,page=0,frame=null,closed=false,lastView=null;
+  let size=0,page=0,frame=null,closed=false,lastView=null,rowMap=null,shownRange='';
   const bar=doc.createElement('div');bar.className='gm-native-pagination';bar.hidden=true;
   bar.setAttribute('role','navigation');bar.setAttribute('aria-label','Message pages');
   const count=doc.createElement('span');count.setAttribute('aria-live','polite');
@@ -69,23 +98,25 @@ function installNativePagination(win, reader) {
     .gm-page-scroll[hidden] { display:none !important; }
     #threadTree tr[data-gm-outside-page] { visibility:hidden !important; pointer-events:none !important; }
   `;doc.head.append(style);
-  function bounds(){return nativePageBounds(win.gDBView?.rowCount || 0,size,page)}
+  function rows(){
+    const view=win.gDBView;
+    if(!rowMap || rowMap.view!==view || rowMap.count!==(view?.rowCount || 0) || rowMap.messages!==view?.numMsgsInView)
+      rowMap={...nativePageRows(view),view,count:view?.rowCount || 0,messages:view?.numMsgsInView};
+    return rowMap;
+  }
+  function bounds(){return nativeMessagePage(rows(),size,page)}
   function rowHeight(){return tree._rowElementClass?.ROW_HEIGHT || tree.getRowAtIndex?.(0)?.getBoundingClientRect().height || 0}
+  function setStyle(node,name,value){if(node.style[name]!==value)node.style[name]=value}
   function paint(alignStart=false) {
     if (!size || closed) return;
     if (lastView!==win.gDBView) {lastView=win.gDBView;page=0;alignStart=true}
-    // rowCount excludes children of collapsed threads; numMsgsInView includes
-    // them. Expand before calculating boundaries so every message is reachable.
-    // Recheck on each paint: users and native view updates can collapse threads.
-    const view=win.gDBView;
-    if(view && view.rowCount<view.numMsgsInView) {
-      win.threadPane?.saveSelection();
-      view.doCommand(Ci.nsMsgViewCommandType.expandAll);
-      win.threadPane?.restoreSelection();
-    }
     const range=bounds();page=range.page;
-    const total=win.gDBView?.rowCount || 0;
-    count.textContent=total?`${(range.start+1).toLocaleString()}–${range.end.toLocaleString()} of ${total.toLocaleString()}`:'0 of 0';
+    const total=rows().total;
+    const rangeKey=`${range.start},${range.end},${total}`;
+    if(shownRange!==rangeKey) {
+      shownRange=rangeKey;
+      count.textContent=total?`${(range.start+1).toLocaleString()}–${range.end.toLocaleString()} of ${total.toLocaleString()}`:'0 of 0';
+    }
     previous.disabled=page===0;next.disabled=page===range.pages-1;
     const height=rowHeight();
     if(height && tree.clientHeight) {
@@ -93,32 +124,34 @@ function installNativePagination(win, reader) {
       // threadTree is a ROW flex container: a normal child sits beside the
       // table and adds no vertical scroll room. Extend the scroll area below
       // the native table only by the deficit needed to align this page.
-      const tableEnd=total*height+header;
-      tail.style.top=tableEnd+'px';
-      tail.style.height=Math.max(0,range.start*height+tree.clientHeight-tableEnd)+'px';
-      const min=range.start*height,max=Math.max(min,range.end*height+header-tree.clientHeight);
+      const tableEnd=(win.gDBView?.rowCount || 0)*height+header;
+      setStyle(tail,'top',tableEnd+'px');
+      setStyle(tail,'height',Math.max(0,range.rowStart*height+tree.clientHeight-tableEnd)+'px');
+      const min=range.rowStart*height,max=Math.max(min,range.rowEnd*height+header-tree.clientHeight);
       const top=alignStart?min:Math.min(Math.max(tree.scrollTop,min),max);
       const rect=tree.getBoundingClientRect();
       const viewport=Math.max(0,tree.clientHeight-header);
       pageScroll.hidden=max===min || tree.checkVisibility?.()===false;
-      pageScroll.style.top=(rect.top+header)+'px';
-      pageScroll.style.left=(doc.documentElement.dir==='rtl'?rect.left:rect.right-16)+'px';
-      pageScroll.style.height=viewport+'px';
-      pageExtent.style.height=((range.end-range.start)*height)+'px';
+      setStyle(pageScroll,'top',(rect.top+header)+'px');
+      setStyle(pageScroll,'left',(doc.documentElement.dir==='rtl'?rect.left:rect.right-16)+'px');
+      setStyle(pageScroll,'height',viewport+'px');
+      setStyle(pageExtent,'height',((range.rowEnd-range.rowStart)*height)+'px');
       if(Math.abs((pageScroll.scrollTop || 0)-(top-min))>.5) pageScroll.scrollTop=top-min;
       // A page change is a jump, never a smooth scroll through hidden rows.
       // Compute the short-page tail first, then move once; cancel any native
       // animation that was already running even when the destination matches.
       if(alignStart || Math.abs(tree.scrollTop-top)>.5) tree.scrollTo({top,behavior:'instant'});
+    }else{
+      pageScroll.hidden=true;
     }
     for(const row of tree.querySelectorAll('tr.table-layout, tr.card-layout')) {
-      row.toggleAttribute('data-gm-outside-page',row.index<range.start || row.index>=range.end);
+      row.toggleAttribute('data-gm-outside-page',row.index<range.rowStart || row.index>=range.rowEnd);
     }
   }
   function scrollPage(){
     if(!size || closed || pageScroll.hidden)return;
     const range=bounds(),height=rowHeight();
-    tree.scrollTo({top:range.start*height+pageScroll.scrollTop,behavior:'instant'});
+    tree.scrollTo({top:range.rowStart*height+pageScroll.scrollTop,behavior:'instant'});
     schedule();
   }
   pageScroll.addEventListener('scroll',scrollPage);
@@ -135,12 +168,16 @@ function installNativePagination(win, reader) {
     paint(true);
   }
   previous.addEventListener('click',()=>turn(-1));next.addEventListener('click',()=>turn(1));
-  function viewChanged(){lastView=null;page=0;schedule()}
+  function viewChanged(){lastView=null;rowMap=null;page=0;schedule()}
+  function structureChanged(){rowMap=null;schedule()}
   function selectionChanged(){
     if(size) {
       const index=tree.currentIndex;
       // Native keyboard/reader navigation may move to a message on another page.
-      if(Number.isInteger(index) && index>=0 && (tree.selectedIndices || []).includes(index)) page=Math.floor(index/size);
+      if(Number.isInteger(index) && index>=0 && (tree.selectedIndices || []).includes(index)) {
+        const range=bounds(),span=rows().spans[index];
+        if(span && (index<range.rowStart || index>=range.rowEnd))page=Math.floor(span.start/size);
+      }
     }
     schedule();
   }
@@ -148,16 +185,27 @@ function installNativePagination(win, reader) {
     if(!size || !(event.type==='click'?event.target.closest('#selectColButton'):
       (event.ctrlKey || event.metaKey) && event.key?.toLowerCase()==='a' && !event.target?.closest?.('input,textarea'))) return;
     event.preventDefault();event.stopImmediatePropagation();
-    const range=bounds(),indices=[];
-    for(let i=range.start;i<range.end;i++) {
+    let range=bounds();
+    // Selecting a page is an explicit bulk action. Reveal only collapsed rows
+    // touching it so native selection cannot include hidden children on another page.
+    for(let i=range.rowEnd-1;i>=range.rowStart;i--) {
+      if(win.gDBView.isContainer?.(i) && !win.gDBView.isContainerOpen(i))win.gDBView.toggleOpenState(i);
+    }
+    rowMap=null;range=bounds();const indices=[];
+    for(let i=range.rowStart;i<range.rowEnd;i++) {
       try {if(!(win.gDBView.getFlagsAt(i)&0x20000000)) indices.push(i)}catch(_){}
     }
     const selected=new Set(tree.selectedIndices || []);
     reader.selectIndices(indices.every(i=>selected.has(i))?[]:indices);schedule();
   }
-  const observer=new win.MutationObserver(schedule);
+  const observer=new win.MutationObserver(records=>{
+    // Pagination depends on row membership/indices, not changes inside a cell.
+    if(records.some(record=>record.type==='attributes' || record.target===tree ||
+      record.target===tree.table || record.target===tree.table?.body || record.target.closest?.('thead')))schedule();
+  });
   const resize=new win.ResizeObserver(schedule);
   tree.addEventListener('scroll',schedule);tree.addEventListener('viewchange',viewChanged);tree.addEventListener('select',selectionChanged);
+  for(const name of ['rowcountchange','expanded','collapsed'])tree.addEventListener(name,structureChanged);
   tree.addEventListener('click',selectPage,true);tree.addEventListener('keydown',selectPage,true);
   function clear(){
     observer.disconnect();resize.disconnect();
@@ -177,6 +225,7 @@ function installNativePagination(win, reader) {
     close(){
       closed=true;clear();
       tree.removeEventListener('scroll',schedule);tree.removeEventListener('viewchange',viewChanged);tree.removeEventListener('select',selectionChanged);
+      for(const name of ['rowcountchange','expanded','collapsed'])tree.removeEventListener(name,structureChanged);
       tree.removeEventListener('click',selectPage,true);tree.removeEventListener('keydown',selectPage,true);
       win.removeEventListener('resize',schedule);pageScroll.removeEventListener('scroll',scrollPage);
       bar.remove();tail.remove();pageScroll.remove();style.remove();

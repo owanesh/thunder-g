@@ -4,6 +4,18 @@
   text-shadow: none !important;
 }
 
+/* Give the thread arrow a larger target without shifting its icon or text. */
+#threadTree tr.table-layout .thread-container > button.twisty {
+  position: relative;
+  z-index: 2;
+  inline-size: 24px !important;
+  block-size: 24px !important;
+  min-inline-size: 24px !important;
+  min-block-size: 24px !important;
+  margin-inline: -4px !important;
+  cursor: pointer;
+}
+
 /* Follow Thunderbird's native UI Font Size control rather than fixed pixels. */
 :root #folderTree, :root #threadTree {
   font-size: 1rem !important;

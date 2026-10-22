@@ -212,6 +212,41 @@ function installCompleteViewCopy(win) {
   return {close(){if(pane._applyView===applyView)pane._applyView=original;}};
 }
 
+function installThreadToggles(win) {
+  const tree=win.document.getElementById('threadTree');
+  if(!tree?.expandRowAtIndex || !tree.collapseRowAtIndex)return {close(){}};
+  function threadRow(event) {
+    if(event.button!==0 || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey)return null;
+    const row=event.target.closest?.('.twisty')?.closest('tr.table-layout, tr.card-layout');
+    return row && tree.contains(row) && !row.hasAttribute('data-gm-outside-page') ? row : null;
+  }
+  function click(event) {
+    const row=threadRow(event),view=win.gDBView;
+    if(!row || !view?.isContainer(row.index))return;
+    // The native row-click handler ignores detail=0 (button activation) and
+    // detail>1 (rapid clicks). Each arrow activation must toggle exactly once.
+    event.preventDefault();event.stopImmediatePropagation();
+    if(view.isContainerOpen(row.index))tree.collapseRowAtIndex(row.index);
+    else {
+      const added=tree.expandRowAtIndex(row.index);
+      tree.scrollExpandedRowIntoView?.(row.index,added);
+    }
+    tree.ensureCorrectFocus?.();
+  }
+  function doubleClick(event) {
+    if(!threadRow(event))return;
+    // Both click events have already toggled the thread. Do not let dblclick
+    // open a message window or apply a second native thread operation.
+    event.preventDefault();event.stopImmediatePropagation();
+  }
+  tree.addEventListener('click',click,true);
+  tree.addEventListener('dblclick',doubleClick,true);
+  return {close(){
+    tree.removeEventListener('click',click,true);
+    tree.removeEventListener('dblclick',doubleClick,true);
+  }};
+}
+
 function installInboxControls(win) {
   const doc = win.document;
   const tree = doc.getElementById('threadTree');
@@ -220,6 +255,7 @@ function installInboxControls(win) {
   const responsive = installResponsiveColumns(win);
   const viewCopy = installCompleteViewCopy(win);
   const newMessage = installInlineNewMessage(win);
+  const threadToggles = installThreadToggles(win);
   let closed = false, prototype, original, wrapped, rowClass, originalHeight;
   const previews = createPreviewQueue(win);
   const filter = win.quickFilterBar;
@@ -373,6 +409,7 @@ function installInboxControls(win) {
     responsive.close();
     viewCopy.close();
     newMessage.close();
+    threadToggles.close();
     if (rowClass && Number.isFinite(originalHeight) && rowClass.ROW_HEIGHT === originalHeight + 6) {
       rowClass.ROW_HEIGHT = originalHeight;
       tree.reset();

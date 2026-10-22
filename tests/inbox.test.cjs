@@ -4,6 +4,48 @@ const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const scope=vm.createContext({});
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/inbox.js'),'utf8'),scope);
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/compose.js'),'utf8'),scope);
+test('thread arrows toggle once per activation, including rapid clicks and keyboard-generated clicks',()=>{
+  const events={},calls=[];
+  let open=false,container=true,outside=false,inside=true;
+  const row={index:3,hasAttribute:()=>outside};
+  const arrow={closest:selector=>selector==='tr.table-layout, tr.card-layout'?row:null};
+  const target={closest:selector=>selector==='.twisty'?arrow:null};
+  const tree={contains:()=>inside,
+    addEventListener(name,fn,capture){assert.equal(capture,true);events[name]=fn},
+    removeEventListener(name,fn,capture){assert.equal(capture,true);assert.equal(events[name],fn);delete events[name]},
+    expandRowAtIndex(index){assert.equal(index,3);open=true;calls.push('expand');return 4},
+    collapseRowAtIndex(index){assert.equal(index,3);open=false;calls.push('collapse')},
+    scrollExpandedRowIntoView(index,count){assert.equal(index,3);assert.equal(count,4);calls.push('scroll')},
+    ensureCorrectFocus(){calls.push('focus')}};
+  const win={document:{getElementById:()=>tree},gDBView:{isContainer:()=>container,isContainerOpen:()=>open}};
+  const controller=scope.installThreadToggles(win);
+  function dispatch(type,detail=1,extra={}) {
+    const event={button:0,detail,target,prevented:false,stopped:false,
+      preventDefault(){this.prevented=true},stopImmediatePropagation(){this.stopped=true},...extra};
+    events[type](event);
+    // Thunderbird's row handler runs afterward only if propagation continues.
+    if(type==='click' && !event.stopped && event.button===0 && detail===1 && container && inside && !outside)
+      throw Error('arrow click must not toggle a second time through the native row handler');
+    return event;
+  }
+  for(const [detail,expected] of [[1,true],[2,false],[3,true],[0,false]]) {
+    const event=dispatch('click',detail);
+    assert.equal(open,expected,`activation with click detail ${detail} is handled`);
+    assert.equal(event.prevented,true);assert.equal(event.stopped,true);
+  }
+  assert.deepEqual(calls,['expand','scroll','focus','collapse','focus','expand','scroll','focus','collapse','focus']);
+  const before=calls.length;
+  assert.equal(dispatch('dblclick',2).stopped,true,'double-click cannot open a message window');
+  assert.equal(calls.length,before,'dblclick adds no extra toggle');
+  for(const modifier of ['ctrlKey','metaKey','altKey','shiftKey'])
+    assert.equal(dispatch('click',2,{[modifier]:true}).stopped,false,'modified clicks retain native behavior');
+  assert.equal(dispatch('click',1,{button:2}).stopped,false);
+  container=false;assert.equal(dispatch('click').stopped,false,'recycled non-container rows cannot be toggled');
+  container=true;outside=true;assert.equal(dispatch('click').stopped,false,'hidden off-page rows cannot be toggled');
+  outside=false;inside=false;assert.equal(dispatch('click').stopped,false,'foreign rows are ignored');
+  assert.equal(calls.length,before);
+  controller.close();assert.deepEqual(events,{});
+});
 test('row actions replace unrelated multi-selection before checking and executing commands',()=>{
   let selected=[1,4],index;
   const tree={set selectedIndex(value){index=value;selected=[value]}};

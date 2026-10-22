@@ -54,6 +54,16 @@
 
 ### Fixed
 
+- Make each thread-arrow activation toggle once, including rapid repeated clicks
+  and button activation. Keep native expansion, selection and keyboard behavior,
+  enlarge the click target without moving the icon, and cancel queued reader opens
+  when the arrow is used. Refresh page boundaries on native thread-change events.
+
+- Stop pagination from reopening collapsed threads on every repaint. Page totals
+  count the messages inside collapsed threads while scrolling uses visible rows.
+  Threads crossing page boundaries remain reachable, and explicit page selection
+  reveals only affected threads to avoid selecting hidden off-page messages.
+
 - Size the message-list scrollbar to the current page, reset it on page changes,
   and hide it when the displayed messages fit without scrolling.
 
@@ -72,6 +82,12 @@
   delayed automatic marking. Failed draft transfers retain the embedded reply.
 
 ### Validation
+
+- Live Thunderbird checks covered thread-arrow button activations with click
+  counts 0–3, native Left/Right keys and collapse/reopen on the first and second
+  pages. Every activation changed the thread state once and message totals stayed
+  unchanged. Regression tests also cover canceling queued reader opens and native
+  structure changes with unchanged row counts.
 
 - 72 automated tests pass, covering pagination, column sizing and copy scope,
   conversation labels, read/unread state, compose lifecycle, DKIM bridge and BIMI.

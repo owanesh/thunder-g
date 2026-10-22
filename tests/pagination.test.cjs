@@ -29,7 +29,9 @@ test('zoom delegates Ctrl/Cmd plus/minus/reset to native controls and leaves tex
 for (const collapsed of [false,true,'short-last']) test(`native pagination retains native rows and reaches every message (collapsed threads: ${collapsed})`,()=>{
   function node() {
     const attrs=new Set(),events={};
+    let text='',textWrites=0;
     return {events,children:[],style:{},hidden:false,
+      get textContent(){return text},set textContent(value){text=value;textWrites++},get textWrites(){return textWrites},
       setAttribute(name){attrs.add(name)},toggleAttribute(name,on){on?attrs.add(name):attrs.delete(name)},
       removeAttribute(name){attrs.delete(name)},hasAttribute:name=>attrs.has(name),
       addEventListener(name,fn){events[name]=fn},removeEventListener(name,fn){if(events[name]===fn)delete events[name]},
@@ -52,13 +54,17 @@ for (const collapsed of [false,true,'short-last']) test(`native pagination retai
   tree.querySelectorAll=selector=>selector==='[data-gm-outside-page]'?rows.filter(r=>r.hasAttribute('data-gm-outside-page')):rows;
   let expansions=0;
   const nativeView={rowCount:collapsed===true?195:total,numMsgsInView:total,getFlagsAt:()=>0,
-    doCommand(command){assert.equal(command,1);expansions++;this.rowCount=this.numMsgsInView}};tree.view=nativeView;
+    doCommand(){expansions++;throw Error('pagination must never expand all threads')},
+    isContainer:index=>collapsed===true && index===0,
+    isContainerOpen:()=>nativeView.rowCount===total,
+    getThreadContainingIndex:()=>({numChildren:24}),
+    toggleOpenState(index){assert.equal(index,0);this.rowCount=this.rowCount===total?195:total}};tree.view=nativeView;
   const frames=[];let mutation,resize;
   const quickFilter=node();quickFilter.after=bar=>{quickFilter.pagination=bar;tree.bar=bar};
   const root=node();const head=node(),doc={documentElement:root,getElementById:id=>id==='threadPaneQuickFilterButton'?quickFilter:tree,querySelector:()=>({getBoundingClientRect:()=>({height:20})}),createElement:node,head};
   const win={document:doc,gDBView:nativeView,addEventListener(){},removeEventListener(){},
     requestAnimationFrame(fn){frames.push(fn);return frames.length},cancelAnimationFrame(){},
-    MutationObserver:class{constructor(fn){mutation=fn}observe(){}disconnect(){}},
+    MutationObserver:class{constructor(fn){mutation=(records=[{type:'childList',target:tree}])=>fn(records)}observe(){}disconnect(){}},
     ResizeObserver:class{constructor(fn){resize=fn}observe(){}disconnect(){}}};
   const selections=[];
   const pages=scope.installNativePagination(win,{selectIndices(indices){tree.selectedIndices=indices;selections.push(indices)}});
@@ -89,23 +95,47 @@ for (const collapsed of [false,true,'short-last']) test(`native pagination retai
   }
   if(collapsed) {
     pages.setSize(100);
-    assert.equal(expansions,1);
+    assert.equal(expansions,0);
+    nativeView.isContainer=index=>index===150;
+    tree.events.rowcountchange();frames.shift()();
+    assert.equal(rows[99].hasAttribute('data-gm-outside-page'),false,'native structure events refresh membership even when net row counts are unchanged');
+    nativeView.isContainer=index=>index===0;
+    tree.events.collapsed();frames.shift()();
+    assert.equal(rows[99].hasAttribute('data-gm-outside-page'),true,'a collapsed thread consumes its hidden messages in page bounds');
     const reached=[];
     for(let page=0;page<3;page++) {
       assert.equal(tree.bar.children[0].textContent,`${page*100+1}–${Math.min(total,(page+1)*100)} of 218`);
-      reached.push(...rows.filter(row=>!row.hasAttribute('data-gm-outside-page')).map(row=>row.index));
+      const spans=scope.nativePageRows(nativeView).spans;
+      for(const row of rows.filter(row=>!row.hasAttribute('data-gm-outside-page')))
+        for(let message=spans[row.index].start;message<spans[row.index].end;message++)reached.push(message);
       if(page<2) tree.bar.children[2].events.click();
     }
     assert.deepEqual(reached,Array.from({length:218},(_,i)=>i),'all 218 messages occur exactly once across pages');
     assert.equal(tree.bar.children[2].disabled,true);
-    nativeView.rowCount=195;mutation();frames.shift()();
-    assert.equal(nativeView.rowCount,218,'collapsing a thread cannot hide messages from pagination');
+    mutation();frames.shift()();
+    assert.equal(nativeView.rowCount,195,'repaint preserves collapsed threads');
+    assert.equal(tree.bar.children[0].textContent,'201–218 of 218');
+    nativeView.toggleOpenState(0);mutation();frames.shift()();assert.equal(nativeView.rowCount,218);
+    nativeView.toggleOpenState(0);mutation();frames.shift()();assert.equal(nativeView.rowCount,195,'a thread can be closed again after reopening');
+    tree.bar.children[1].events.click();tree.bar.children[1].events.click();
+    tree.events.keydown({ctrlKey:true,key:'a',target:{closest:()=>null},preventDefault(){},stopImmediatePropagation(){}});
+    assert.equal(selections.at(-1).length,100,'bulk selection counts exact page messages even when a thread was collapsed');
+    assert.equal(nativeView.rowCount,218,'explicit page selection reveals the affected thread, not every thread');
     pages.setSize(0);
-    nativeView.rowCount=195;
-    assert.equal(expansions,2,'disabled pagination does not expand threads');
-    pages.close();return;
+    assert.equal(expansions,0,'pagination never expands all threads');
+    pages.close();
+    for(const name of ['rowcountchange','expanded','collapsed'])assert.equal(tree.events[name],undefined);
+    return;
   }
   const originalRows=rows.slice();pages.setSize(25);
+  const writes=tree.bar.children[0].textWrites;
+  const cell={closest:()=>null};
+  for(let i=0;i<200;i++)mutation([{type:'childList',target:cell}]);
+  assert.equal(frames.length,0,'cell text, previews and tag chips must not schedule page painting');
+  tree.events.scroll();frames.shift()();
+  assert.equal(tree.bar.children[0].textWrites,writes,'scrolling must not rewrite the live page announcement');
+  mutation([{type:'attributes',attributeName:'aria-rowindex',target:rows[0]}]);
+  assert.equal(frames.length,1,'virtual row recycling still updates page masks');frames.shift()();
   assert.equal(tree.view,nativeView);assert.equal(rows[0],originalRows[0]);assert.equal(tree.style.cssText,undefined);
   assert.equal(tree._rowElementClass.ROW_HEIGHT,20,'native row height is never overwritten');
   assert.equal(rows[24].hasAttribute('data-gm-outside-page'),false);assert.equal(rows[25].hasAttribute('data-gm-outside-page'),true);
@@ -115,6 +145,8 @@ for (const collapsed of [false,true,'short-last']) test(`native pagination retai
   assert.equal(scrollbar.style.height,'180px');assert.equal(scrollbar.scrollTop || 0,0,'each page starts at the top of its own scrollbar');
   scrollbar.scrollTop=320;scrollbar.events.scroll();assert.equal(tree.scrollTop,820,'dragging to page bottom maps onto native global row indices');
   frames.shift()();assert.equal(scrollbar.scrollTop,320);
+  tree.clientHeight=0;resize();frames.shift()();assert.equal(scrollbar.hidden,true,'opening a conversation must hide the page scrollbar with the list');
+  tree.clientHeight=200;resize();frames.shift()();assert.equal(scrollbar.hidden,false,'returning to the list restores its page scrollbar');
   tree.bar.children[1].events.click();tree.bar.children[2].events.click();assert.equal(scrollbar.scrollTop,0);
   assert.equal(rows[0].hasAttribute('data-gm-outside-page'),true);assert.equal(rows[25].hasAttribute('data-gm-outside-page'),false);
   tree.scrollTop=0;tree.events.scroll();frames.shift()();assert.equal(tree.scrollTop,500,'cannot scroll into the previous page');
@@ -126,4 +158,20 @@ for (const collapsed of [false,true,'short-last']) test(`native pagination retai
   pages.setSize(0);assert.equal(rows.some(r=>r.hasAttribute('data-gm-outside-page')),false);
   assert.equal(tree.view,nativeView);assert.equal(tree._rowElementClass.ROW_HEIGHT,32);
   pages.close();assert.equal(tree.bar.removed,true);
+});
+
+test('collapsed threads spanning pages remain reachable with stable message totals',()=>{
+ const view={rowCount:2,getFlagsAt:()=>0,isContainer:i=>i===0,isContainerOpen:()=>false,getThreadContainingIndex:()=>({numChildren:150})};
+ const rows=scope.nativePageRows(view);
+ assert.equal(rows.total,151);
+ const first=scope.nativeMessagePage(rows,100,0),last=scope.nativeMessagePage(rows,100,1);
+ assert.equal(first.rowStart,0);assert.equal(first.rowEnd,1);
+ assert.equal(last.rowStart,0,'a collapsed representative remains reachable on every page containing its messages');assert.equal(last.rowEnd,2);
+ assert.equal(last.start,100);assert.equal(last.end,151);
+});
+test('native group headers do not inflate message totals and stay with the first visible message',()=>{
+ const view={rowCount:4,getFlagsAt:i=>i===0?0x20000000:0,isContainer:i=>i===0,isContainerOpen:()=>true};
+ const rows=scope.nativePageRows(view);assert.equal(rows.total,3);
+ const first=scope.nativeMessagePage(rows,2,0);assert.equal(first.rowStart,0);assert.equal(first.rowEnd,3);
+ const last=scope.nativeMessagePage(rows,2,1);assert.equal(last.rowStart,3);assert.equal(last.rowEnd,4);
 });
