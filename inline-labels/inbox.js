@@ -20,8 +20,19 @@ function localMessagePreview(header) {
   finally { try { stream?.close(); } catch (_) {} }
 }
 
+var sharedPreviewCaches=new WeakMap();
 function createPreviewQueue(win) {
-  const cache = new Map(), jobs = new Map();
+  let shared=sharedPreviewCaches.get(win);
+  if(!shared){shared={cache:new Map(),users:0};sharedPreviewCaches.set(win,shared);}
+  shared.users++;
+  const cache=shared.cache,jobs=new Map();
+  const stamp=header=>JSON.stringify([header.messageId || '',header.messageSize || 0,header.dateInSeconds || 0]);
+  function lookup(header,key){
+    const entry=cache.get(key);
+    if(!entry || entry.stamp!==stamp(header) || entry.expiresAt<=Date.now())return null;
+    if(!entry.text && (entry.retryAt<=Date.now() || entry.flags!==header.flags))return null;
+    cache.delete(key);cache.set(key,entry);return entry;
+  }
   let timer = null, closed = false;
   function schedule() {
     if (!closed && timer === null && jobs.size) timer = win.setTimeout(drain, 16);
@@ -33,9 +44,12 @@ function createPreviewQueue(win) {
     if (!key) return;
     jobs.delete(key);
     if (job.isCurrent()) {
-      const text = localMessagePreview(job.header);
-      if (cache.size >= 300) cache.delete(cache.keys().next().value);
-      cache.set(key, {text, flags:job.header.flags, retryAt:Date.now()+30000});
+      // Another consumer may already have read this message while queued.
+      const found=lookup(job.header,key),text=found?found.text:localMessagePreview(job.header);
+      if(!found){
+        if(cache.size>=300)cache.delete(cache.keys().next().value);
+        cache.set(key,{text,stamp:stamp(job.header),flags:job.header.flags,retryAt:Date.now()+30000,expiresAt:Date.now()+300000});
+      }
       if (!closed && job.isCurrent()) job.ready();
     }
     schedule();
@@ -48,17 +62,18 @@ function createPreviewQueue(win) {
       const key = header.folder?.URI && header.messageKey !== undefined
         ? header.folder.URI+'#'+header.messageKey : null;
       if (!key) return '';
-      const found = cache.get(key);
-      if (found && (found.text || (found.retryAt > Date.now() && found.flags === header.flags))) return found.text;
+      const found=lookup(header,key);
+      if(found)return found.text;
       // Keep the queue bounded when scrolling through many virtual rows.
       if (jobs.size >= 100 && !jobs.has(key)) jobs.delete(jobs.keys().next().value);
       jobs.set(key,{header,isCurrent,ready}); schedule();
       return '';
     },
     close() {
-      closed = true;
+      if(closed)return;closed = true;
       if (timer !== null) win.clearTimeout(timer);
-      timer = null; jobs.clear(); cache.clear();
+      timer = null; jobs.clear();
+      if(--shared.users===0){cache.clear();sharedPreviewCaches.delete(win);}
     }
   };
 }

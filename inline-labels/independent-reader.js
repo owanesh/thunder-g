@@ -55,6 +55,30 @@ async function independentSentCandidates(win,folders,cancelled) {
   }
   return candidates;
 }
+// Only local summary metadata is retained; message bodies remain native.
+function createSentCandidateCache(win,now=()=>Date.now(),limit=10000,ttl=30000) {
+  let entry=null,pending=null,generation=0,closed=false;
+  function invalidate(){generation++;entry=null;pending=null;}
+  return {
+    get(folders){
+      if(closed)return Promise.resolve([]);
+      const key=JSON.stringify(folders.map(folder=>{
+        let count=null;try{count=folder.getTotalMessages?.(false) ?? null}catch(_){}
+        return [folder.URI,count];
+      }));
+      if(entry?.key===key && entry.expires>now())return Promise.resolve(entry.items);
+      if(pending?.key===key)return pending.promise;
+      const revision=generation,job={key};
+      job.promise=independentSentCandidates(win,folders,()=>closed || revision!==generation).then(items=>{
+        if(!closed && revision===generation && items.length<=limit)entry={key,items,expires:now()+ttl};
+        return items;
+      }).finally(()=>{if(pending===job)pending=null});
+      pending=job;return job.promise;
+    },
+    invalidate,
+    close(){closed=true;invalidate();}
+  };
+}
 function independentRelatedSent(messages,candidates) {
   const byId=new Map(),seen=new Set(),result=[...messages];
   for(const candidate of candidates)for(const id of candidate.ids) {
@@ -70,7 +94,7 @@ function independentRelatedSent(messages,candidates) {
   }
   return result;
 }
-function independentConversation(win, header, gloda, sentFolders=[]) {
+function independentConversation(win, header, gloda, sentFolders=[],sentCache=null) {
   const fallback=independentFolderThread(header);
   let finish,timer,settled=false,localDone=sentFolders.length===0,indexDone=!gloda,indexed=false;
   let sent=[],indexedMessages=[];
@@ -84,7 +108,7 @@ function independentConversation(win, header, gloda, sentFolders=[]) {
       resolve({messages:independentMessages(messages,header),indexed});
     };
     const complete=()=>{if(localDone && indexDone)finish()};
-    if(sentFolders.length)independentSentCandidates(win,sentFolders,()=>settled).then(result=>{
+    if(sentFolders.length)(sentCache?sentCache.get(sentFolders):independentSentCandidates(win,sentFolders,()=>settled)).then(result=>{
       sent=result;localDone=true;complete();
     },()=>{localDone=true;complete()});
     if(!gloda){complete();return}
@@ -151,11 +175,12 @@ function independentBimiDomain(address,result,baseDomain) {
 }
 function installIndependentReader(win) {
   const doc=win.document,layout=doc.getElementById('paneLayout');
-  let closed=false,ticket=0,query=null,revealFrame=null;
+  let closed=false,ticket=0,query=null,revealFrame=null,resolving=false;
   const host=doc.createElement('section');host.className='gm-independent-reader';host.hidden=true;
   host.setAttribute('aria-label','Thunder-G conversation');layout.append(host);
   const root=host.attachShadow({mode:'open'});
   const previews=createPreviewQueue(win);
+  const sentCache=createSentCandidateCache(win);
   const style=doc.createElement('style');style.textContent=`
     :host { grid-area:message; display:block; min-width:0; min-height:0; overflow:auto;
       color:var(--layout-color-0,#202124); background:var(--layout-background-0,white);
@@ -242,7 +267,7 @@ function installIndependentReader(win) {
     button.addEventListener('click',()=>runCommand(command));actions.append(button);
   }
   conversation.append(actions);
-  function updateActions(){for(const button of buttons)button.disabled=!frames.has(independentMessageKey(actionHeader || {}))}
+  function updateActions(){for(const button of buttons)button.disabled=resolving || !frames.has(independentMessageKey(actionHeader || {}))}
   function refreshTags(){
     for(const render of securityRenderers)render();
     for(const render of tagRenderers)render();
@@ -257,7 +282,11 @@ function installIndependentReader(win) {
     }
   }
   const tagListener={msgPropertyChanged(header,property){if(['keywords','label'].includes(property))refreshTags();if(property==='dkim_verifier@pl-result')for(const render of securityRenderers)render()}};
-  if(MailServices.mfn)MailServices.mfn.addListener(tagListener,Ci.nsIMsgFolderNotificationService.msgPropertyChanged);
+  let notifications=Ci.nsIMsgFolderNotificationService.msgPropertyChanged;
+  for(const name of ['msgAdded','msgsDeleted','msgsMoveCopyCompleted','folderDeleted','folderRenamed','msgKeyChanged']){
+    tagListener[name]=()=>sentCache.invalidate();notifications|=Ci.nsIMsgFolderNotificationService[name] || 0;
+  }
+  if(MailServices.mfn)MailServices.mfn.addListener(tagListener,notifications);
   win.addEventListener?.('focus',refreshTags);
   function clearCards(){if(revealFrame!==null)win.cancelAnimationFrame(revealFrame);revealFrame=null;for(const cleanup of cleanups)cleanup();cleanups.clear();cards.replaceChildren();tagRenderers.clear();securityRenderers.clear();messageDocs.clear();titleTags.replaceChildren();frames.clear();currentHeaders=[];actionHeader=null;activeHeader=null;updateActions()}
   function text(tag,className,value){const node=doc.createElement(tag);node.className=className;node.textContent=value;return node}
@@ -538,23 +567,27 @@ function installIndependentReader(win) {
     },
     async open(header){
       if(closed)return;if(typeof inlineComposeControllers!=='undefined')inlineComposeControllers.get(win)?.float();const token=++ticket;query?.cancel();
-      host.hidden=false;layout.classList.add('gm-independent-open');host.scrollTop=0;
+      resolving=true;host.hidden=false;layout.classList.add('gm-independent-open');host.scrollTop=0;
       title.textContent=header.mime2DecodedSubject || '(No subject)';title.append(titleTags);status.hidden=false;status.textContent='Loading conversation…';
-      clearCards();
+      // Start the native viewer immediately. Index/Sent lookups enrich the
+      // conversation asynchronously rather than holding the body behind them.
+      render(independentFolderThread(header),header,token);
       let gloda=null;
       try {if(Services.prefs.getBoolPref('mailnews.database.global.indexer.enabled',true))gloda=ChromeUtils.importESModule('resource:///modules/gloda/GlodaPublic.sys.mjs').Gloda}catch(_){}
-      query=independentConversation(win,header,gloda,independentSentFolders());
+      query=independentConversation(win,header,gloda,independentSentFolders(),sentCache);
       const result=await query.promise;
       if(closed || token!==ticket)return;
-      render(result.messages,header,token);
+      resolving=false;
+      const same=currentHeaders.length===result.messages.length && currentHeaders.every((message,index)=>independentMessageKey(message)===independentMessageKey(result.messages[index]));
+      if(!same)render(result.messages,header,token);else updateActions();
       status.textContent=`${result.messages.length} ${result.messages.length===1?'message':'messages'}`;
       status.hidden=result.messages.length===1;
       status.title=result.indexed?'':'Conversation assembled from this folder and locally available sent messages';
     },
-    hide(){if(typeof inlineComposeControllers!=='undefined')inlineComposeControllers.get(win)?.float();++ticket;query?.cancel();query=null;host.hidden=true;layout.classList.remove('gm-independent-open');clearCards()},
-    close(){this.hide();closed=true;previews.close();win.removeEventListener?.('focus',refreshTags);MailServices.mfn?.removeListener(tagListener);host.remove();layoutStyle.remove()},
+    hide(){if(typeof inlineComposeControllers!=='undefined')inlineComposeControllers.get(win)?.float();++ticket;query?.cancel();query=null;resolving=false;host.hidden=true;layout.classList.remove('gm-independent-open');clearCards()},
+    close(){this.hide();closed=true;sentCache.close();previews.close();win.removeEventListener?.('focus',refreshTags);MailServices.mfn?.removeListener(tagListener);host.remove();layoutStyle.remove()},
     refresh:refreshTags,
     print(){runCommand('cmd_print')},
-    getMessages(){return currentHeaders.slice()}
+    getMessages(){return resolving?[]:currentHeaders.slice()}
   };
 }

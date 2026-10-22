@@ -264,3 +264,30 @@ test('live verifier results work when saving results is disabled and cannot upda
   f.reader.close();
   for(const item of pending)item.resolve({dkim:[{result:'SUCCESS'}]});
 });
+
+test('sent metadata scans are shared, expire, invalidate on changes and stay bounded',async()=>{
+ const scope=context();let now=0,reads=0,count=1;
+ const sent=references(message(2,'reply','sent',2),'a');
+ const folder={URI:'sent',getTotalMessages:()=>count,get messages(){reads++;return [sent]}};
+ const cache=scope.createSentCandidateCache({},()=>now);
+ const first=cache.get([folder]),concurrent=cache.get([folder]);assert.equal(first,concurrent,'concurrent lookups share the scan');
+ assert.equal((await first)[0].header,sent);await cache.get([folder]);assert.equal(reads,1);
+ now=30001;await cache.get([folder]);assert.equal(reads,2);
+ count=2;await cache.get([folder]);assert.equal(reads,3,'new Sent messages invalidate the folder signature');
+ cache.invalidate();await cache.get([folder]);assert.equal(reads,4,'native notifications invalidate immediately');
+ cache.close();assert.equal((await cache.get([folder])).length,0);
+ const bounded=scope.createSentCandidateCache({},()=>now,0);await bounded.get([folder]);await bounded.get([folder]);assert.equal(reads,6,'oversized scans remain complete but are not retained');bounded.close();
+});
+test('native body starts before index lookup while conversation-wide actions wait for full scope',async()=>{
+ const f=readerFixture();let lookup;
+ f.scope.Services.prefs.getBoolPref=()=>true;
+ f.scope.ChromeUtils.importESModule=url=>url.includes('GlodaPublic')?{Gloda:{getMessageCollectionForHeader(header,listener){lookup=listener;return {}}}}:{UIFontSize:{}};
+ const opening=f.reader.open(f.anchor);
+ assert.equal(f.browsers.length,1,'native renderer is created before the index completes');
+ assert.equal(f.reader.getMessages().length,0,'L cannot label a partial conversation without sent replies');
+ f.loaded();assert.equal(f.actions.children[0].disabled,true,'Reply waits for the actual newest message');
+ lookup.onQueryCompleted({items:[]});await opening;
+ assert.equal(f.browsers.length,1,'identical membership does not reload the native message');
+ assert.equal(f.reader.getMessages().length,1);assert.equal(f.actions.children[0].disabled,false);
+ f.reader.close();
+});

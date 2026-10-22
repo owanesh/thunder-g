@@ -4,6 +4,14 @@
 
 ### Added
 
+- Shared in-memory preview cache for the message list and conversation reader:
+  up to 300 short text previews, expiring after five minutes, with local reads
+  reused across consumers and replacement-message checks.
+
+- A bounded 30-second cache of local Sent summary metadata, sharing concurrent
+  scans and invalidating on message/folder changes. No message bodies are stored
+  in this cache or downloaded for preview generation.
+
 - Separate, off-by-default **Compose new messages in this window** setting.
   Write opens the native composer in a detached panel, expandable within the
   message area without opening a new tab or covering the folder sidebar. Uses the
@@ -33,6 +41,10 @@
 
 ### Changed
 
+- Start the native message viewer while conversation-index and Sent lookups are
+  still running. Reuse the viewer when membership is unchanged; conversation-wide
+  labels and footer replies wait for the complete scope, including sent replies.
+
 - Renamed the extension ID from `inline-labels@local.gmail-skin` to
   `thunder-g@vschiavoni`, matching the Thunder-G name and primary author. Updated the installer and optional
   DKIM bridge allowlist. Thunderbird treats this as a different add-on: uninstall the previous extension,
@@ -53,6 +65,10 @@
   beside the subject, with removable chips and compact message headers.
 
 ### Fixed
+
+- Avoid refitting columns and repainting pagination when only row text, tag chips
+  or previews change. Reuse date formatters and unchanged chips, skip redundant
+  paging/style updates, and stop retaining detached date cells from recycled rows.
 
 - Make each thread-arrow activation toggle once, including rapid repeated clicks
   and button activation. Keep native expansion, selection and keyboard behavior,
@@ -88,6 +104,20 @@
 
 ### Validation
 
+- Live Thunderbird performance checks covered scrolling, folder/page changes,
+  repeated thread-arrow clicks and the 19-message final page. The page scrollbar
+  followed native scrolling, columns stayed within the pane and the sidebar
+  remained visible. No list mutations occurred during a five-second idle check;
+  a clean restart recorded no Thunder-G script errors. A 40-step scrolling check
+  kept individual row fills below 2 ms in the optimized run; this is a smoke check,
+  not an application-wide speed guarantee.
+
+- Performance regressions check that cell/preview updates schedule no column or
+  page work, scrolling does not rewrite the page announcement, unchanged chips
+  are retained, and 500 date rows use four formatters. A local isolated benchmark
+  of 300 dates improved from about 15 ms to under 1 ms across five warmed runs;
+  this measures date formatting, not application-wide responsiveness.
+
 - Live Thunderbird checks covered thread-arrow button activations with click
   counts 0–3, native Left/Right keys and collapse/reopen on the first and second
   pages. Every activation changed the thread state once and message totals stayed
@@ -99,6 +129,12 @@
   the resized layout across next/previous page changes. The table stayed within
   the mail pane. Regression coverage includes native divider re-enabling,
   explicitly fixed columns, drag-time balancing and cleanup.
+
+- Cache regressions cover shared preview reads, identity changes, expiry and LRU
+  eviction; shared Sent scans, invalidation and retention limits; and early native
+  rendering without exposing incomplete conversation-wide label/reply scope.
+  Live Thunderbird opening/reopening checks completed with no Thunder-G errors
+  recorded. No before/after latency benchmark has been claimed.
 
 - 72 automated tests pass, covering pagination, column sizing and copy scope,
   conversation labels, read/unread state, compose lifecycle, DKIM bridge and BIMI.

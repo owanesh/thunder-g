@@ -234,6 +234,23 @@ test('Copy view also copies native columns across accounts and keeps descendant 
  win.gFolder=null;pane._applyView(target);assert.equal(calls.length,0);
  controller.close();assert.equal(pane._applyView,original);
 });
+test('list and conversation preview queues share bounded expiring text without duplicate local reads',()=>{
+ let now=0,sequence=0,reads=0,body='first';scope.Date={now:()=>now};
+ const timers=new Map(),win={setTimeout(fn){timers.set(++sequence,fn);return sequence},clearTimeout(id){timers.delete(id)}};
+ const flush=()=>{while(timers.size){const [id,fn]=timers.entries().next().value;timers.delete(id);fn()}};
+ const header={messageKey:1,messageId:'a',flags:0,getStringProperty:()=>'',folder:{URI:'local://inbox',
+  getMsgInputStream(){reads++;return {close(){}}},getMsgTextFromStream:()=>body}};
+ const list=scope.createPreviewQueue(win),reader=scope.createPreviewQueue(win);
+ list.get(header,()=>true,()=>{});reader.get(header,()=>true,()=>{});flush();assert.equal(reads,1,'simultaneous consumers read a local body once');
+ list.close();assert.equal(reader.get(header,()=>true,()=>{}),'first','closing one consumer preserves the shared cache');
+ header.messageId='replacement';body='replacement';assert.equal(reader.get(header,()=>true,()=>{}),'');flush();assert.equal(reads,2,'a reused message key cannot return another message\'s text');
+ now=300001;body='fresh';assert.equal(reader.get(header,()=>true,()=>{}),'');flush();assert.equal(reads,3,'positive results expire');
+ for(let i=2;i<=302;i++) {reader.get({...header,messageKey:i},()=>true,()=>{});flush()}
+ assert.equal(reader.get(header,()=>true,()=>{}),'','least recently used previews are evicted');flush();
+ reader.close();const reopened=scope.createPreviewQueue(win);assert.equal(reopened.get(header,()=>true,()=>{}),'','last consumer releases all cached text');reopened.close();
+});
+
+
 test('native final-column splitter stays enabled and subject dragging gives space to Date',()=>{
  const sender=columnElement('senderCol','text',180),subject=columnElement('subjectCol','text',600),date=columnElement('dateCol','text',112);
  const headers=[sender,subject,date],table=columnElement('table','',900),persisted=[];
