@@ -77,4 +77,17 @@ class InstallerTests(unittest.TestCase):
             self.assertEqual(backup[0].read_bytes(),b'updated')
             installer.uninstall(profile)
 
+    def test_legacy_identity_requires_explicit_migration(self):
+        with tempfile.TemporaryDirectory() as folder:
+            profile=Path(folder)
+            (profile/'prefs.js').write_text('')
+            old=profile/installer.LEGACY_ADDON
+            old.parent.mkdir()
+            old.write_bytes(b'legacy extension')
+            with self.assertRaisesRegex(RuntimeError, 'previous inline-labels'):
+                installer.install(profile)
+            self.assertEqual(old.read_bytes(), b'legacy extension')
+            self.assertFalse((profile/installer.STATE).exists())
+            self.assertFalse((profile/installer.ADDON).exists())
+
 if __name__ == '__main__': unittest.main()

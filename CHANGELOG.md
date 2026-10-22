@@ -26,6 +26,14 @@
 
 ### Changed
 
+- Renamed the extension ID from `inline-labels@local.gmail-skin` to
+  `thunder-g@vschiavoni`, matching the Thunder-G name and primary author. Updated the installer and optional
+  DKIM bridge allowlist. Thunderbird treats this as a different add-on: uninstall the previous extension,
+  then install the new Thunder-G package. Add-on-local settings do not migrate
+  automatically; native messages and tags are unaffected.
+- Experimental conversation and inline-reply features require disabling Thunderbird
+  Conversations because conversation handling is now built into Thunder-G.
+
 - Pagination uses Thunderbird's original virtual message list. Controls sit beside
   Quick Filter; page size is configurable and native font-size shortcuts remain
   available outside text fields.

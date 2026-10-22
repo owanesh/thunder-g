@@ -57,7 +57,9 @@ setting without changing calendar preferences.
 ### Independent Gmail-style reader (experimental)
 
 Preferences → **Use Thunder-G's independent Gmail-style reader** is off by default
-and applies to all mail windows. It does not require Thunderbird Conversations.
+and applies to all mail windows.
+
+These experimental conversation and inline-reply features require disabling Thunderbird Conversations, because conversation handling is now built into Thunder-G.
 Changing the option returns any open reader to the list; open a message again.
 
 Thunder-G owns the conversation header and expandable message cards.
@@ -117,6 +119,16 @@ Outside text-entry fields, Ctrl/Cmd + plus (or equals), minus and zero invoke
 Thunderbird's native interface font-size increase, decrease and reset controls.
 Paging recomputes boundaries when the list or native row metrics change.
 Live zoom/density/layout verification in Thunderbird is still pending.
+
+### Extension identity
+
+The extension ID is now `thunder-g@vschiavoni` (formerly `inline-labels@local.gmail-skin`).
+Thunderbird treats this as a different add-on, rather than an in-place update.
+Uninstall the previous extension, then install the new Thunder-G package;
+add-on-local preferences do not migrate automatically. If using the optional
+local DKIM compatibility patch, rebuild it with the updated sender allowlist.
+For installer-managed profiles, uninstall with the existing rollback snapshot
+before installing the new identity. Native messages and tags are unaffected.
 
 ## Requirements
 

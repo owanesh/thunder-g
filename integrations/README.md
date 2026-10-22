@@ -11,7 +11,7 @@ The prototype uses the provider's original `content/displayAction.html` with
 bounded, message-specific contexts; expired contexts never resolve to a different
 selected message. Native-tab behavior is unchanged.
 
-The bridge accepts external requests only from `inline-labels@local.gmail-skin`. The provider's existing `AuthVerifier`, preferences, DNS and key policy perform verification; no sender or success result is synthesized. Results work with `saveResult` disabled. Late results cannot populate a replaced conversation.
+The bridge accepts external requests only from `thunder-g@vschiavoni`. The provider's existing `AuthVerifier`, preferences, DNS and key policy perform verification; no sender or success result is synthesized. Results work with `saveResult` disabled. Late results cannot populate a replaced conversation.
 
 Build the explicit local provider patch using:
 

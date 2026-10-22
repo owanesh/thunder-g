@@ -10,7 +10,7 @@ function thunderGReleasePopup(contextId) {
   clearTimeout(item.timer);thunderGPopupMessages.delete(contextId);displayedResultsCache.delete(contextId);
 }
 browser.runtime.onMessageExternal.addListener((request,sender)=>{
-  if(sender.id !== 'inline-labels@local.gmail-skin' || request?.module !== 'ThunderG' || !['verify','bimi','details','release'].includes(request.method))return undefined;
+  if(sender.id !== 'thunder-g@vschiavoni' || request?.module !== 'ThunderG' || !['verify','bimi','details','release'].includes(request.method))return undefined;
   if(request.method==='bimi')return (async()=>{await isInitialized;const {default:DNS}=await import('../modules/dns.mjs.js');return {logo:await thunderGBimiLookup(request.domain,{baseDomain:request.baseDomain,txt:name=>DNS.txt(name),fetchLogo:thunderGFetchBimiLogo})};})();
   if(!Number.isInteger(request.messageId))return Promise.reject(new Error('Invalid message ID'));
   return (async()=>{

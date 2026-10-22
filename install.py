@@ -12,7 +12,8 @@ from datetime import datetime
 
 ROOT = Path(__file__).resolve().parent
 PREF = 'toolkit.legacyUserProfileCustomizations.stylesheets'
-ADDON = 'extensions/inline-labels@local.gmail-skin.xpi'
+ADDON = 'extensions/thunder-g@vschiavoni.xpi'
+LEGACY_ADDON = 'extensions/inline-labels@local.gmail-skin.xpi'
 FILES = ['chrome/userChrome.css', 'chrome/gmail-inspired.css',
          'chrome/gmail-columns.css', 'user.js', ADDON]
 STATE = '.gmail-skin-install'
@@ -40,6 +41,8 @@ def install(profile):
     state = profile / STATE
     if state.exists():
         raise RuntimeError('Skin already installed by this installer. Uninstall before upgrading.')
+    if (profile / LEGACY_ADDON).exists():
+        raise RuntimeError('Uninstall the previous inline-labels extension before installing Thunder-G under its new ID.')
     # Build from the source shipped alongside this installer, without downloads.
     subprocess.run([sys.executable, str(ROOT / 'build.py')], check=True)
     version = json.loads((ROOT / 'inline-labels/manifest.json').read_text())['version']

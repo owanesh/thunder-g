@@ -7,7 +7,7 @@ test('DKIM provider bridge authenticates the caller and verifies the exact reque
     browser:{runtime:{onMessageExternal:{addListener(fn){listener=fn}}},messages:{async get(id){return {id}}}},
     isInitialized:Promise.resolve(),verifier:{async verify(message){verified.push(message.id);return {dkim:[{result:'SUCCESS',sdid:'accounts.google.com'}]}}}
   });
-  const request={module:'ThunderG',method:'verify',messageId:42},sender={id:'inline-labels@local.gmail-skin'};
+  const request={module:'ThunderG',method:'verify',messageId:42},sender={id:'thunder-g@vschiavoni'};
   assert.equal(listener(request,{id:'other-extension'}),undefined);
   assert.equal(listener({...request,module:'other'},sender),undefined);
   await assert.rejects(listener({...request,messageId:'42'},sender));
@@ -22,7 +22,7 @@ test('original popup contexts keep exact messages isolated and release their res
  setTimeout(fn){timers.set(++sequence,fn);return sequence},clearTimeout(id){timers.delete(id)}
  });
  vm.runInContext(fs.readFileSync('integrations/dkim-thunderg-bridge.js','utf8'),scope);
- const sender={id:'inline-labels@local.gmail-skin'},request=messageId=>({module:'ThunderG',method:'details',messageId});
+ const sender={id:'thunder-g@vschiavoni'},request=messageId=>({module:'ThunderG',method:'details',messageId});
  const first=await listener(request(72),sender),second=await listener(request(81),sender);
  assert.notEqual(first.contextId,second.contextId);assert.ok(first.contextId < -1000);
  assert.equal(cache.get(first.contextId).dkim[0].sdid,'message-72.example');
