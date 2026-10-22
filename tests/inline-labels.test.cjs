@@ -2,6 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
+const menuCode=fs.readFileSync(require('node:path').join(__dirname,'../inline-labels/label-menu.js'),'utf8');
 const code = fs.readFileSync(require('node:path').join(__dirname, '../inline-labels/labels.js'), 'utf8');
 
 function fixture() {
@@ -27,7 +28,7 @@ function fixture() {
   const win = {windowUtils:{loadSheetUsingURIString(uri,type){sheets.push([uri,type]);},
     removeSheetUsingURIString(uri,type){assert.deepEqual(sheets.pop(),[uri,type]);}},document:doc, customElements:{whenDefined:async()=>{},get:()=>ThreadRow}, gDBView:{getMsgHdrAt:()=>({getStringProperty:()=>keywords})}, addEventListener(){},removeEventListener(){}};
   const scope = vm.createContext({Ci:{nsIDOMWindowUtils:{USER_SHEET:1}},window:win,MailServices:{tags:{getAllTags:()=>tags}},console});
-  vm.runInContext(code, scope);
+  vm.runInContext(menuCode+"\n"+code, scope);
   return { scope, row, nativeSubject, tags, sheets, setKeywords(value){keywords=value;} };
 }
 

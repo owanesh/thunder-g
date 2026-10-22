@@ -20,6 +20,7 @@ with ZipFile(output, 'w', ZIP_DEFLATED) as archive:
             data += ('\nvar GMAIL_SKIN_CSS = ' + json.dumps(skin) + ';\n').encode()
             data += ('\nvar GMAIL_CONVERSATIONS_CSS = ' + json.dumps((root / 'chrome/gmail-conversations.css').read_text()) + ';\n').encode()
             data += b'\n' + (source / 'labels.js').read_bytes()
+            data += b'\n' + (source / 'label-menu.js').read_bytes()
             data += b'\n' + (source / 'nested-labels.js').read_bytes()
             data += b'\n' + (source / 'reading.js').read_bytes()
             data += b'\n' + (source / 'dates.js').read_bytes()

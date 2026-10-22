@@ -18,7 +18,7 @@ function chipColors(color) {
   };
 }
 
-function installInlineLabels(window = globalThis.window, MailServices = globalThis.MailServices) {
+function installInlineLabels(window = globalThis.window, MailServices = globalThis.MailServices, labelPrefs = null) {
   const doc = window.document;
   let disposed = false;
   let prototype, original, wrapped;
@@ -82,7 +82,8 @@ function installInlineLabels(window = globalThis.window, MailServices = globalTh
     try {
       const header = window.gDBView?.getMsgHdrAt(row.index);
       if (!header) {existing?.remove();return;}
-      labels = assignedTags(header, tags);
+      const hidden=hiddenMessageLabelKeys(labelPrefs);
+      labels = assignedTags(header, tags).filter(tag=>!hidden.has(tag.key));
     } catch (_) {existing?.remove();return;}
     if (!labels.length) {existing?.remove();return;}
     const signature=JSON.stringify(labels.map(tag=>[tag.key,tag.tag,tag.color]));
