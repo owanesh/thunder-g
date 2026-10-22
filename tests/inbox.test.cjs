@@ -138,6 +138,48 @@ test('responsive columns fit the pane on resize, reserve date space and restore 
   events['column-resized']({detail:{column:'senderCol',splitter:{width:160}}});
   changed();frames.shift()();assert.equal(size(sender),160,'row updates do not override a manual resize');
   tree.clientWidth=900;resized();frames.shift()();assert.equal(size(sender),160,'window resize preserves chosen sender width when it fits');
-  tree.clientWidth=500;changed();frames.shift()();controller.close();
-  assert.equal(size(subject),900);assert.equal(size(table),1400);assert.equal(size(sender),160,'disable preserves the user’s new width');
+  // A last-column drag can request more space than the entire pane.
+  events.pointerdown({target:{closest:()=>({})}});
+  date.style.setProperty('--dateColSplitter-width','2000px');
+  events['column-resized']({detail:{column:'dateCol',splitter:{width:2000}}});
+  frames.shift()();
+  function fits() {
+    assert.ok(headers.every(header=>Number.isFinite(size(header)) && size(header)>=0));
+    assert.ok(headers.reduce((sum,header)=>sum+size(header),0)<=tree.clientWidth,'last column stays inside pane');
+    assert.equal(size(table),tree.clientWidth);
+  }
+  fits();assert.ok(size(subject)>=100,'oversized last column leaves room to read subjects');
+  changed();frames.shift()();fits();
+  tree.clientWidth=160;resized();frames.shift()();fits();
+  tree.clientWidth=2400;resized();frames.shift()();fits();
+  assert.equal(size(date),2000,'chosen last-column width returns when sufficient space is available');
+  events.pointerdown({target:{closest:()=>({})}});
+  date.style.setProperty('--dateColSplitter-width','90px');
+  events['column-resized']({detail:{column:'dateCol',splitter:{width:90}}});
+  frames.shift()();fits();assert.equal(size(date),90);
+  tree.clientWidth=500;changed();frames.shift()();fits();
+  sender.style.setProperty('--senderColSplitter-width','190px');changed();frames.shift()();
+  assert.equal(size(sender),190,'a native restored width overrides the previous folder preference');
+  const nextHeaders=[element('selectCol','icon',32),element('senderCol','text',200),element('subjectCol','text',700),element('dateCol','text',100)];
+  nextHeaders[1].style.setProperty('--senderColSplitter-width','140px');
+  const nextTable=element('next-table','',1032);nextTable.querySelectorAll=()=>nextHeaders;tree.table=nextTable;changed();frames.shift()();
+  assert.equal(size(nextHeaders[1]),140,'rebuilding columns uses the destination native widths');
+  assert.equal(size(nextTable),500);controller.close();
+  assert.equal(size(subject),900);assert.equal(size(table),1400);assert.equal(size(sender),190,'disable preserves the latest native width');
+});
+
+test('Copy view also copies native columns across accounts and keeps descendant scope',()=>{
+ const source={URI:'imap://source.example/Inbox'},target={URI:'imap://destination.example/Inbox'},calls=[];
+ const pane={columns:[{id:'dateCol',hidden:false,ordinal:1},{id:'senderCol',hidden:false,ordinal:2},{id:'subjectCol',hidden:false,ordinal:3},{id:'tagsCol',hidden:true,ordinal:4}],
+ _applyColumns(folder,children){calls.push(['columns',folder,children]);folder.columns=this.columns.map(column=>({...column}));},
+ _applyView(folder,children){calls.push(['view',folder,children]);folder.sort='date-desc';}};
+ const original=pane._applyView,win={gFolder:source,threadPane:pane};
+ const controller=scope.installCompleteViewCopy(win);
+ for(const children of [false,true]){
+  pane._applyView(target,children);assert.deepEqual(target.columns,pane.columns);
+  assert.equal(target.sort,'date-desc');assert.deepEqual(calls.splice(0),[['columns',target,children],['view',target,children]]);
+ }
+ pane._applyView(null);assert.equal(calls.length,0);
+ win.gFolder=null;pane._applyView(target);assert.equal(calls.length,0);
+ controller.close();assert.equal(pane._applyView,original);
 });

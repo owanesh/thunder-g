@@ -98,6 +98,7 @@ function installResponsiveColumns(win) {
   if (!tree || !win.ResizeObserver) return {close(){}};
   const saved = new Map();
   const preferred = new Map();
+  let currentTable = null;
   let manualWidth = null;
   let closed = false, frame = null;
   function set(element, name, value) {
@@ -119,19 +120,30 @@ function installResponsiveColumns(win) {
     const table = tree.table;
     const width = tree.clientWidth;
     if (!table || width <= 0) return;
+    if (table !== currentTable) {restore();preferred.clear();currentTable=table;}
     const headers = [...table.querySelectorAll('thead th')].filter(header =>
       !header.hidden && win.getComputedStyle(header).display !== 'none');
+    for (const header of headers) {
+      const value=parseFloat(header.style.getPropertyValue(`--${header.id}Splitter-width`));
+      if(Number.isFinite(value) && value>0){
+        preferred.set(header.id,value);
+        const properties=saved.get(header);
+        if(properties?.has(`--${header.id}Splitter-width`))properties.set(`--${header.id}Splitter-width`,[`${value}px`,'']);
+      }
+    }
     const subject = headers.find(header=>header.id==='subjectCol');
     const date = headers.find(header=>header.id==='dateCol');
     if (!subject || !date) return;
     const icons = headers.filter(header=>header.dataset.type==='icon');
     const fixed = icons.reduce((sum,header)=>sum+header.getBoundingClientRect().width,0);
     const others = headers.filter(header=>header!==subject && header!==date && !icons.includes(header));
-    const dateWidth = preferred.get('dateCol') ?? Math.max(88,8*(parseFloat(win.getComputedStyle(tree).fontSize)||14));
+    const available = Math.max(0,width-fixed-4);
+    const desiredDate = preferred.get('dateCol') ?? Math.max(88,8*(parseFloat(win.getComputedStyle(tree).fontSize)||14));
+    const dateWidth = Math.min(desiredDate,Math.max(0,available-Math.min(100,available*.4)));
     const space = Math.max(0,width-fixed-dateWidth-4);
     const desired = others.map(header => preferred.get(header.id) ?? Math.min(180,width*.18));
     const total = desired.reduce((sum,value)=>sum+value,0);
-    const budget = Math.max(0,space-Math.min(100,space*.4));
+    const budget = Math.max(0,space-Math.min(100,space));
     const ratio = total > budget ? budget/total : 1;
     const widths = desired.map(value=>value*ratio);
     const subjectWidth = Math.max(0,space-widths.reduce((sum,value)=>sum+value,0));
@@ -171,7 +183,10 @@ function installResponsiveColumns(win) {
         properties.set('width',[`var(--${column}Splitter-width)`,'']);
       }
     }
-    manualWidth = tree.clientWidth;
+    // Refit after the native drag finishes, including a drag of the last
+    // column: its preferred width must not push the table beyond the pane.
+    manualWidth = null;
+    schedule();
   }
   tree.addEventListener('pointerdown',manualResize,true);
   tree.addEventListener('column-resized',resizedColumn);
@@ -183,12 +198,27 @@ function installResponsiveColumns(win) {
     tree.removeEventListener('pointerdown',manualResize,true);tree.removeEventListener('column-resized',resizedColumn);restore();}};
 }
 
+// Copy view includes the visible column layout, using Thunderbird's own folder
+// propagation (including its From/Recipient swap for outgoing folders).
+function installCompleteViewCopy(win) {
+  const pane=win.threadPane, original=pane?._applyView;
+  if(typeof original!=='function' || typeof pane._applyColumns!=='function')return {close(){}};
+  function applyView(folder,useChildren=false){
+    if(!win.gFolder || !folder)return;
+    pane._applyColumns(folder,useChildren);
+    return original.call(this,folder,useChildren);
+  }
+  pane._applyView=applyView;
+  return {close(){if(pane._applyView===applyView)pane._applyView=original;}};
+}
+
 function installInboxControls(win) {
   const doc = win.document;
   const tree = doc.getElementById('threadTree');
   if (!tree) return {close(){}};
   const compose = installComposeLabel(doc);
   const responsive = installResponsiveColumns(win);
+  const viewCopy = installCompleteViewCopy(win);
   let closed = false, prototype, original, wrapped, rowClass, originalHeight;
   const previews = createPreviewQueue(win);
   const filter = win.quickFilterBar;
@@ -340,6 +370,7 @@ function installInboxControls(win) {
     previews.close();
     compose.close();
     responsive.close();
+    viewCopy.close();
     if (rowClass && Number.isFinite(originalHeight) && rowClass.ROW_HEIGHT === originalHeight + 6) {
       rowClass.ROW_HEIGHT = originalHeight;
       tree.reset();

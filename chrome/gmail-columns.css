@@ -4,11 +4,6 @@
   text-shadow: none !important;
 }
 
-/* Hide both header and message cells, so no empty Spam column is left. */
-#threadTree :is(#junkStatusCol, .junkstatuscol-column) {
-  display: none !important;
-}
-
 /* Follow Thunderbird's native UI Font Size control rather than fixed pixels. */
 :root #folderTree, :root #threadTree {
   font-size: 1rem !important;

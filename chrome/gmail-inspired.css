@@ -252,3 +252,26 @@
     --thread-pane-flag-stroke: #fdd663 !important;
   }
 }
+
+/* Gmail-style overflow button; native label remains available to accessibility. */
+#otherActionsButton {
+  min-inline-size:36px !important; max-inline-size:36px !important;
+  min-block-size:36px !important; padding:8px !important;
+  margin-inline:4px !important; border:0 !important;
+  border-radius:50% !important; background:transparent !important;
+  justify-content:center !important;
+}
+#otherActionsButton > .toolbarbutton-text,
+#otherActionsButton > .toolbarbutton-menu-dropmarker { display:none !important; }
+#otherActionsButton > .toolbarbutton-icon {
+  margin:0 !important; width:16px !important; height:16px !important;
+}
+#otherActionsButton:hover { background:light-dark(#20212414,#ffffff20) !important; }
+#otherActionsButton:focus-visible { outline:2px solid Highlight !important; outline-offset:2px; }
+
+/* Gmail-style attachment orientation; keep text and menu indicator upright. */
+#button-attach .toolbarbutton-icon { rotate:90deg !important; }
+/* Attachment indicators in the message list, including its column heading. */
+#threadTree :is(#attachmentColButton img, .attachmentcol-column img, .attachment-icon) {
+  rotate:90deg !important;
+}
