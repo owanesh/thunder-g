@@ -262,7 +262,10 @@ function installReadingMode(win) {
   doc.documentElement.append(tagPopup); popups.push(tagPopup);
   const picker = doc.createElement('div');
   picker.className = 'gm-label-picker';
-  const heading = doc.createElement('div'); heading.textContent = 'Label as:';
+  const heading = doc.createElement('div');
+  const scopeNote = doc.createElement('p'); scopeNote.className = 'gm-label-scope';
+  scopeNote.textContent = 'Includes sent replies in this conversation.';
+  scopeNote.hidden = true;
   const search = doc.createElement('input');
   search.type = 'search';
   const searchBox = doc.createElement('div'); searchBox.className = 'gm-label-search';
@@ -290,7 +293,7 @@ function installReadingMode(win) {
     });
     footer.append(button);
   }
-  picker.append(heading, searchBox, tagList, empty, footer); tagPopup.append(picker);
+  picker.append(heading, scopeNote, searchBox, tagList, empty, footer); tagPopup.append(picker);
   let pickerMessages = [], pickerSelection = [], pickerTags = [], pickerOpen = false, returnFocus = null;
   let pickerConversation = null;
   function conversationDocument() {
@@ -358,6 +361,12 @@ function installReadingMode(win) {
     pickerMessages = pickerConversation ? resolveConversation(pickerConversation) : pickerSelection;
     if (pickerConversation && pickerMessages && !pickerSelection.every(selected =>
       pickerMessages.some(message => message.messageKey === selected.messageKey && message.folder.URI === selected.folder?.URI))) pickerMessages = null;
+    const count = pickerMessages?.length;
+    heading.textContent = pickerConversation
+      ? `Entire conversation · ${count == null ? 'Loading…' : `${count} ${count === 1 ? 'message' : 'messages'}`}`
+      : count === 1 ? 'This message' : `${count} selected messages`;
+    scopeNote.hidden = !pickerConversation;
+    tagPopup.setAttribute('aria-label', `Labels — ${heading.textContent}`);
     if (!pickerMessages) {
       pickerTags = []; pickerMessages = []; search.disabled = true;
       returnFocus = doc.activeElement; search.value = ''; renderTags();
@@ -416,6 +425,7 @@ function installReadingMode(win) {
       background:var(--layout-background-0, white); color:var(--layout-color-0, #3c4043);
       font:inherit; font-size:1rem; border-radius:4px; }
     .gm-label-picker > div:first-child { font-weight:400; margin:0 16px 8px; }
+    .gm-label-scope { margin:0 16px 12px; font-size:.85em; color:var(--layout-color-1, #5f6368); }
     .gm-label-search { display:flex; align-items:center; margin:0 8px 16px 16px;
       border-bottom:1px solid var(--layout-border-0, #dadce0); }
     .gm-label-search:focus-within { border-bottom:2px solid #4285f4; }

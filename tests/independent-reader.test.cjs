@@ -208,7 +208,12 @@ test('numeric shortcuts and native tag menu target the opened Sent reply, never 
   const f=readerFixture(),sent=f.prepare(message(2,'sent','sent',2)),latest=f.prepare(message(3,'latest','inbox',3));
   f.anchor.folder.msgDatabase={getThreadContainingMsgHdr:()=>({numChildren:3,getChildHdrAt:i=>[f.anchor,sent,latest][i]})};
   await f.reader.open(f.anchor);f.loaded();
+  const active=()=>f.cards.children.filter(card=>card.getAttribute('aria-current')==='true');
+  assert.deepEqual(active(),[f.cards.children[2]],'the latest message starts as the visible numeric-tag target');
+  assert.equal(f.cards.children[2].getAttribute('data-active-message'),'');
   const toggle=f.cards.children[1].children[0].children[0];toggle.emit('click');f.loaded();
+  assert.deepEqual(active(),[f.cards.children[1]],'opening a Sent reply moves the marker to the exact target');
+  assert.equal(f.cards.children[2].getAttribute('data-active-message'),undefined);
   const event=()=>({key:'1',target:{closest:()=>null},preventDefault(){this.prevented=true},stopImmediatePropagation(){this.stopped=true}});
   const key=event();assert.equal(f.reader.handleTagKey(key),true);assert.equal(key.prevented,true);
   assert.equal(sent.tagged,true);assert.notEqual(f.anchor.tagged,true);assert.notEqual(latest.tagged,true);
@@ -218,8 +223,15 @@ test('numeric shortcuts and native tag menu target the opened Sent reply, never 
   assert.equal(f.removals.at(-1).headers[0],sent,'native menu and command routing also use the exact embedded header');
   frame.contentWindow.commandController._toggleMessageTag('work',false);assert.equal(sent.tagged,false);
   f.cards.children[2].emit('pointerdown');f.reader.handleTagKey(event());assert.equal(latest.tagged,true);
+  assert.deepEqual(active(),[f.cards.children[2]]);
   // Events originating inside another message use that document, even if focus tracking was stale.
   f.reader.handleTagKey({...event(),currentTarget:frame.contentDocument});assert.equal(sent.tagged,true);
+  assert.deepEqual(active(),[f.cards.children[1]],'document-based key routing also corrects the visible marker');
+  f.cards.children[0].emit('focusin');assert.deepEqual(active(),[f.cards.children[0]],'keyboard focus on a folded card selects only that message');
+  assert.notEqual(f.anchor.tagged,true,'moving focus never changes labels');
+  frame.content.emit('focusin');assert.deepEqual(active(),[f.cards.children[1]],'focus inside native message content restores its marker');
+  f.cards.children[2].emit('pointerdown');frame.contentWindow.commandController._toggleMessageTag('work',false);
+  assert.deepEqual(active(),[f.cards.children[1]],'native tag menu and marker agree even after stale focus');
   assert.equal(f.reader.handleTagKey({...event(),ctrlKey:true}),false);
   assert.equal(f.reader.handleTagKey({...event(),target:{closest:()=>({})}}),false);
   assert.equal(f.reader.handleTagKey({...event(),key:'l'}),false,'L remains reserved for the whole-conversation picker');

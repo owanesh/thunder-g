@@ -4,6 +4,10 @@
 
 ### Added
 
+- Label picker headings show whether changes apply to one message, selected
+  messages or the entire conversation, with its message count and sent replies.
+  A subtle marker identifies the active message targeted by numeric tag shortcuts.
+
 - Floating composers remember their chosen size across messages and restarts,
   adapting to the available space beside the sidebar. Size preferences are saved
   after a resize gesture, not on every pointer move.

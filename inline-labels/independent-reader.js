@@ -191,7 +191,11 @@ function installIndependentReader(win) {
     .scope,.status { font-size:.85em; opacity:.75; margin:0 0 8px var(--message-inset); }
     .title-tags { display:inline-flex; flex-wrap:wrap; gap:4px; margin-inline-start:10px; vertical-align:middle; font-size:.6em; font-weight:400; }
     .cards { display:flex; flex-direction:column; }
-    article { border-block-end:1px solid var(--layout-border-0,#eceff1); padding:10px 0; }
+    article { position:relative; border-block-end:1px solid var(--layout-border-0,#eceff1); padding:10px 0; }
+    article[data-active-message]::before { content:''; position:absolute; inset-inline-start:-8px;
+      inset-block-start:10px; block-size:40px; inline-size:3px; border-radius:3px;
+      background:var(--focus-outline-color,#1a73e8); pointer-events:none; }
+    @media(forced-colors:active) { article[data-active-message]::before { background:Highlight; forced-color-adjust:none; } }
     article[data-expanded] { padding:10px 0 0; }
     article:last-child { border-block-end:0; }
     .card-header { display:flex; align-items:flex-start; gap:16px; min-block-size:40px; }
@@ -247,7 +251,14 @@ function installIndependentReader(win) {
   status.className='status';status.setAttribute('role','status');cards.className='cards';
   conversation.append(title,scope,status,cards);root.append(style,conversation);
   const titleTags=doc.createElement('span');titleTags.className='title-tags';titleTags.setAttribute('aria-label','Labels in this conversation');
-  const cleanups=new Set(),tagRenderers=new Set(),securityRenderers=new Set(),frames=new Map(),messageDocs=new Map();let currentHeaders=[],actionHeader=null,activeHeader=null;
+  const cleanups=new Set(),tagRenderers=new Set(),securityRenderers=new Set(),frames=new Map(),messageDocs=new Map(),messageCards=new Map();let currentHeaders=[],actionHeader=null,activeHeader=null,activeCard=null;
+  function activateMessage(header) {
+    const card=messageCards.get(header);
+    if(closed || !card || activeCard===card)return;
+    activeCard?.removeAttribute('data-active-message');activeCard?.removeAttribute('aria-current');
+    activeHeader=header;activeCard=card;
+    card.setAttribute('data-active-message','');card.setAttribute('aria-current','true');
+  }
   const actions=doc.createElement('div');actions.className='actions';actions.setAttribute('role','group');actions.setAttribute('aria-label','Reply to conversation');
   const buttons=[];
   function runCommand(command) {
@@ -288,13 +299,15 @@ function installIndependentReader(win) {
   }
   if(MailServices.mfn)MailServices.mfn.addListener(tagListener,notifications);
   win.addEventListener?.('focus',refreshTags);
-  function clearCards(){if(revealFrame!==null)win.cancelAnimationFrame(revealFrame);revealFrame=null;for(const cleanup of cleanups)cleanup();cleanups.clear();cards.replaceChildren();tagRenderers.clear();securityRenderers.clear();messageDocs.clear();titleTags.replaceChildren();frames.clear();currentHeaders=[];actionHeader=null;activeHeader=null;updateActions()}
+  function clearCards(){if(revealFrame!==null)win.cancelAnimationFrame(revealFrame);revealFrame=null;for(const cleanup of cleanups)cleanup();cleanups.clear();cards.replaceChildren();tagRenderers.clear();securityRenderers.clear();messageDocs.clear();messageCards.clear();titleTags.replaceChildren();frames.clear();currentHeaders=[];actionHeader=null;activeHeader=null;activeCard=null;updateActions()}
   function text(tag,className,value){const node=doc.createElement(tag);node.className=className;node.textContent=value;return node}
   function buildCard(header,expand,token) {
     const article=doc.createElement('article');
+    messageCards.set(header,article);
     const cardHeader=doc.createElement('div');cardHeader.className='card-header';
     const latest=header===actionHeader;
     const toggle=doc.createElement('button');toggle.type='button';toggle.className='toggle';toggle.setAttribute('aria-expanded','false');
+    toggle.setAttribute('aria-description','Number keys label this message. L labels the entire conversation.');
     if(latest) {article.setAttribute('data-latest','');toggle.setAttribute('aria-disabled','true');toggle.title='Most recent message'}
     let name=header.mime2DecodedAuthor || header.author || 'Unknown sender',address='';
     try {const from=MailServices.headerParser.parseDecodedHeader(name)[0];name=from?.name || from?.email || name;address=from?.email || ''}catch(_){}
@@ -386,7 +399,7 @@ function installIndependentReader(win) {
 
     }
     function expandCard(){
-      activeHeader=header;body.hidden=false;preview.hidden=true;article.setAttribute('data-expanded','');toggle.setAttribute('aria-expanded','true');error.hidden=true;
+      activateMessage(header);body.hidden=false;preview.hidden=true;article.setAttribute('data-expanded','');toggle.setAttribute('aria-expanded','true');error.hidden=true;
       browser=doc.createXULElement('browser');
       const frame=browser;
       browser.addEventListener('load',event=>{
@@ -461,7 +474,7 @@ function installIndependentReader(win) {
         const content=pane?.contentDocument;
         if(content) {
           messageDocs.set(content,header);
-          const activate=()=>{activeHeader=header};
+          const activate=()=>activateMessage(header);
           content.addEventListener('pointerdown',activate,true);content.addEventListener('focusin',activate,true);
           focusCleanup=()=>{content.removeEventListener('pointerdown',activate,true);content.removeEventListener('focusin',activate,true)};
         }
@@ -507,10 +520,10 @@ function installIndependentReader(win) {
       body.replaceChildren(error,browser,quoteButton);
       timeout=win.setTimeout(()=>{if(!ready){release();error.hidden=false}},15000);
     }
-    article.addEventListener('pointerdown',()=>{activeHeader=header});
-    article.addEventListener('focusin',()=>{activeHeader=header});
+    article.addEventListener('pointerdown',()=>activateMessage(header));
+    article.addEventListener('focusin',()=>activateMessage(header));
     toggle.addEventListener('click',()=>{
-      activeHeader=header;
+      activateMessage(header);
       if(latest)return;
       if(body.hidden) {
         if(browser) {body.hidden=false;preview.hidden=true;article.setAttribute('data-expanded','');toggle.setAttribute('aria-expanded','true')}
@@ -526,7 +539,7 @@ function installIndependentReader(win) {
   }
   function render(headers,anchor,token){
     clearCards();currentHeaders=headers;
-    actionHeader=headers.at(-1) || anchor;activeHeader=actionHeader;
+    actionHeader=headers.at(-1) || anchor;
     let latestCard;
     for(const header of headers) {
       const card=buildCard(header,header===actionHeader,token);
@@ -540,12 +553,14 @@ function installIndependentReader(win) {
   }
   function setMessageTag(header,key,add) {
     if(closed || !currentHeaders.includes(header))return;
+    activateMessage(header);
     applyConversationLabel([header],key,add);
     if(!add && header.label && key===`$label${header.label}`)header.label=0;
     refreshTags();
   }
   function toggleTagNumber(header,number) {
     if(!header || !currentHeaders.includes(header))return;
+    activateMessage(header);
     const tags=MailServices.tags.getAllTags();
     if(number===0) {
       const keys=new Set((header.getStringProperty('keywords') || '').split(/\s+/));
