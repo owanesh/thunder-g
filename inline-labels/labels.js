@@ -30,8 +30,6 @@ function installInlineLabels(window = globalThis.window, MailServices = globalTh
       font-size: 0 !important;
       text-shadow: none !important;
     }
-    /* Hidden only while the add-on is active; native column settings survive. */
-    #threadTree :is(#tagsCol, .tagscol-column) { display: none !important; }
     #threadTree .subject-line {
       display: flex !important; align-items: center; min-width: 0;
       flex: 1 1 auto; overflow: hidden; column-gap: 0 !important;
