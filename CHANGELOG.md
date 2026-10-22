@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add expandable nested native labels in the Tags sidebar and label picker, searchable by full path.
+- Add a New label panel with a parent selector; preserve existing tag keys, full-path chips and conversation-wide application.
+
+
 ### Added
 
 - Label picker headings show whether changes apply to one message, selected

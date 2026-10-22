@@ -4,6 +4,7 @@ const vm = require('node:vm');
 const fs = require('node:fs');
 const path = require('node:path');
 const scope = vm.createContext({});
+vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/nested-labels.js'),'utf8'),scope);
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/reading.js'),'utf8'),scope);
 test('only unmodified left clicks on message text open reading mode',()=>{
   const event = {button:0,target:{closest:()=>null}};
@@ -274,7 +275,7 @@ for(const independentMode of [false,true]) test(`label picker covers the full ac
     assert.ok(nodes.some(n=>n.textContent==='Entire conversation · 3 messages'));
     assert.equal(nodes.find(n=>n.className==='gm-label-scope').hidden,false,'the full scope explicitly includes sent replies');
     assert.equal(nodes.find(n=>n.name==='panel').getAttribute('aria-label'),'Labels — Entire conversation · 3 messages');
-    const checkbox=nodes.find(n=>n.type==='checkbox');checkbox.checked=true;checkbox.events.change[0]();
+    const checkbox=nodes.find(n=>n.type==='checkbox' && n.getAttribute('aria-label')==='Project One');checkbox.checked=true;checkbox.events.change[0]();
     assert.deepEqual(JSON.parse(JSON.stringify(calls)),[['add','inbox',[1,2],'one'],['add','Sent',[1],'one']]);
     checkbox.checked=false;checkbox.events.change[0]();
     assert.deepEqual(JSON.parse(JSON.stringify(calls.slice(2))),[['remove','inbox',[1,2],'one'],['remove','Sent',[1],'one']]);
@@ -291,12 +292,12 @@ for(const independentMode of [false,true]) test(`label picker covers the full ac
   assert.ok(nodes.some(n=>n.textContent==='2 selected messages'));
   assert.equal(nodes.find(n=>n.className==='gm-label-scope').hidden,true,'list selection does not claim to label a whole conversation');
   const search=nodes.find(n=>n.type==='search');assert.equal(doc.activeElement,search);
-  const first=nodes.find(n=>n.type==='checkbox');assert.equal(first.indeterminate,true);
+  const first=nodes.find(n=>n.type==='checkbox' && n.getAttribute('aria-label')==='Project One');assert.equal(first.indeterminate,true);
   first.checked=true;first.events.change[0]();assert.deepEqual(calls,[['one',true]]);
   first.checked=false;first.events.change[0]();assert.deepEqual(calls[1],['one',false]);
   search.value='Other';search.events.input[0]();
   const list=nodes.find(n=>n.className==='gm-label-list');assert.equal(list.childElementCount,1);
-  const other=list.children[0].children[0];selected=[messages[0]];
+  const other=list.children[0].children.find(n=>n.type==='checkbox');selected=[messages[0]];
   other.checked=true;other.events.change[0]();assert.equal(calls.length,2);assert.equal(doc.activeElement,tree);
   nodes.find(n=>n.textContent==='Manage labels').events.click[0]();
   assert.deepEqual(nativeCommands,['cmd_manageTags']);
@@ -305,7 +306,21 @@ for(const independentMode of [false,true]) test(`label picker covers the full ac
   assert.equal(nodes.find(n=>n.name==='panel').getAttribute('aria-label'),'Labels — This message');
   selected=messages;nodes.find(n=>n.title==='Labels… (L)').events.click[0]();
   nodes.find(n=>n.textContent==='Create new').events.click[0]();
-  assert.deepEqual(nativeCommands,['cmd_manageTags','cmd_addTag']);
+  assert.deepEqual(nativeCommands,['cmd_manageTags']);
+  assert.ok(nodes.some(n=>n.className==='gm-new-label'));
+  assert.equal(nodes.find(n=>n.getAttribute('aria-label')==='Parent label').disabled,true);
+  const newName=nodes.find(n=>n.getAttribute('aria-label')==='New label name');
+  const parentSelect=nodes.find(n=>n.getAttribute('aria-label')==='Parent label');
+  const nest=nodes.find(n=>n.type==='checkbox' && !n.getAttribute('aria-label'));
+  const form=nodes.find(n=>n.className==='gm-new-label');
+  const additions=[];scope.MailServices.tags.addTag=(...args)=>additions.push(args);
+  scope.MailServices.tags.getKeyForTag=()=> 'new-child-key';
+  newName.value='Project One';form.events.submit[0]({preventDefault(){}});
+  assert.equal(additions.length,0,'duplicate label must not be created');
+  newName.value='Child';nest.checked=true;parentSelect.value='Project One';
+  form.events.submit[0]({preventDefault(){}});
+  assert.deepEqual(additions,[['Project One/Child','','']]);
+  assert.deepEqual(calls.at(-1),['new-child-key',true],'apply only the child key to the exact selection');
   controller.close();
 });
 test('conversation scope resolves exact Conversations IDs across Inbox and Sent, deduplicating copies of the same header',()=>{

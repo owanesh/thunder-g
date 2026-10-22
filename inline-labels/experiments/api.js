@@ -127,6 +127,7 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
       pendingDocuments.get(doc)?.close(); pendingDocuments.delete(doc);
       loadSkin(doc.defaultView);
       const labels = installInlineLabels(doc.defaultView, MailServices);
+      const nestedLabels = installNestedLabelSidebar(doc.defaultView);
       const reader = installReadingMode(doc.defaultView);
       readers.set(doc,reader); reader.setIndependent(independentReader);
       const pages = installNativePagination(doc.defaultView,reader);
@@ -138,7 +139,7 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
       documents.set(doc, { setThreadGuides(enabled){inbox.setThreadGuides(enabled);}, refresh() { labels.refresh(); dates.refresh(); }, close() {
         readers.delete(doc);
         pages.close(); pagedDocuments.delete(doc); zoom.close();
-        conversationBrowser.close(); inbox.close(); dates.close(); reader.close(); labels.close();
+        nestedLabels.close(); conversationBrowser.close(); inbox.close(); dates.close(); reader.close(); labels.close();
       }});
     };
     const scan = doc => {
