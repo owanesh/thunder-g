@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.11.0
+
 - Constrain sidebar label menu buttons to 28 pixels at the right edge; preserve space for label names and message counts.
 
 - Add a hover/focus three-dot sidebar label menu with colors, message-list visibility, subtree editing, removal confirmation and sublabel creation.
