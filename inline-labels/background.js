@@ -22,6 +22,7 @@ async function startThunderG() {
   await browser.inlineLabels.setIndependentReader(independentReader);
   await browser.inlineLabels.setBimiEnabled?.((await browser.storage.local.get({bimiEnabled:false})).bimiEnabled===true);
   await browser.inlineLabels.setInlineReplyEnabled?.((await browser.storage.local.get({inlineReplyEnabled:false})).inlineReplyEnabled===true);
+  await browser.inlineLabels.setInlineNewMessageEnabled?.((await browser.storage.local.get({inlineNewMessageEnabled:false})).inlineNewMessageEnabled===true);
   await browser.inlineLabels.start();
   browser.storage.onChanged.addListener((changes, area) => {
     if (area === 'local' && (changes.composeAutosave || changes.composeAutosaveMinutes)) {
@@ -35,6 +36,7 @@ async function startThunderG() {
     if (area === 'local' && changes.independentReader) {
       browser.inlineLabels.setIndependentReader(changes.independentReader.newValue === true).catch(console.error);
     }
+    if(area==='local' && changes.inlineNewMessageEnabled)browser.inlineLabels.setInlineNewMessageEnabled(changes.inlineNewMessageEnabled.newValue===true).catch(console.error);
     if(area==='local' && changes.inlineReplyEnabled)browser.inlineLabels.setInlineReplyEnabled(changes.inlineReplyEnabled.newValue===true).catch(console.error);
     if(area==='local' && changes.bimiEnabled)browser.inlineLabels.setBimiEnabled(changes.bimiEnabled.newValue===true).catch(console.error);
     if (area === 'local' && changes.hideTodayPane) {

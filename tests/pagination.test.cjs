@@ -37,7 +37,7 @@ for (const collapsed of [false,true,'short-last']) test(`native pagination retai
   }
   const total=collapsed==='short-last'?219:collapsed?218:53;
   const rows=Array.from({length:total},(_,index)=>Object.assign(node(),{index}));
-  const tree=node();tree.parentNode={};tree.clientHeight=200;tree.scrollTop=0;tree._rowElementClass={ROW_HEIGHT:20};
+  const tree=node();tree.getBoundingClientRect=()=>({top:0,left:260,right:1000});tree.parentNode={};tree.clientHeight=200;tree.scrollTop=0;tree._rowElementClass={ROW_HEIGHT:20};
   if(collapsed==='short-last') {
     tree.clientHeight=900;tree._rowElementClass.ROW_HEIGHT=34;
     let actualTop=0;
@@ -55,8 +55,8 @@ for (const collapsed of [false,true,'short-last']) test(`native pagination retai
     doCommand(command){assert.equal(command,1);expansions++;this.rowCount=this.numMsgsInView}};tree.view=nativeView;
   const frames=[];let mutation,resize;
   const quickFilter=node();quickFilter.after=bar=>{quickFilter.pagination=bar;tree.bar=bar};
-  const head=node(),doc={getElementById:id=>id==='threadPaneQuickFilterButton'?quickFilter:tree,querySelector:()=>({getBoundingClientRect:()=>({height:20})}),createElement:node,head};
-  const win={document:doc,gDBView:nativeView,
+  const root=node();const head=node(),doc={documentElement:root,getElementById:id=>id==='threadPaneQuickFilterButton'?quickFilter:tree,querySelector:()=>({getBoundingClientRect:()=>({height:20})}),createElement:node,head};
+  const win={document:doc,gDBView:nativeView,addEventListener(){},removeEventListener(){},
     requestAnimationFrame(fn){frames.push(fn);return frames.length},cancelAnimationFrame(){},
     MutationObserver:class{constructor(fn){mutation=fn}observe(){}disconnect(){}},
     ResizeObserver:class{constructor(fn){resize=fn}observe(){}disconnect(){}}};
@@ -75,6 +75,8 @@ for (const collapsed of [false,true,'short-last']) test(`native pagination retai
     assert.equal(tree.scrollTop,200*34,'browser scroll clamp must still allow the first of the 19 rows to reach the header');
     assert.equal(rows.filter(row=>!row.hasAttribute('data-gm-outside-page')).length,19);
     assert.equal(tree.children[0].style.height,'234px','only the missing scroll height is added, never a full viewport');
+    assert.equal(root.children[0].hidden,true,'a final page fitting the viewport has no scrollbar');
+    assert.equal(root.children[0].children[0].style.height,'646px','scroll extent counts only the 19 displayed messages');
     tree.scrollTop=999999;tree.events.scroll();frames.shift()();
     assert.equal(tree.scrollTop,200*34,'no blank scrolling past the short final page');
     tree.clientHeight=500;resize();frames.shift()();
@@ -108,6 +110,12 @@ for (const collapsed of [false,true,'short-last']) test(`native pagination retai
   assert.equal(tree._rowElementClass.ROW_HEIGHT,20,'native row height is never overwritten');
   assert.equal(rows[24].hasAttribute('data-gm-outside-page'),false);assert.equal(rows[25].hasAttribute('data-gm-outside-page'),true);
   tree.bar.children[2].events.click();assert.equal(tree.scrollTop,500);
+  const scrollbar=root.children[0];
+  assert.equal(scrollbar.children[0].style.height,'500px','scrollbar extent is 25 messages, not the 53-message inbox');
+  assert.equal(scrollbar.style.height,'180px');assert.equal(scrollbar.scrollTop || 0,0,'each page starts at the top of its own scrollbar');
+  scrollbar.scrollTop=320;scrollbar.events.scroll();assert.equal(tree.scrollTop,820,'dragging to page bottom maps onto native global row indices');
+  frames.shift()();assert.equal(scrollbar.scrollTop,320);
+  tree.bar.children[1].events.click();tree.bar.children[2].events.click();assert.equal(scrollbar.scrollTop,0);
   assert.equal(rows[0].hasAttribute('data-gm-outside-page'),true);assert.equal(rows[25].hasAttribute('data-gm-outside-page'),false);
   tree.scrollTop=0;tree.events.scroll();frames.shift()();assert.equal(tree.scrollTop,500,'cannot scroll into the previous page');
   tree._rowElementClass.ROW_HEIGHT=32;resize();frames.shift()();assert.equal(tree.scrollTop,800,'density/zoom uses new native metrics');

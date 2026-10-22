@@ -92,6 +92,17 @@
             "type": "boolean"
           }
         ]
+      },
+      {
+        "name": "setInlineNewMessageEnabled",
+        "type": "function",
+        "async": true,
+        "parameters": [
+          {
+            "name": "enabled",
+            "type": "boolean"
+          }
+        ]
       }
     ],
     "events": [

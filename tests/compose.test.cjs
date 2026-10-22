@@ -52,14 +52,15 @@ test('inline compose preserves an open reply across navigation and guards dirty 
  const appChrome={XULBrowserWindow:{original:true}},oldChrome=appChrome.XULBrowserWindow;
  const mode={tryCloseTab:()=>true},tab={mode},main={document:{getElementById:()=>({tabInfo:[tab]})},docShell:{treeOwner:{QueryInterface(){return {getInterface:()=>appChrome}}}},addEventListener(name,fn){events.set(name,fn)},removeEventListener(name){events.delete(name)}};
  const native={gMsgCompose:{},GetCurrentEditor:()=>({}),ComposeCanClose:()=>mayClose,SetMsgBodyFrameFocus(){}};
- const doc={documentElement:element('html'),createElement:element,createElementNS:(ns,tag)=>element(tag),createXULElement(){
+ const sidebar={getBoundingClientRect:()=>({width:260,right:260,left:0})};
+ const doc={getElementById:id=>id==='folderPane'?sidebar:null,documentElement:element('html'),createElement:element,createElementNS:(ns,tag)=>element(tag),createXULElement(){
   frame=element('browser');frame.browsingContext={};native.browsingContext=frame.browsingContext;
   frame.contentWindow=native;frame.contentDocument={documentURI:'chrome://messenger/content/messengercompose/messengercompose.xhtml',createElement:element,documentElement:element('html')};
   frame.loadURI=()=>{observer.observe(native);paramsReceived=native.arguments[0];frame.events.load({target:frame.contentDocument})};return frame;
  }};
  const win={document:doc,browsingContext:{topChromeWindow:main},setTimeout(fn){timers.set(1,fn);return 1},clearTimeout(id){timers.delete(id)},addEventListener(name,fn){events.set('pane-'+name,fn)},removeEventListener(name){events.delete('pane-'+name)}};tab.chromeBrowser={contentWindow:win};
  const testScope=vm.createContext({
-  Ci:{nsIMsgCompType:{ReplyToSender:1,ReplyAll:2},nsIMsgCompFormat:{Default:0}},
+  Ci:{nsIMsgCompType:{New:0,ReplyToSender:1,ReplyAll:2},nsIMsgCompFormat:{Default:0}},
   Cc:{'@mozilla.org/messengercompose/composeparams;1':{createInstance:()=>({})},'@mozilla.org/messengercompose/composefields;1':{createInstance:()=>({})}},
   MailServices:{},ChromeUtils:{importESModule:()=>({MailUtils:{getIdentityForHeader:()=>[{key:'chosen-account'}]}})},
   Services:{obs:{addObserver(value){observer=value},removeObserver(){}},io:{newURI:value=>value},scriptSecurityManager:{getSystemPrincipal:()=>({})}}
@@ -83,7 +84,11 @@ test('inline compose preserves an open reply across navigation and guards dirty 
  assert.equal(mode.tryCloseTab({}),true,'other tabs keep native behavior');
  // Native compose closes itself only after send/save has completed; the host then releases it.
  native.close();assert.equal(composer.active,false);assert.equal(originalFrame.removed,true);
- composer.open(header,'cmd_replySender');mayClose=true;assert.equal(composer.close(),true);assert.equal(composer.active,false);assert.equal(events.has('close'),false);
+ composer.open(null,'cmd_newMessage');assert.equal(paramsReceived.type,0);assert.equal(composer.presentation,'floating');assert.equal(composer.target,null);composer.returnInline();assert.equal(composer.presentation,'full');
+ const fullPanel=doc.documentElement.children.at(-1);assert.equal(fullPanel.style.left,'260px','full composer must leave the sidebar visible');
+ sidebar.getBoundingClientRect=()=>({width:340,right:340,left:0});events.get('pane-resize')();assert.equal(fullPanel.style.left,'340px','sidebar resizing moves the composer boundary');
+ composer.float();assert.equal(composer.presentation,'floating');const newFrame=frame;composer.returnInline();assert.equal(composer.presentation,'full');assert.equal(frame,newFrame);
+ composer.open(header,'cmd_replySender');assert.equal(composer.command,'cmd_newMessage','Reply must not replace an open new message');mayClose=true;assert.equal(composer.close(),true);assert.equal(composer.active,false);assert.equal(events.has('close'),false);
 });
 test('separate-window transfer waits for native draft completion and retains failures',async()=>{
  const draftScope=vm.createContext({Ci:{nsIMsgCompDeliverMode:{SaveAsDraft:4}}});
@@ -100,4 +105,43 @@ test('separate-window transfer waits for native draft completion and retains fai
   assert.equal(unregistered,true);assert.equal(native.gMsgCompose,compose);
  }
  await assert.rejects(draftScope.saveInlineReplyDraft({gSaveOperationInProgress:true},{setTimeout,clearTimeout}),/Wait/);
+});
+
+test('new-message parameters preserve folder identity and native format without a reply URI',()=>{
+ const custom={key:'custom-signature'},server={key:'server-signature'},Ci={nsIMsgCompType:{New:0},nsIMsgCompFormat:{Default:2}},Cc={
+ '@mozilla.org/messengercompose/composeparams;1':{createInstance:()=>({})},
+ '@mozilla.org/messengercompose/composefields;1':{createInstance:()=>({})}};
+ const utils={getIdentityForServer(value){assert.equal(value,'server');return [server]}};
+ for(const [folder,identity] of [[{customIdentity:custom,server:'server'},custom],[{server:'server'},server],[null,null]]){
+  const params=scope.inlineNewMessageParams(folder,Ci,Cc,utils);
+  assert.equal(params.type,0);assert.equal(params.format,2);assert.equal(params.identity,identity);
+  assert.equal(params.originalMsgURI,undefined);assert.deepEqual(Object.keys(params.composeFields),[]);
+ }
+});
+test('Write is opt-in, reuses the existing compose controller, and restores native commands',()=>{
+ const native=[],opens=[],folder={server:{type:'imap'}};
+ const controller={doCommand(...args){native.push(args);return 'native'}};
+ const win={commandController:controller,gFolder:folder},original=controller.doCommand;
+ let created=0;const composer={open(...args){opens.push(args)}};
+ const hook=scope.installInlineNewMessage(win,()=>{created++;return composer});
+ scope.inlineNewMessageEnabled=false;assert.equal(controller.doCommand('cmd_newMessage'),'native');
+ scope.inlineNewMessageEnabled=true;controller.doCommand('cmd_newMessage');controller.doCommand('cmd_newMessage');
+ assert.equal(created,1);assert.equal(opens.length,2);assert.equal(opens[0][0],null);assert.equal(opens[0][1],'cmd_newMessage');assert.equal(opens[0][2].folder,folder);
+ controller.doCommand('cmd_forwardInline');controller.doCommand('cmd_newMessage',{shiftKey:true});
+ folder.server.type='nntp';controller.doCommand('cmd_newMessage');assert.equal(native.length,4);
+ scope.inlineNewMessageEnabled=false;controller.doCommand('cmd_newMessage');assert.equal(native.length,5);
+ hook.close();assert.equal(controller.doCommand,original);
+});
+
+test('main-window Write and shortcut route to the active pane without affecting other tabs',()=>{
+ const calls=[],opens=[],win={gFolder:{server:{type:'imap'}},commandController:{doCommand(){calls.push('pane-native')}}};
+ const original=function(){calls.push('main-native')};
+ const tabmail={currentAbout3Pane:win},main={MsgNewMessage:original,document:{getElementById:()=>tabmail}};
+ win.browsingContext={topChromeWindow:main};
+ const hook=scope.installInlineNewMessage(win,()=>({open(){opens.push('new')}}));
+ scope.inlineNewMessageEnabled=true;main.MsgNewMessage({});assert.equal(opens.length,1);assert.equal(calls.length,0);
+ tabmail.currentAbout3Pane={};main.MsgNewMessage({});assert.equal(calls.pop(),'main-native');
+ tabmail.currentAbout3Pane=win;main.MsgNewMessage({shiftKey:true});assert.equal(calls.pop(),'main-native');
+ scope.inlineNewMessageEnabled=false;main.MsgNewMessage({});assert.equal(calls.pop(),'main-native');
+ hook.close();assert.equal(main.MsgNewMessage,original);
 });

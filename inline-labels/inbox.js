@@ -219,6 +219,7 @@ function installInboxControls(win) {
   const compose = installComposeLabel(doc);
   const responsive = installResponsiveColumns(win);
   const viewCopy = installCompleteViewCopy(win);
+  const newMessage = installInlineNewMessage(win);
   let closed = false, prototype, original, wrapped, rowClass, originalHeight;
   const previews = createPreviewQueue(win);
   const filter = win.quickFilterBar;
@@ -371,6 +372,7 @@ function installInboxControls(win) {
     compose.close();
     responsive.close();
     viewCopy.close();
+    newMessage.close();
     if (rowClass && Number.isFinite(originalHeight) && rowClass.ROW_HEIGHT === originalHeight + 6) {
       rowClass.ROW_HEIGHT = originalHeight;
       tree.reset();

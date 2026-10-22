@@ -95,3 +95,13 @@ inlineReply.addEventListener('change',async()=>{
  catch(_){inlineReply.checked=!inlineReply.checked;status.textContent='Unable to save. Please try again.';}
  finally{inlineReply.disabled=false;}
 });
+
+const inlineNewMessage=document.getElementById('inline-new-message');
+inlineNewMessage.disabled=true;
+browser.storage.local.get({inlineNewMessageEnabled:false}).then(settings=>{inlineNewMessage.checked=settings.inlineNewMessageEnabled===true;inlineNewMessage.disabled=false;}).catch(()=>{status.textContent='Unable to load settings.';});
+inlineNewMessage.addEventListener('change',async()=>{
+ inlineNewMessage.disabled=true;
+ try{await browser.storage.local.set({inlineNewMessageEnabled:inlineNewMessage.checked});status.textContent='Saved. Applies to new messages; an open message stays available.';}
+ catch(_){inlineNewMessage.checked=!inlineNewMessage.checked;status.textContent='Unable to save. Please try again.';}
+ finally{inlineNewMessage.disabled=false;}
+});

@@ -41,6 +41,12 @@ function installNativePagination(win, reader) {
   // Extra scroll room allows a short final page to begin beneath the native header.
   const tail=doc.createElement('div');tail.setAttribute('aria-hidden','true');tail.hidden=true;
   tail.style.cssText='position:absolute;inset-inline-start:0;inline-size:1px;pointer-events:none;';tree.append(tail);
+  // Keep native global row indices, but expose a scrollbar whose extent is
+  // only the current page. The native tree still renders and selects messages.
+  const pageScroll=doc.createElement('div');pageScroll.className='gm-page-scroll';pageScroll.hidden=true;
+  pageScroll.setAttribute('aria-label','Scroll current message page');
+  const pageExtent=doc.createElement('div');pageExtent.style.inlineSize='1px';pageScroll.append(pageExtent);
+  doc.documentElement.append(pageScroll);
   const style=doc.createElement('style');style.textContent=`
     .gm-native-pagination[hidden] { display:none !important; }
     .gm-native-pagination { display:inline-flex !important; justify-content:flex-end; align-items:center;
@@ -57,7 +63,10 @@ function installNativePagination(win, reader) {
     .gm-native-pagination > button:hover:enabled { background:var(--treeitem-background-hover,#e9eef6); }
     .gm-native-pagination > button:focus-visible { outline:2px solid var(--focus-outline-color,#1a73e8); outline-offset:-2px; }
     .gm-native-pagination > button:disabled { opacity:.35;cursor:default;background:transparent; }
-    #threadTree[data-gm-paginated] { scroll-behavior:auto !important; overflow-anchor:none !important; }
+    #threadTree[data-gm-paginated] { scroll-behavior:auto !important; overflow-anchor:none !important; scrollbar-width:none !important; }
+    .gm-page-scroll { position:fixed; z-index:2; overflow-y:scroll; overflow-x:hidden;
+      scrollbar-width:auto; scrollbar-color:auto; width:16px; }
+    .gm-page-scroll[hidden] { display:none !important; }
     #threadTree tr[data-gm-outside-page] { visibility:hidden !important; pointer-events:none !important; }
   `;doc.head.append(style);
   function bounds(){return nativePageBounds(win.gDBView?.rowCount || 0,size,page)}
@@ -89,6 +98,14 @@ function installNativePagination(win, reader) {
       tail.style.height=Math.max(0,range.start*height+tree.clientHeight-tableEnd)+'px';
       const min=range.start*height,max=Math.max(min,range.end*height+header-tree.clientHeight);
       const top=alignStart?min:Math.min(Math.max(tree.scrollTop,min),max);
+      const rect=tree.getBoundingClientRect();
+      const viewport=Math.max(0,tree.clientHeight-header);
+      pageScroll.hidden=max===min || tree.checkVisibility?.()===false;
+      pageScroll.style.top=(rect.top+header)+'px';
+      pageScroll.style.left=(doc.documentElement.dir==='rtl'?rect.left:rect.right-16)+'px';
+      pageScroll.style.height=viewport+'px';
+      pageExtent.style.height=((range.end-range.start)*height)+'px';
+      if(Math.abs((pageScroll.scrollTop || 0)-(top-min))>.5) pageScroll.scrollTop=top-min;
       // A page change is a jump, never a smooth scroll through hidden rows.
       // Compute the short-page tail first, then move once; cancel any native
       // animation that was already running even when the destination matches.
@@ -98,6 +115,14 @@ function installNativePagination(win, reader) {
       row.toggleAttribute('data-gm-outside-page',row.index<range.start || row.index>=range.end);
     }
   }
+  function scrollPage(){
+    if(!size || closed || pageScroll.hidden)return;
+    const range=bounds(),height=rowHeight();
+    tree.scrollTo({top:range.start*height+pageScroll.scrollTop,behavior:'instant'});
+    schedule();
+  }
+  pageScroll.addEventListener('scroll',scrollPage);
+  win.addEventListener('resize',schedule);
   function schedule(){
     if (!size || closed || frame!==null) return;
     frame=win.requestAnimationFrame(()=>{frame=null;paint()});
@@ -138,7 +163,7 @@ function installNativePagination(win, reader) {
     observer.disconnect();resize.disconnect();
     if(frame!==null) win.cancelAnimationFrame(frame);frame=null;
     for(const row of tree.querySelectorAll('[data-gm-outside-page]')) row.removeAttribute('data-gm-outside-page');
-    tail.hidden=true;tail.style.height='0px';tree.removeAttribute('data-gm-paginated');
+    pageScroll.hidden=true;tail.hidden=true;tail.style.height='0px';tree.removeAttribute('data-gm-paginated');
   }
   return {
     setSize(value){
@@ -153,7 +178,8 @@ function installNativePagination(win, reader) {
       closed=true;clear();
       tree.removeEventListener('scroll',schedule);tree.removeEventListener('viewchange',viewChanged);tree.removeEventListener('select',selectionChanged);
       tree.removeEventListener('click',selectPage,true);tree.removeEventListener('keydown',selectPage,true);
-      bar.remove();tail.remove();style.remove();
+      win.removeEventListener('resize',schedule);pageScroll.removeEventListener('scroll',scrollPage);
+      bar.remove();tail.remove();pageScroll.remove();style.remove();
     }
   };
 }

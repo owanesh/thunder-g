@@ -195,6 +195,7 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
     }});
     return { inlineLabels: {
       async setInlineReplyEnabled(enabled){inlineReplyEnabled=enabled===true;},
+      async setInlineNewMessageEnabled(enabled){inlineNewMessageEnabled=enabled===true;},
       async setBimiEnabled(enabled){independentBimiEnabled=enabled===true;for(const refresh of independentBimiListeners)refresh();},
       onDkimRequest: new ExtensionCommon.EventManager({context,name:'inlineLabels.onDkimRequest',register(fire){dkimFire=fire;return()=>{dkimFire=null;};}}).api(),
       async resolveDkim(request,payload) {

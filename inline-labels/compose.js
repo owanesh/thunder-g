@@ -44,6 +44,7 @@ function createComposeAutosave(prefs) {
 
 // Keep the full native compose document alive independently of conversation navigation.
 var inlineReplyEnabled=false;
+var inlineNewMessageEnabled=false;
 var inlineComposeControllers=new WeakMap();
 function inlineReplyParams(header,command,services=MailServices,interfaces=Ci,classes=Cc,utils=null) {
   const types={cmd_replySender:interfaces.nsIMsgCompType.ReplyToSender,cmd_replyall:interfaces.nsIMsgCompType.ReplyAll};
@@ -55,6 +56,35 @@ function inlineReplyParams(header,command,services=MailServices,interfaces=Ci,cl
   [params.identity]=utils.getIdentityForHeader(header,params.type);
   params.composeFields=classes['@mozilla.org/messengercompose/composefields;1'].createInstance(interfaces.nsIMsgCompFields);
   return params;
+}
+function inlineNewMessageParams(folder,interfaces=Ci,classes=Cc,utils=null) {
+  utils ||= ChromeUtils.importESModule('resource:///modules/MailUtils.sys.mjs').MailUtils;
+  const params=classes['@mozilla.org/messengercompose/composeparams;1'].createInstance(interfaces.nsIMsgComposeParams);
+  params.type=interfaces.nsIMsgCompType.New;params.format=interfaces.nsIMsgCompFormat.Default;
+  params.identity=folder?.customIdentity || (folder?.server?utils.getIdentityForServer(folder.server)[0]:null);
+  params.composeFields=classes['@mozilla.org/messengercompose/composefields;1'].createInstance(interfaces.nsIMsgCompFields);
+  return params;
+}
+function installInlineNewMessage(win,create=createInlineCompose) {
+  const controller=win.commandController,original=controller?.doCommand;
+  if(typeof original!=='function')return {close(){}};
+  function doCommand(command,...args){
+    if(command!=='cmd_newMessage' || !inlineNewMessageEnabled || args[0]?.shiftKey || win.gFolder?.server?.type==='nntp')return original.call(this,command,...args);
+    let composer=inlineComposeControllers.get(win);
+    if(!composer){composer=create(win);inlineComposeControllers.set(win,composer);}
+    composer.open(null,command,{folder:win.gFolder});
+  }
+  controller.doCommand=doCommand;
+  // Thunderbird's Write button and main-window shortcut bypass the pane controller.
+  const main=win.browsingContext?.topChromeWindow,previousNew=main?.MsgNewMessage;
+  let closed=false;
+  function newMessage(event){
+    const pane=main.document.getElementById('tabmail')?.currentAbout3Pane;
+    if(!closed && pane===win && inlineNewMessageEnabled && !event?.shiftKey && win.gFolder?.server?.type!=='nntp')return doCommand('cmd_newMessage',event);
+    return previousNew.apply(this,arguments);
+  }
+  if(typeof previousNew==='function')main.MsgNewMessage=newMessage;
+  return {close(){closed=true;if(controller.doCommand===doCommand)controller.doCommand=original;if(main?.MsgNewMessage===newMessage)main.MsgNewMessage=previousNew;}};
 }
 function saveInlineReplyDraft(native,clock,timeoutMs=60000) {
   return new Promise((resolve,reject)=>{
@@ -101,21 +131,45 @@ function createInlineCompose(win) {
   }
   if(mode)mode.tryCloseTab=tryCloseTab;
   function detach(){
+    sidebarResize?.disconnect();win.removeEventListener('resize',fitComposeToContent);
     main.removeEventListener('close',parentClose,true);
     if(mode?.tryCloseTab===tryCloseTab)mode.tryCloseTab=previousTryClose;
     win.removeEventListener('unload',unload);
   }
   function unload(){detach();dispose();}
   win.addEventListener('unload',unload,{once:true});
+  function fitComposeToContent(){
+    if(!panel)return;
+    const sidebar=doc.getElementById('folderPane')?.getBoundingClientRect?.();
+    const viewport=doc.documentElement.getBoundingClientRect?.();
+    const rtl=doc.documentElement.dir==='rtl';
+    const splitter=doc.getElementById('folderPaneSplitter')?.getBoundingClientRect?.();
+    const edge=rtl?Math.min(sidebar?.left ?? 0,splitter?.left ?? sidebar?.left ?? 0):Math.max(sidebar?.right || 0,splitter?.right || 0);
+    const boundary=sidebar?.width>0?Math.max(0,rtl?(viewport?.right || win.innerWidth)-edge:edge-(viewport?.left || 0)):0;
+    if(presentation==='full'){
+      panel.style.left=rtl?'0px':`${boundary}px`;
+      panel.style.right=rtl?`${boundary}px`:'0px';
+    }
+    panel.style.maxWidth=`max(0px,calc(100vw - ${boundary+(presentation==='floating'?32:0)}px))`;
+  }
+  const sidebarResize=win.ResizeObserver?new win.ResizeObserver(fitComposeToContent):null;
+  const sidebar=doc.getElementById('folderPane');if(sidebar)sidebarResize?.observe(sidebar);
+  win.addEventListener('resize',fitComposeToContent);
   function setPresentation(next){
     if(!panel)return;
     presentation=next;panel.setAttribute('data-presentation',next);
-    const common='display:flex;flex-direction:column;min-height:320px;background:var(--layout-background-0,white);border:1px solid var(--layout-border-0,#dadce0);border-radius:12px;overflow:hidden;';
-    panel.style.cssText=common+(next==='inline'?'position:relative;height:460px;margin:16px 0 20px 56px;box-shadow:none;':'position:fixed;z-index:1000;inset:auto 16px 12px auto;width:min(720px,calc(100vw - 32px));height:min(620px,75vh);box-shadow:0 4px 22px #0003;');
-    const label=next==='inline'?'Detach reply into a floating panel':'Return reply below the message';
-    labelControl(floatButton,next==='inline'?'detach':'inline',next==='inline'?'Detach reply':'Return to conversation',label);
+    const common='display:flex;flex-direction:column;min-height:320px;box-sizing:border-box;isolation:isolate;contain:paint;background:light-dark(#ffffff,#18181b);border:1px solid var(--layout-border-0,#dadce0);border-radius:12px;overflow:hidden;';
+    panel.style.cssText=common+(next==='inline'?'position:relative;height:460px;margin:16px 0 20px 56px;box-shadow:none;':next==='full'?'position:fixed;z-index:1000;inset:0;width:auto;height:100%;min-height:0;border:0;border-radius:0;box-shadow:none;':'position:fixed;z-index:1000;inset:auto 16px 12px auto;width:min(720px,calc(100vw - 32px));height:min(620px,75vh);box-shadow:0 4px 22px #0003;');
+    if(originalCommand==='cmd_newMessage') {
+      labelControl(floatButton,next==='full'?'detach':'window',next==='full'?'Detach message':'Expand in this window');
+      floatButton.hidden=false;
+    }else{
+      const label=next==='inline'?'Detach reply into a floating panel':'Return reply below the message';
+      labelControl(floatButton,next==='inline'?'detach':'inline',next==='inline'?'Detach reply':'Return to conversation',label);
+      floatButton.hidden=next!=='inline' && (!inlineContainer?.isConnected || scrollHost?.hidden);
+    }
     windowButton.hidden=next==='inline';
-    floatButton.hidden=next!=='inline' && (!inlineContainer?.isConnected || scrollHost?.hidden);
+    fitComposeToContent();
   }
   function float(){
     if(!panel)return;
@@ -127,6 +181,7 @@ function createInlineCompose(win) {
     setPresentation('floating');
   }
   function returnInline(){
+    if(originalCommand==='cmd_newMessage'){setPresentation('full');return;}
     if(!inlineContainer?.isConnected || scrollHost?.hidden)return;
     inlineContainer.moveBefore(panel,null);setPresentation('inline');panel.scrollIntoView({block:'nearest',behavior:'instant'});
   }
@@ -195,18 +250,19 @@ function createInlineCompose(win) {
         // Never replace another unsent message when navigating or pressing Reply again.
         panel.hidden=false;browser.focus();return;
       }
-      const params=inlineReplyParams(header,command);originalHeader=header;originalCommand=command;
+      const isNew=command==='cmd_newMessage';
+      const params=isNew?inlineNewMessageParams(placement.folder):inlineReplyParams(header,command);originalHeader=header;originalCommand=command;
       inlineContainer=placement.container || doc.documentElement;scrollHost=placement.scrollHost || null;
-      panel=doc.createElement('section');panel.className='gm-inline-compose';panel.setAttribute('aria-label','Reply in this window');
+      panel=doc.createElement('section');panel.className='gm-inline-compose';panel.setAttribute('aria-label',isNew?'New message in this window':'Reply in this window');
       bar=doc.createElement('div');bar.style.cssText='display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:8px 12px;flex:none;';
       title=doc.createElement('strong');title.style.cssText='flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.9em;font-weight:500;';
-      title.textContent=`${command==='cmd_replyall'?'Reply all':'Reply'} · ${header.mime2DecodedSubject || '(No subject)'}`;
+      title.textContent=isNew?'New message':`${command==='cmd_replyall'?'Reply all':'Reply'} · ${header.mime2DecodedSubject || '(No subject)'}`;
       const save=button('',()=>browser?.contentWindow.goDoCommand('cmd_saveAsDraft'));save.disabled=true;labelControl(save,'save','Save draft');
-      floatButton=button('',()=>{if(presentation==='inline')float();else returnInline();});
-      windowButton=button('',separateWindow);labelControl(windowButton,'window','Separate window','Open reply in a separate window');windowButton.disabled=true;
-      const close=button('',requestClose);labelControl(close,'close','Close','Close reply');
+      floatButton=button('',()=>{if(presentation!=='floating')float();else returnInline();});
+      windowButton=button('',separateWindow);labelControl(windowButton,'window','Separate window',isNew?'Open message in a separate window':'Open reply in a separate window');windowButton.disabled=true;
+      const close=button('',requestClose);labelControl(close,'close','Close',isNew?'Close message':'Close reply');
       bar.append(title,save,floatButton,windowButton,close);panel.append(bar);setPresentation(placement.container?'inline':'floating');
-      browser=doc.createXULElement('browser');browser.setAttribute('type','content');browser.setAttribute('maychangeremoteness','false');browser.setAttribute('disablehistory','true');browser.setAttribute('flex','1');browser.style.cssText='flex:1;min-height:0;width:100%;';
+      browser=doc.createXULElement('browser');browser.setAttribute('type','content');browser.setAttribute('maychangeremoteness','false');browser.setAttribute('disablehistory','true');browser.setAttribute('flex','1');browser.style.cssText='display:block;flex:1 1 0;min-height:0;min-width:0;width:100%;height:0;border:0;background:light-dark(#ffffff,#18181b);';
       const frame=browser;
       observer={observe(subject){
         if(subject.browsingContext!==frame.browsingContext)return;
@@ -221,11 +277,15 @@ function createInlineCompose(win) {
         restoreChrome?.();restoreChrome=null;
         const style=frame.contentDocument.createElement('style');style.textContent=`
           #compose-toolbar-menubar2,#titlebar,#status-bar{display:none!important}
-          html,body{min-width:0!important;min-height:0!important}
+          html,body{box-sizing:border-box!important;min-width:0!important;min-height:0!important;width:100%!important;height:100%!important;margin:0!important;overflow:hidden!important;background:light-dark(#ffffff,#18181b)!important}
           body{display:flex!important;flex-direction:column!important}
           #compose-toolbox{order:3!important;flex:none!important;border-top:1px solid var(--layout-border-0,#dadce0)}
-          #composeContentBox{order:1!important;flex:1!important;min-height:0!important}
-          #composeToolbar2{padding:6px!important}
+          #composeContentBox{order:1!important;flex:1 1 0!important;min-height:0!important;overflow:hidden!important}
+          #appcontent,#messageArea,#content-frame{min-height:0!important}
+          #compose-toolbox,#composeToolbar2{background:light-dark(#ffffff,#18181b)!important;background-image:none!important;opacity:1!important;backdrop-filter:none!important}
+          /* macOS native titlebar overlap must not follow the toolbar into the footer. */
+          #composeToolbar2{margin:0!important;padding:6px!important;overflow:visible!important}
+          #compose-toolbox::before,#compose-toolbox::after{display:none!important}
           #button-attach .toolbarbutton-icon{rotate:90deg!important}
           #composeToolbar2 .toolbarbutton-text{display:none!important}
           #button-send .toolbarbutton-text{display:initial!important}

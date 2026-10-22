@@ -95,7 +95,7 @@ default, every minute. Choose 1, 2, 5 or 10 minutes. This configures Thunderbird
 native autosave and each account's configured Drafts destination; changes apply
 to newly opened compose windows. Disabling/uninstalling Thunder-G restores the
 previous native settings unless independently changed in the meantime.
-New mail and Forward keep Thunderbird's native compose window.
+Forward keeps Thunderbird's native compose window. New mail uses it unless the separate in-window setting is enabled.
 
 ### Reply inside the current window (experimental)
 
@@ -104,6 +104,21 @@ Preferences → **Reply and Reply all in this window** is off by default. When e
 One reply stays open while the user navigates; clicking another Reply focuses the existing editor rather than replacing unsent work. Its subject and From fields remain visible. **Save draft**, native autosave, Send and attachment controls use Thunderbird's ordinary commands. Closing the panel, its mail tab or its containing window honors native Save/Discard/Cancel handling. Disabling the option affects new replies and does not discard an open editor.
 
 Live verification on Thunderbird 158.0.1 covered native reply identities and recipients, draft save/reopen with a test attachment, and preserving an edited reply across folder navigation. Closing a modified reply showed the native Save/Discard/Cancel dialog; Cancel retained its contents. No mail was sent. These checks were performed only in Thunderbird. Native signatures follow the selected identity; signature text was not configured in the test accounts.
+
+### New messages inside the current window (experimental)
+
+Preferences → **Compose new messages in this window** is off by default and
+independent of the inline-reply setting. Write and the native New Message command
+open the same native composer in a detached panel, expandable within the message
+area without opening another tab. The folder sidebar stays visible and usable.
+The selected folder's identity and native default format are used, preserving
+native signatures, attachments and drafts. Separate window saves a native draft
+before handing it off. If a reply or new message is already open, Write focuses
+that editor instead of replacing unsent content. Turning the setting off affects
+future requests without discarding an open message. Newsgroup posts stay native. Automated coverage checks command routing, identity
+selection and editor reuse. A live Thunderbird check confirmed that Write opens
+a blank native new-message composer inside the current mail window. Full
+new-message draft, attachment and separate-window transfer checks remain pending.
 
 ### Native message pages and zoom
 
@@ -268,6 +283,6 @@ builds XPI/source ZIP files with SHA-256 checksums. It preserves older release
 notes and refuses existing target versions/artifacts. It does not commit, push,
 upload, or install. Keep writing future notes under Unreleased.
 
-Three-state reply verification: 69 automated tests pass. Live Thunderbird checks covered inline/floating transitions and native-window handoff with identity, recipient, subject and quoted body intact. The embedded editor closed only after the successor body loaded. An earlier server draft-copy failure retained the open reply. Attachments were saved/reopened in a native draft, but the separate-window attachment transfer still needs live confirmation. No mail was sent. These handoff checks were performed only in Thunderbird.
+Three-state reply verification: 72 automated tests pass. Live Thunderbird checks covered inline/floating transitions and native-window handoff with identity, recipient, subject and quoted body intact. The embedded editor closed only after the successor body loaded. An earlier server draft-copy failure retained the open reply. Attachments were saved/reopened in a native draft, but the separate-window attachment transfer still needs live confirmation. No mail was sent. These handoff checks were performed only in Thunderbird.
 
 Column layouts: the reader no longer forces the selection column to be visible or first, and styling no longer hides native Tags or Spam columns. Responsive sizing reads native saved splitter widths and resets temporary preferences when the table is rebuilt. With Thunder-G enabled, Copy view also invokes Thunderbird's native column-copy operation, preserving visibility/order and the selected descendant scope. The separate native Copy columns command remains available; widths are stored globally by Thunderbird. Reply-panel actions have visible labels and panel/window icons rather than standalone arrows.

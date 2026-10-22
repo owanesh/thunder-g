@@ -4,6 +4,13 @@
 
 ### Added
 
+- Separate, off-by-default **Compose new messages in this window** setting.
+  Write opens the native composer in a detached panel, expandable within the
+  message area without opening a new tab or covering the folder sidebar. Uses the
+  selected folder's identity, native signatures, attachments, draft handling and
+  a separate-window control. Existing unsent replies/messages are focused instead
+  of replaced; newsgroup posts retain native behavior.
+
 - Opt-in Gmail-style conversation reader, independent of Thunderbird Conversations,
   with local-index grouping and a folder-thread fallback. Includes discovered sent
   replies, compact message cards, account/contact avatars, subject labels, native
@@ -47,6 +54,12 @@
 
 ### Fixed
 
+- Size the message-list scrollbar to the current page, reset it on page changes,
+  and hide it when the displayed messages fit without scrolling.
+
+- Prevent macOS compose-toolbar titlebar offsets from overlapping the embedded
+  composer footer; keep its surface opaque and clipped to the panel.
+
 - Pagination totals and page boundaries preserve all native message rows, including
   expanded threads. Short final pages no longer retain a full page of blank space;
   switching pages resets scroll without a smooth-scroll animation.
@@ -60,7 +73,7 @@
 
 ### Validation
 
-- 69 automated tests pass, covering pagination, column sizing and copy scope,
+- 72 automated tests pass, covering pagination, column sizing and copy scope,
   conversation labels, read/unread state, compose lifecycle, DKIM bridge and BIMI.
 - Live Thunderbird checks covered inline/floating transitions and transfer to a
   native compose window with identity, recipient, subject and quoted body intact.
@@ -70,7 +83,10 @@
   used for testing. No messages were sent.
 - Betterbird was not tested or changed during this work. Compatibility with
   third-party compose add-ons and the full supported Thunderbird version range
-  remains unverified.
+  remains unverified. Live Thunderbird checks confirmed the current-page
+  scrollbar and the 19-message final page. A live new-message check confirmed Write
+  opens the native composer inside the current mail window; new-message attachment,
+  draft and separate-window transfer checks remain pending.
 
 ## 0.8.0
 

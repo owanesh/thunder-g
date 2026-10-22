@@ -3,6 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const scope=vm.createContext({});
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/inbox.js'),'utf8'),scope);
+vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/compose.js'),'utf8'),scope);
 test('row actions replace unrelated multi-selection before checking and executing commands',()=>{
   let selected=[1,4],index;
   const tree={set selectedIndex(value){index=value;selected=[value]}};
