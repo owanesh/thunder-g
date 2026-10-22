@@ -48,102 +48,12 @@ partially succeed if a folder rejects an update.
 
 ## Settings
 
-Open Add-ons Manager → Thunder-G → Preferences and enable **Hide Today Pane
-completely** to hide the calendar pane, its splitter and bottom-right toggle.
-The option is off by default, applies immediately and is saved across restarts.
-Turning it off or disabling Thunder-G restores Thunderbird’s existing visibility
-setting without changing calendar preferences.
+Open **Add-ons Manager → Thunder-G → Preferences**.
+The [settings guide](docs/settings.md) explains each option, its default and when
+it is useful, including experimental features and optional sender-logo downloads.
 
-### Independent Gmail-style reader (experimental)
-
-Preferences → **Use Thunder-G's independent Gmail-style reader** is off by default
-and applies to all mail windows.
-
-These experimental conversation and inline-reply features require disabling Thunderbird Conversations, because conversation handling is now built into Thunder-G.
-Changing the option returns any open reader to the list; open a message again.
-
-Thunder-G owns the conversation header and expandable message cards.
-The most recent message is expanded and brought into view when a conversation opens; earlier messages can be expanded individually.
-Number shortcuts (1–9, and 0 to clear tags) target the active message card, including replies in Sent.
-The L picker applies labels to the entire loaded conversation.
-Message tags sit beside the sender; the title shows the conversation’s combined labels.
-DKIM chips use the optional local DKIM Verifier compatibility bridge (see `integrations/README.md`): green for verified, amber for warnings or unavailable checks, and red for failed verification. The DKIM toolbar button is hidden in the independent reader.
-A missing result is never shown as verified.
-Thunderbird's local conversation index supplies messages across folders.
-The reader also checks local Sent folder summaries, including custom Sent destinations, and links outgoing replies by Message-ID and References even when the global index is unavailable.
-No subject-only grouping is performed.
-Duplicate stored copies are shown once, preferentially retaining the selected copy.
-Messages absent from local summaries or the index may remain unavailable.
-
-Bodies load on expansion in Thunderbird's native `about:message` viewer. This
-preserves its MIME handling, remote-content policy, security indicators and
-attachment controls. Reply, Reply all, Forward and per-message Print delegate to
-the native commands and composer. A failed message offers a native-window fallback.
-The conversation toolbar continues to act on the native list selection, **not**
-automatically on additional messages discovered in other folders. The L picker separately applies tags to every loaded conversation member, including Sent replies.
-
-Styles are isolated in a shadow root. The native list, columns, row renderer,
-zoom and density are not replaced. Expanded native message viewers register with
-Thunderbird's font-size and density controllers. Tests use mocked interfaces;
-live layout, attachments, signed/encrypted mail, and interaction verification
-without Thunderbird Conversations is still required before treating this as stable.
-
-### Draft autosave
-
-Thunder-G Preferences → **Automatically save messages in Drafts** is enabled by
-default, every minute. Choose 1, 2, 5 or 10 minutes. This configures Thunderbird's
-native autosave and each account's configured Drafts destination; changes apply
-to newly opened compose windows. Disabling/uninstalling Thunder-G restores the
-previous native settings unless independently changed in the meantime.
-Forward keeps Thunderbird's native compose window. New mail uses it unless the separate in-window setting is enabled.
-
-### Reply inside the current window (experimental)
-
-Preferences → **Reply and Reply all in this window** is off by default. When enabled, the conversation footer opens Thunderbird's full `messengercompose.xhtml` editor below the message in the current conversation. Its detach control moves the same editor into a floating panel; the return control puts it back. From the floating panel, a separate-window control saves a native draft and opens it in Thunderbird's normal compose window, closing the embedded editor only after the new window reports its body ready. Failed saves leave the embedded reply open. It passes the exact reply header, native Reply-to-Sender/Reply-All type and account identity; native code supplies recipients, quoting, signatures, HTML/plain text, attachments, encryption controls and configured draft folders. The feature does not implement its own message sending or draft serialization. Compatibility of third-party compose add-ons with an embedded document is not guaranteed.
-
-One reply stays open while the user navigates; clicking another Reply focuses the existing editor rather than replacing unsent work. Its subject and From fields remain visible. **Save draft**, native autosave, Send and attachment controls use Thunderbird's ordinary commands. Closing the panel, its mail tab or its containing window honors native Save/Discard/Cancel handling. Disabling the option affects new replies and does not discard an open editor.
-
-Live verification on Thunderbird 158.0.1 covered native reply identities and recipients, draft save/reopen with a test attachment, and preserving an edited reply across folder navigation. Closing a modified reply showed the native Save/Discard/Cancel dialog; Cancel retained its contents. No mail was sent. These checks were performed only in Thunderbird. Native signatures follow the selected identity; signature text was not configured in the test accounts.
-
-### New messages inside the current window (experimental)
-
-Preferences → **Compose new messages in this window** is off by default and
-independent of the inline-reply setting. Write and the native New Message command
-open the same native composer in a detached panel, expandable within the message
-area without opening another tab. The folder sidebar stays visible and usable.
-The selected folder's identity and native default format are used, preserving
-native signatures, attachments and drafts. Separate window saves a native draft
-before handing it off. If a reply or new message is already open, Write focuses
-that editor instead of replacing unsent content. Turning the setting off affects
-future requests without discarding an open message. Newsgroup posts stay native. Automated coverage checks command routing, identity
-selection and editor reuse. A live Thunderbird check confirmed that Write opens
-a blank native new-message composer inside the current mail window. Full
-new-message draft, attachment and separate-window transfer checks remain pending.
-
-### Native message pages and zoom
-
-Preferences → **Messages per page** offers 25, 50, 100 or **All** (default).
-A Gmail-style range counter and arrows navigate the original virtual list.
-Paging keeps Thunderbird's original rows, columns, chips, hover actions and
-native row metrics; scrolling is constrained to the selected page. Collapsed
-threads count as one row. Select-all in the list selects the current page.
-Disabling paging restores continuous scrolling. The folder index remains native
-and complete; paging does not establish a memory-use reduction.
-
-Outside text-entry fields, Ctrl/Cmd + plus (or equals), minus and zero invoke
-Thunderbird's native interface font-size increase, decrease and reset controls.
-Paging recomputes boundaries when the list or native row metrics change.
-Live zoom/density/layout verification in Thunderbird is still pending.
-
-### Extension identity
-
-The extension ID is now `thunder-g@vschiavoni` (formerly `inline-labels@local.gmail-skin`).
-Thunderbird treats this as a different add-on, rather than an in-place update.
-Uninstall the previous extension, then install the new Thunder-G package;
-add-on-local preferences do not migrate automatically. If using the optional
-local DKIM compatibility patch, rebuild it with the updated sender allowlist.
-For installer-managed profiles, uninstall with the existing rollback snapshot
-before installing the new identity. Native messages and tags are unaffected.
+Outside text-entry fields, Ctrl/Cmd + plus (or equals), minus and zero control
+Thunderbird’s interface font size.
 
 ## Requirements
 
@@ -195,6 +105,16 @@ the debugging page is not needed. If the interface is missing after restart,
 check whether Thunder-G is still enabled in Add-ons Manager and that Thunderbird
 opened the same profile.
 
+### Upgrading from the previous extension
+
+The extension ID is now `thunder-g@vschiavoni` (formerly `inline-labels@local.gmail-skin`).
+Thunderbird treats this as a different add-on, rather than an in-place update.
+Uninstall the previous extension, then install the new Thunder-G package;
+add-on-local preferences do not migrate automatically. If using the optional
+local DKIM compatibility patch, rebuild it with the updated sender allowlist.
+For installer-managed profiles, uninstall with the existing rollback snapshot
+before installing the new identity. Native messages and tags are unaffected.
+
 ### Optional column layout
 
 With the intended ordinary folder open, paste the entire
@@ -231,8 +151,9 @@ packages these sources without a network step.
 
 The experiment has broad Thunderbird UI/profile privileges; it is more powerful
 than an ordinary theme. Review the source before installing. The bundled code
-has no telemetry or domain-logo network requests; mail actions use your configured
-mail service normally. Compatibility can break when Thunderbird internals change.
+has no telemetry. Optional [BIMI sender logos](docs/settings.md#sender-logos)
+require DNS lookups and logo downloads; mail actions use your configured mail
+service normally. Compatibility can break when Thunderbird internals change.
 Archive actions follow Thunderbird's selected-message/thread semantics; messages
 found only by Conversations, such as additional Sent messages, are not always
 included in the skin toolbar's action scope.
@@ -257,6 +178,23 @@ Thunderbird version. See the changelog for validation limits.
 
 Build a source ZIP and SHA-256 checksum with `python3 package.py`. Packaging uses
 an explicit allowlist excluding generated packages and profile recovery data.
+
+### Content loading and temporary caches
+
+The conversation reader starts Thunderbird's native message viewer while it
+looks up the rest of the conversation. It avoids reloading that viewer when the
+result contains the same messages. Conversation-wide labels and footer replies
+wait for the complete scope so sent replies are included.
+
+The list and reader share up to 300 text previews in memory for five minutes.
+Preview extraction reads only locally available message data; it never starts a
+server fetch. A changed message identity/size/date invalidates its preview, and
+an unavailable body is retried after 30 seconds or an offline-flag change.
+Local Sent summary metadata is cached for 30 seconds, up to 10,000 headers;
+larger scans are still complete but are not retained. Native add/delete/move,
+folder rename/delete and key-change notifications invalidate that metadata.
+Both caches are released when their consumers close. Full bodies, attachments,
+remote-image policy and MIME rendering remain under Thunderbird's native viewer.
 
 ## Publishing to GitHub
 
@@ -283,6 +221,6 @@ builds XPI/source ZIP files with SHA-256 checksums. It preserves older release
 notes and refuses existing target versions/artifacts. It does not commit, push,
 upload, or install. Keep writing future notes under Unreleased.
 
-Three-state reply verification: 72 automated tests pass. Live Thunderbird checks covered inline/floating transitions and native-window handoff with identity, recipient, subject and quoted body intact. The embedded editor closed only after the successor body loaded. An earlier server draft-copy failure retained the open reply. Attachments were saved/reopened in a native draft, but the separate-window attachment transfer still needs live confirmation. No mail was sent. These handoff checks were performed only in Thunderbird.
+Three-state reply verification: 89 automated tests pass. Live Thunderbird checks covered inline/floating transitions and native-window handoff with identity, recipient, subject and quoted body intact. The embedded editor closed only after the successor body loaded. An earlier server draft-copy failure retained the open reply. Attachments were saved/reopened in a native draft, but the separate-window attachment transfer still needs live confirmation. No mail was sent. These handoff checks were performed only in Thunderbird.
 
-Column layouts: the reader no longer forces the selection column to be visible or first, and styling no longer hides native Tags or Spam columns. Responsive sizing reads native saved splitter widths and resets temporary preferences when the table is rebuilt. With Thunder-G enabled, Copy view also invokes Thunderbird's native column-copy operation, preserving visibility/order and the selected descendant scope. The separate native Copy columns command remains available; widths are stored globally by Thunderbird. Reply-panel actions have visible labels and panel/window icons rather than standalone arrows.
+Column layouts: the final Date divider stays visible beside the column picker, and dragging the Subject divider redistributes and saves space for Date. The table remains within the mail pane. The reader no longer forces the selection column to be visible or first, and styling no longer hides native Tags or Spam columns. Responsive sizing reads native saved splitter widths and resets temporary preferences when the table is rebuilt. With Thunder-G enabled, Copy view also invokes Thunderbird's native column-copy operation, preserving visibility/order and the selected descendant scope. The separate native Copy columns command remains available; widths are stored globally by Thunderbird. Reply-panel actions have visible labels and panel/window icons rather than standalone arrows.

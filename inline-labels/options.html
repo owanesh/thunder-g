@@ -1,30 +1,97 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Thunder-G settings</title><link rel="stylesheet" href="options.css"></head>
-<body><main><h1>Thunder-G</h1><h2>Layout</h2>
-<label><input id="thread-guides" type="checkbox"> Show thread connection lines</label>
-<p>Connect messages in expanded threads. Enabled by default; applies immediately.</p>
-<label><input id="hide-today-pane" type="checkbox"> Hide Today Pane completely</label>
-<p>Hide the calendar pane, its splitter, and the bottom-right toggle. Applies immediately to all windows.</p>
-<p>Turn this off to restore Thunderbird’s existing visibility setting. That setting is never changed.</p>
-<h2>Conversation reader</h2>
-<label><input id="independent-reader" type="checkbox"> Use Thunder-G's independent Gmail-style reader (experimental)</label>
-<p>Off by default. Disable Thunderbird Conversations before enabling this experimental reader or inline replies: conversation handling is built into Thunder-G. Messages are grouped using Thunderbird's local index, with a folder-thread fallback when indexing is unavailable. Expand cards to read messages and attachments. Reply, Forward and Print use Thunderbird's native controls.</p>
-<p>List columns, CSS, zoom and density stay native. Switching readers returns to the list. The toolbar above a conversation acts on the messages selected in the list, including when more messages are found in other folders.</p>
-<label><input id="inline-reply-enabled" type="checkbox"> Reply and Reply all in this window (experimental)</label>
-<p>Off by default. Starts a reply below the message with Thunderbird's native editor, preserving account signatures, recipients, formatting, attachments and native draft saving. Detach moves the same editor into a floating panel; its separate-window button saves the draft and opens it in Thunderbird's normal compose window. Forward keeps its usual window. An open reply stays available when navigating; close it before starting another reply. Turning this setting off affects new replies and keeps an existing draft open.</p>
-<label><input id="inline-new-message" type="checkbox"> Compose new messages in this window (experimental)</label>
-<p>Off by default. Write opens Thunderbird's native composer in a detached panel beside the sidebar, expandable within the message area, without opening another tab, preserving account signatures, formatting, attachments and native drafts. Open it in a separate window using its window control. If a reply or new message is already open, Write focuses it instead of replacing unsent work. This setting is independent of inline replies.</p>
-<h2>Sender logos</h2>
-<label><input id="bimi-enabled" type="checkbox"> Download and show BIMI sender logos</label>
-<p>Optional remote image downloads — off by default. Enabling this contacts the logo host, which can see your IP address. After a successful aligned DKIM check, looks up the sender domain's BIMI DNS record and downloads only its HTTPS SVG logo. No logo directories, favicons or certificate downloads. A logo is a DNS-published image, not a certified identity badge.</p>
-<p>Contact photos take priority. Missing or invalid records leave the existing avatar unchanged. Logos and missing results are cached for one hour during this session to avoid repeat requests. Turning this off stops new downloads and restores the usual avatars immediately. Applies immediately.</p>
-<h2>Compose and drafts</h2>
-<p>The editor shows Saving…, then ✓ Saved after confirmation. Floating panels resize from their edges and corner, and remember your size across messages and restarts.</p>
-<label><input id="compose-autosave" type="checkbox"> Automatically save messages in Drafts</label>
-<label>Save every <select id="compose-autosave-minutes"><option value="1">1 minute</option><option value="2">2 minutes</option><option value="5">5 minutes</option><option value="10">10 minutes</option></select></label>
-<p>Enabled by default, every minute. Uses each account's configured Drafts folder and Thunderbird's native autosave. Changes apply to newly opened compose windows. Disabling Thunder-G restores previous Thunderbird settings unless changed independently.</p>
-<h2>Message list</h2>
-<label>Messages per page <select id="messages-per-page"><option value="0">All (continuous scrolling)</option><option value="25">25</option><option value="50">50</option><option value="100">100</option></select></label>
-<p>Global setting, saved across restarts. Uses the original list, columns and density. Totals include messages inside collapsed threads; scrolling follows visible rows. Ctrl/Cmd + plus, minus and zero use Thunderbird's interface font controls outside text fields.</p>
-<p id="status" role="status" aria-live="polite"></p></main><script src="options.js"></script></body></html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Thunder-G settings</title>
+  <link rel="icon" href="icons/thunder-g-32.png">
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="settings-shell">
+    <header class="page-header">
+      <div class="brand">
+        <img src="icons/thunder-g-64.png" width="44" height="44" alt="">
+        <div><p class="app-name">Thunder-G <span id="version" class="version"></span></p><h1>Settings</h1></div>
+      </div>
+      <a id="repository" class="repository-link" href="https://github.com/vschiavoni/thunderbird-gmail-skin" target="_blank" rel="noopener noreferrer">
+        Repository
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M14 3h7v7m0-7L10 14M10 3H4a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-6"/></svg>
+      </a>
+    </header>
+
+    <div class="settings-layout">
+      <aside>
+        <nav aria-label="Settings sections">
+          <a href="#inbox">Inbox</a>
+          <a href="#conversations">Conversations</a>
+          <a href="#writing">Writing</a>
+          <a href="#sender-logos">Sender logos</a>
+        </nav>
+        <p class="nav-note">Changes save automatically.<br>Your choices stay after restart.</p>
+      </aside>
+
+      <main>
+        <section id="inbox" aria-labelledby="inbox-title">
+          <div class="section-heading"><h2 id="inbox-title">Inbox</h2><p>A little more room for your messages.</p></div>
+          <div class="setting-row">
+            <div class="setting-copy"><label for="messages-per-page">Messages per page</label><p id="page-size-help">Choose a page size or keep one continuous list.</p></div>
+            <select id="messages-per-page" aria-describedby="page-size-help"><option value="0">All messages</option><option value="25">25 messages</option><option value="50">50 messages</option><option value="100">100 messages</option></select>
+          </div>
+          <div class="setting-row">
+            <div class="setting-copy"><label for="hide-today-pane">Hide Today Pane</label><p id="today-pane-help">Hide the calendar pane and its toggle to leave more room for mail.</p></div>
+            <input class="switch" id="hide-today-pane" type="checkbox" role="switch" aria-describedby="today-pane-help">
+          </div>
+          <div class="setting-row">
+            <div class="setting-copy"><label for="thread-guides">Show thread connection lines</label><p id="thread-guides-help">A subtle line connects messages in expanded threads. Enabled by default; applies immediately.</p></div>
+            <input class="switch" id="thread-guides" type="checkbox" role="switch" aria-describedby="thread-guides-help">
+          </div>
+          <details><summary>About your existing layout</summary><div class="details-content"><p>Your columns, density and interface font size stay native. Page totals include messages inside collapsed threads; scrolling follows visible rows.</p><p>Hiding Today Pane applies immediately. Turning it off restores Thunderbird’s existing visibility setting without changing calendar preferences.</p></div></details>
+        </section>
+
+        <section id="conversations" aria-labelledby="conversations-title">
+          <div class="section-heading"><div class="heading-line"><h2 id="conversations-title">Conversations</h2><span class="badge">Experimental</span></div><p>Read the conversation together, including your sent replies.</p></div>
+          <p class="notice"><strong>Using Thunderbird Conversations?</strong> Disable that add-on before enabling Thunder-G’s conversation reader or in-window replies. Thunder-G provides its own conversation handling.</p>
+          <div class="setting-row">
+            <div class="setting-copy"><label for="independent-reader">Use Thunder-G’s conversation reader</label><p id="reader-help">Expandable message cards, attachments and reply actions in one view. Off by default.</p></div>
+            <input class="switch" id="independent-reader" type="checkbox" role="switch" aria-describedby="reader-help">
+          </div>
+          <details><summary>How conversations work</summary><div class="details-content"><p>Messages are grouped using Thunderbird’s local index, with a folder-thread fallback when indexing is unavailable. Message bodies, attachments, Reply, Forward and Print use Thunderbird’s native viewer and commands.</p><p>Changing readers returns to the list. The conversation toolbar acts on messages selected in the list, even when the reader finds additional messages in other folders.</p></div></details>
+        </section>
+
+        <section id="writing" aria-labelledby="writing-title">
+          <div class="section-heading"><h2 id="writing-title">Writing</h2><p>Your native composer, with a place in the current window.</p></div>
+          <div class="setting-row">
+            <div class="setting-copy"><label for="inline-new-message">Write new messages in this window <span class="badge">Experimental</span></label><p id="new-message-help">Start in a floating panel. Resize it, expand it beside the sidebar, or open a separate window. Off by default.</p></div>
+            <input class="switch" id="inline-new-message" type="checkbox" role="switch" aria-describedby="new-message-help">
+          </div>
+          <div class="setting-row">
+            <div class="setting-copy"><label for="inline-reply-enabled">Reply in this window <span class="badge">Experimental</span></label><p id="reply-help">Reply and Reply all start below the conversation. Detach when you need more room. Disable Thunderbird Conversations first. Off by default.</p></div>
+            <input class="switch" id="inline-reply-enabled" type="checkbox" role="switch" aria-describedby="reply-help">
+          </div>
+          <div class="setting-row">
+            <div class="setting-copy"><label for="compose-autosave">Automatically save drafts</label><p id="autosave-help">Use your account’s Drafts folder. Enabled by default, every minute.</p></div>
+            <input class="switch" id="compose-autosave" type="checkbox" role="switch" aria-describedby="autosave-help draft-status-help">
+          </div>
+          <div class="sub-setting"><label for="compose-autosave-minutes">Save every</label><select id="compose-autosave-minutes"><option value="1">1 minute</option><option value="2">2 minutes</option><option value="5">5 minutes</option><option value="10">10 minutes</option></select></div>
+          <p id="draft-status-help" class="section-note">The editor shows “Saving…”, then “✓ Saved” after confirmation. New edits show “Unsaved changes”; errors show “Save failed”.</p>
+          <details><summary>Editor and draft behavior</summary><div class="details-content"><p>Signatures, account identity, recipients, formatting, attachments and draft saving use Thunderbird’s native composer. Forward keeps its usual window. The floating panel resizes from its top or side edge and marked corner; the corner also supports arrow keys. Your chosen size is remembered across messages and restarts, adapting to the available space beside the sidebar.</p><p>An open message is kept when you navigate or start another one. Closing follows native Save, Discard and Cancel prompts. Separate window saves a native draft first. Turning off an in-window option affects new messages and keeps existing work open.</p><p>Autosave changes apply to newly opened composers. Disabling Thunder-G restores prior native autosave settings unless they were changed independently.</p></div></details>
+        </section>
+
+        <section id="sender-logos" aria-labelledby="logos-title">
+          <div class="section-heading"><h2 id="logos-title">Sender logos</h2><p>Optional domain logos alongside your messages.</p></div>
+          <div class="setting-row">
+            <div class="setting-copy"><label for="bimi-enabled">Show sender logos with BIMI</label><p id="bimi-help">Looks up the sender’s BIMI DNS record and downloads its advertised HTTPS SVG logo. Off by default.</p></div>
+            <input class="switch" id="bimi-enabled" type="checkbox" role="switch" aria-describedby="bimi-help logo-privacy">
+          </div>
+          <p id="logo-privacy" class="notice privacy-note"><strong>This downloads remote images.</strong> The logo host can see your IP address. Only the advertised logo is downloaded; no logo lookup service, favicon or certificate download is used.</p>
+          <details><summary>Checks, caching and fallback</summary><div class="details-content"><p>Requires a successful aligned DKIM check through the optional integration. A DNS-published logo is not a certified identity badge. Contact photos take priority; missing or invalid records keep the usual avatar.</p><p>Logos and missing results are cached for one hour during this session. Turning this off stops new downloads and restores the usual avatars immediately.</p></div></details>
+        </section>
+
+        <footer class="save-status"><span class="autosave-note">Settings save automatically</span><p id="status" role="status" aria-live="polite" aria-atomic="true"></p></footer>
+      </main>
+    </div>
+  </div>
+  <script src="options.js"></script>
+</body>
+</html>

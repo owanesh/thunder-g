@@ -29,7 +29,7 @@ compatibility with unmodified provider releases.
 
 ## Optional BIMI image downloads
 
-Settings include **Download and show BIMI sender logos**, off by default. The setting explicitly discloses remote image downloads and that the logo host can see the user's IP address. After aligned DKIM success, the reader looks up `default._bimi.<From domain>` and, only if no record exists, the organizational domain resolved with Thunderbird's public suffix service. Empty `l=` opts out.
+The [settings guide](../docs/settings.md#sender-logos) describes **Show sender logos with BIMI**, off by default. The setting explicitly discloses remote image downloads and that the logo host can see the user's IP address. After aligned DKIM success, the reader looks up `default._bimi.<From domain>` and, only if no record exists, the organizational domain resolved with Thunderbird's public suffix service. Empty `l=` opts out.
 
 Only the DNS-declared HTTPS SVG is downloaded: no logo directories, favicons, certificate requests, credentials or referrer. Redirects are rejected. Downloads have a ten-second deadline and a 64 KiB limit. Only static self-contained SVG is accepted as a data-image; downloaded markup is never inserted into the document. This is logo discovery, not BIMI/VMC identity certification. Local contact photos have priority. A bounded one-hour session cache includes successful and absent results. Disabling stops new discovery, removes displayed BIMI logos and ignores late responses.
 

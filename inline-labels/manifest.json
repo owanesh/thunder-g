@@ -42,5 +42,6 @@
   "options_ui": {
     "page": "options.html",
     "open_in_tab": true
-  }
+  },
+  "homepage_url": "https://github.com/vschiavoni/thunderbird-gmail-skin"
 }
