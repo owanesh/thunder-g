@@ -126,7 +126,7 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
       }
       pendingDocuments.get(doc)?.close(); pendingDocuments.delete(doc);
       loadSkin(doc.defaultView);
-      const labels = installInlineLabels(doc.defaultView, MailServices);
+      const labels = installInlineLabels(doc.defaultView, MailServices, Services.prefs);
       const nestedLabels = installNestedLabelSidebar(doc.defaultView);
       const reader = installReadingMode(doc.defaultView);
       readers.set(doc,reader); reader.setIndependent(independentReader);
@@ -182,6 +182,7 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
       if (!started) return;
       ExtensionSupport.unregisterWindowListener(id);
       Services.prefs.removeObserver("mailnews.tags.", observer);
+      Services.prefs.removeObserver(HIDDEN_MESSAGE_LABELS_PREF, observer);
       MailServices.mfn.removeListener(tagChanges);
       for (const [win, listener] of windows) win.removeEventListener("load", listener, true);
       for (const controller of pendingDocuments.values()) controller.close();
@@ -231,6 +232,7 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
       } catch (_) { console.warn('Thunder-G: could not configure draft autosave settings.'); }
       started = true;
       Services.prefs.addObserver("mailnews.tags.", observer);
+      Services.prefs.addObserver(HIDDEN_MESSAGE_LABELS_PREF, observer);
       MailServices.mfn.addListener(tagChanges, Ci.nsIMsgFolderNotificationService.msgPropertyChanged);
       ExtensionSupport.registerWindowListener(id, {
         chromeURLs: ["chrome://messenger/content/messenger.xhtml"],

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Constrain sidebar label menu buttons to 28 pixels at the right edge; preserve space for label names and message counts.
+
+- Add a hover/focus three-dot sidebar label menu with colors, message-list visibility, subtree editing, removal confirmation and sublabel creation.
+
 - Add expandable nested native labels in the Tags sidebar and label picker, searchable by full path.
 - Add a New label panel with a parent selector; preserve existing tag keys, full-path chips and conversation-wide application.
 

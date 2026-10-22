@@ -37,6 +37,7 @@ function nestedLabelName(name,parent,tags) {
 function installNestedLabelSidebar(win,mailServices=MailServices,prefs=Services.prefs) {
   const doc=win.document,tree=doc.getElementById('folderTree');
   if(!tree)return {close(){}};
+  const menu=installSidebarLabelMenu(win,mailServices.tags,prefs);
   const saved=new Map();let closed=false,timer=null;
   function refresh() {
     timer=null;if(closed)return;
@@ -54,6 +55,7 @@ function installNestedLabelSidebar(win,mailServices=MailServices,prefs=Services.
         const name=node.parent?node.path.slice(node.parent.path.length+1):node.path;
         row.name=name;row.fullName=node.path;
         row.dataset.gmNestedLabel='true';
+        menu.decorate(row,node.tag);
         place(node.children,row.childList);
       });
     }
@@ -64,7 +66,7 @@ function installNestedLabelSidebar(win,mailServices=MailServices,prefs=Services.
   const prefObserver={observe:schedule};prefs.addObserver('mailnews.tags.',prefObserver);
   schedule();
   return {refresh:schedule,close(){
-    closed=true;observer.disconnect();prefs.removeObserver('mailnews.tags.',prefObserver);if(timer!==null)win.clearTimeout(timer);
+    closed=true;observer.disconnect();menu.close();prefs.removeObserver('mailnews.tags.',prefObserver);if(timer!==null)win.clearTimeout(timer);
     const list=win.folderPane?._modes?.tags?.containerList;
     if(list?.isConnected)for(const tag of mailServices.tags.getAllTags()) {
       const row=saved.get(tag.key);if(!row)continue;
