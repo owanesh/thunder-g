@@ -2,6 +2,227 @@
 
 ## Unreleased
 
+### Added
+
+- Label picker headings show whether changes apply to one message, selected
+  messages or the entire conversation, with its message count and sent replies.
+  A subtle marker identifies the active message targeted by numeric tag shortcuts.
+- Floating composers remember their chosen size across messages and restarts,
+  adapting to the available space beside the sidebar. Size preferences are saved
+  after a resize gesture, not on every pointer move.
+
+- Optional thread connection lines in the native message list. Enabled by
+  default and configurable under Inbox, with immediate updates. Connectors follow
+  expanded native thread boundaries, end at each thread’s last reply and leave
+  collapse controls, columns, indentation and pagination unchanged.
+
+- Extension homepage links to the main GitHub repository in the manifest and
+  settings header.
+- Redesigned settings with the bundled logo, version, section navigation,
+  accessible switches, compact expandable explanations, light/dark layouts and
+  visible save/error feedback. Experimental-feature and BIMI download notices
+  remain visible beside their controls.
+
+- In-window draft status for native manual save and configurable autosave:
+  Saving…, a green ✓ Saved only after confirmed success, Unsaved changes after
+  edits, and Save failed on errors. Editing during autosave cannot leave a stale
+  Saved confirmation. Native signatures, attachments and Drafts folders are retained.
+- Resizable floating composers with top/side edge handles, a visible corner grip
+  and keyboard resizing. Sizes stay within the message area beside the sidebar
+  and are retained across detach/return transitions.
+
+- Shared in-memory preview cache for the message list and conversation reader:
+  up to 300 short text previews, expiring after five minutes, with local reads
+  reused across consumers and replacement-message checks.
+- A bounded 30-second cache of local Sent summary metadata, sharing concurrent
+  scans and invalidating on message/folder changes. No message bodies are stored
+  in this cache or downloaded for preview generation.
+
+- Separate, off-by-default **Compose new messages in this window** setting.
+  Write opens the native composer in a detached panel, expandable within the
+  message area without opening a new tab or covering the folder sidebar. Uses the
+  selected folder's identity, native signatures, attachments, draft handling and
+  a separate-window control. Existing unsent replies/messages are focused instead
+  of replaced; newsgroup posts retain native behavior.
+
+- Opt-in Gmail-style conversation reader, independent of Thunderbird Conversations,
+  with local-index grouping and a folder-thread fallback. Includes discovered sent
+  replies, compact message cards, account/contact avatars, subject labels, native
+  message bodies and attachments, printing, and reply actions below the messages.
+  The most recent message stays expanded.
+- Configurable inline Reply and Reply all using Thunderbird's native composer,
+  account identity, signatures, formatting, attachments and draft machinery.
+  Replies start below the conversation, can detach into a floating panel and
+  return inline, or transfer through a saved native draft to a separate compose
+  window. Navigation preserves an open reply; closing honors native draft prompts.
+- Configurable native draft autosave interval, with restoration of prior native
+  preferences when the feature is disabled or unloaded.
+- DKIM status chips for verified, unsigned, failed and unchecked messages, using
+  the optional local DKIM Verifier compatibility bridge. The separate DKIM button
+  is hidden; ordinary DKIM Verifier installations do not provide this bridge.
+- Opt-in BIMI domain logos with explicit disclosure of DNS lookups and logo
+  downloads, bounded caching and fallback avatars. Only the advertised logo is
+  downloaded; no external logo lookup service is used. See integrations/README.md
+  for provider requirements and validation limits.
+
+### Changed
+
+- Move setting descriptions from the README to [the settings guide](docs/settings.md),
+  with defaults and short explanations for each option. Include the guide in source bundles.
+
+- Start the native message viewer while conversation-index and Sent lookups are
+  still running. Reuse the viewer when membership is unchanged; conversation-wide
+  labels and footer replies wait for the complete scope, including sent replies.
+
+- Renamed the extension ID from `inline-labels@local.gmail-skin` to
+  `thunder-g@vschiavoni`, matching the Thunder-G name and primary author. Updated the installer and optional
+  DKIM bridge allowlist. Thunderbird treats this as a different add-on: uninstall the previous extension,
+  then install the new Thunder-G package. Add-on-local settings do not migrate
+  automatically; native messages and tags are unaffected.
+- Experimental conversation and inline-reply features require disabling Thunderbird
+  Conversations because conversation handling is now built into Thunder-G.
+
+- Pagination uses Thunderbird's original virtual message list. Controls sit beside
+  Quick Filter; page size is configurable and native font-size shortcuts remain
+  available outside text fields.
+- Copy view also copies native column visibility and order to the destination,
+  respecting the selected descendant scope. The native Copy columns command and
+  outgoing-folder From/Recipient handling remain available.
+- Reply-panel controls use visible labels and panel/window icons instead of
+  standalone arrows. The attachment paperclip is rotated 90 degrees.
+- Per-message More uses a spaced vertical-ellipsis button. Conversation labels sit
+  beside the subject, with removable chips and compact message headers.
+
+### Fixed
+
+- Keep message-list labels visible when row actions appear in narrow panes.
+  Smart actions occupy space only on hover or keyboard focus. Settings save
+  confirmations dismiss automatically while errors remain available.
+
+- Avoid refitting columns and repainting pagination when only row text, tag chips
+  or previews change. Reuse date formatters and unchanged chips, skip redundant
+  paging/style updates, and stop retaining detached date cells from recycled rows.
+
+- Make each thread-arrow activation toggle once, including rapid repeated clicks
+  and button activation. Keep native expansion, selection and keyboard behavior,
+  enlarge the click target without moving the icon, and cancel queued reader opens
+  when the arrow is used. Refresh page boundaries on native thread-change events.
+
+- Keep the final Date column divider visible and enabled beside the column picker.
+  Dragging the Subject divider redistributes space to Date during the drag and
+  saves the balancing width through native column storage without overflowing
+  the mail pane.
+
+- Stop pagination from reopening collapsed threads on every repaint. Page totals
+  count the messages inside collapsed threads while scrolling uses visible rows.
+  Threads crossing page boundaries remain reachable, and explicit page selection
+  reveals only affected threads to avoid selecting hidden off-page messages.
+
+- Anchor the embedded composer attachment picker to the main mail window on
+  macOS so the native file chooser opens correctly. Native attachment conversion,
+  multiple-file selection and the last attachment directory are preserved.
+
+- Hide the page scrollbar while the conversation replaces the message list.
+- Keep extension startup available with safe defaults if optional preferences
+  cannot be loaded; read all startup preferences together.
+
+- Size the message-list scrollbar to the current page, reset it on page changes,
+  and hide it when the displayed messages fit without scrolling.
+
+- Prevent macOS compose-toolbar titlebar offsets from overlapping the embedded
+  composer footer; keep its surface opaque and clipped to the panel.
+
+- Pagination totals and page boundaries preserve all native message rows, including
+  expanded threads. Short final pages no longer retain a full page of blank space;
+  switching pages resets scroll without a smooth-scroll animation.
+- Resizing the last column keeps the table within the pane. Responsive sizing reads
+  native saved widths instead of overriding them with stale preferences. The reader
+  no longer forces checkbox-column visibility/order or hides native Tag/Spam columns.
+- Conversation-wide L label operations include resolved sent replies; individual
+  message tag shortcuts target the opened message rather than the first message.
+- Read/unread actions use current message flags, including mixed selections and
+  delayed automatic marking. Failed draft transfers retain the embedded reply.
+
+### Validation
+
+- Regression checks cover label scope and active-message targeting, floating-size
+  persistence, viewport limits and settings confirmations. Successful settings
+  feedback dismisses after 3 seconds, or 6 for explanatory text; errors remain visible.
+- Live Thunderbird checks confirmed that closing and reopening an empty
+  new-message composer restored the resized dimensions with the sidebar visible.
+  No mail was sent.
+
+- Live Thunderbird performance checks covered scrolling, folder/page changes,
+  repeated thread-arrow clicks and the 19-message final page. The page scrollbar
+  followed native scrolling, columns stayed within the pane and the sidebar
+  remained visible. No list mutations occurred during a five-second idle check;
+  a clean restart recorded no Thunder-G script errors. A 40-step scrolling check
+  kept individual row fills below 2 ms in the optimized run; this is a smoke check,
+  not an application-wide speed guarantee.
+
+- Performance regressions check that cell/preview updates schedule no column or
+  page work, scrolling does not rewrite the page announcement, unchanged chips
+  are retained, and 500 date rows use four formatters. A local isolated benchmark
+  of 300 dates improved from about 15 ms to under 1 ms across five warmed runs;
+  this measures date formatting, not application-wide responsiveness.
+
+- Live Thunderbird checks covered thread-arrow button activations with click
+  counts 0–3, native Left/Right keys and collapse/reopen on the first and second
+  pages. Every activation changed the thread state once and message totals stayed
+  unchanged. Regression tests also cover canceling queued reader opens and native
+  structure changes with unchanged row counts.
+
+- Live Thunderbird checks confirmed immediate thread-guide on/off updates, native
+  collapse/reopen behavior and next/previous pages with unchanged message totals.
+  The redesigned settings and bundled logo were visually checked at normal width
+  and a temporary 560px viewport; the original width was restored afterward.
+- Settings checks cover manifest metadata, control/label wiring, packaged local
+  logo assets, all preference groups, autosave dependencies and save-error rollback.
+- Live Thunderbird checks confirmed the native one-minute autosave setting,
+  Saved after actual draft success, clearing confirmation on new edits,
+  manual Save draft, floating resize with the sidebar visible and expansion/return.
+  The native autosave handler was invoked directly for the check; no mail was sent.
+  Regression tests cover failure with an existing draft URI, edits during autosave,
+  native field updates, viewport limits, pointer capture, keyboard resize and cleanup.
+- Live Thunderbird column checks covered the exposed final Date divider,
+  redistribution from Subject to Date, native width persistence and retaining
+  the resized layout across next/previous page changes. The table stayed within
+  the mail pane. Regression coverage includes native divider re-enabling,
+  explicitly fixed columns, drag-time balancing and cleanup.
+- Live Thunderbird collapse/reopen/collapse and next/previous-page checks kept
+  the thread closed and the full message count unchanged. Automated regressions
+  cover collapsed threads spanning pages, native group headers and exact-page
+  bulk selection.
+- Cache regressions cover shared preview reads, identity changes, expiry and LRU
+  eviction; shared Sent scans, invalidation and retention limits; and early native
+  rendering without exposing incomplete conversation-wide label/reply scope.
+  Live Thunderbird opening/reopening checks completed with no Thunder-G errors
+  recorded. No before/after latency benchmark has been claimed.
+- Follow-up Thunderbird checks covered all 15 pages of a 1,430-message folder,
+  page-relative scroll limits, a 19-message final page, and hiding/restoring the
+  page scrollbar when switching between list and conversation.
+- New-message checks covered detached/full-area transitions with the folder
+  sidebar visible, preservation of edited text, and native Cancel/Discard prompts.
+  An inline-reply test confirmed the native file chooser opens and a synthetic
+  attachment survives detach/return transitions. No messages were sent.
+- The existing local DKIM bridge prototype was rebuilt for the current add-on ID;
+  a real signed-message check returned the provider's verification result. This
+  does not establish compatibility with unmodified DKIM Verifier releases.
+- 89 automated tests pass, covering pagination, column sizing and copy scope,
+  conversation labels, read/unread state, compose lifecycle, DKIM bridge and BIMI.
+- Live Thunderbird checks covered inline/floating transitions and transfer to a
+  native compose window with identity, recipient, subject and quoted body intact.
+  Attachments were saved/reopened in a native draft; attachment transfer through
+  the new separate-window action and the cross-account Copy view workflow still
+  need live confirmation. Native signature text was not configured in the accounts
+  used for testing. No messages were sent.
+- Betterbird was not tested or changed during this work. Compatibility with
+  third-party compose add-ons and the full supported Thunderbird version range
+  remains unverified. Live Thunderbird checks confirmed the current-page
+  scrollbar and the 19-message final page. A live new-message check confirmed Write
+  opens the native composer inside the current mail window; new-message attachment,
+  draft and separate-window transfer checks remain pending.
+
 ## 0.8.0
 
 - Renamed the companion to **Thunder-G**, with a new icon, refined Gmail-style

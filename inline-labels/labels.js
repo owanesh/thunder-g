@@ -23,6 +23,7 @@ function installInlineLabels(window = globalThis.window, MailServices = globalTh
   let disposed = false;
   let prototype, original, wrapped;
   let tags = MailServices.tags.getAllTags();
+  const rendered = new WeakMap();
   const style = doc.createElement("style");
   style.textContent = `
     /* Keep sender/subject headers visually empty; native controls remain. */
@@ -30,8 +31,6 @@ function installInlineLabels(window = globalThis.window, MailServices = globalTh
       font-size: 0 !important;
       text-shadow: none !important;
     }
-    /* Hidden only while the add-on is active; native column settings survive. */
-    #threadTree :is(#tagsCol, .tagscol-column) { display: none !important; }
     #threadTree .subject-line {
       display: flex !important; align-items: center; min-width: 0;
       flex: 1 1 auto; overflow: hidden; column-gap: 0 !important;
@@ -77,16 +76,18 @@ function installInlineLabels(window = globalThis.window, MailServices = globalTh
   function render(row) {
     const line = row.querySelector(".subject-line");
     if (!line) return;
-    // Recycled virtual rows must never keep the preceding message's tags.
-    line.querySelector(".gm-inline-labels")?.remove();
-    if ((row.dataset.properties || "").split(" ").includes("dummy")) return;
+    const existing=line.querySelector('.gm-inline-labels');
+    if ((row.dataset.properties || "").split(" ").includes("dummy")) {existing?.remove();return;}
     let labels;
     try {
       const header = window.gDBView?.getMsgHdrAt(row.index);
-      if (!header) return;
+      if (!header) {existing?.remove();return;}
       labels = assignedTags(header, tags);
-    } catch (_) { return; }
-    if (!labels.length) return;
+    } catch (_) {existing?.remove();return;}
+    if (!labels.length) {existing?.remove();return;}
+    const signature=JSON.stringify(labels.map(tag=>[tag.key,tag.tag,tag.color]));
+    if(existing && rendered.get(row)===signature)return;
+    existing?.remove();rendered.set(row,signature);
     const container = doc.createElement("span");
     container.className = "gm-inline-labels";
     container.setAttribute("aria-label", `Labels: ${labels.map(tag => tag.tag).join(", ")}`);

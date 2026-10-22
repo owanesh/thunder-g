@@ -18,6 +18,134 @@
             "type": "boolean"
           }
         ]
+      },
+      {
+        "name": "setComposeAutosave",
+        "type": "function",
+        "async": true,
+        "parameters": [
+          {
+            "name": "enabled",
+            "type": "boolean"
+          },
+          {
+            "name": "minutes",
+            "type": "integer"
+          }
+        ]
+      },
+      {
+        "name": "setMessagesPerPage",
+        "type": "function",
+        "async": true,
+        "parameters": [
+          {
+            "name": "value",
+            "type": "integer"
+          }
+        ]
+      },
+      {
+        "name": "setIndependentReader",
+        "type": "function",
+        "async": true,
+        "parameters": [
+          {
+            "name": "enabled",
+            "type": "boolean"
+          }
+        ]
+      },
+      {
+        "name": "resolveDkim",
+        "type": "function",
+        "async": true,
+        "parameters": [
+          {
+            "name": "request",
+            "type": "integer"
+          },
+          {
+            "name": "payload",
+            "type": "string"
+          }
+        ]
+      },
+      {
+        "name": "setBimiEnabled",
+        "type": "function",
+        "async": true,
+        "parameters": [
+          {
+            "name": "enabled",
+            "type": "boolean"
+          }
+        ]
+      },
+      {
+        "name": "setInlineReplyEnabled",
+        "type": "function",
+        "async": true,
+        "parameters": [
+          {
+            "name": "enabled",
+            "type": "boolean"
+          }
+        ]
+      },
+      {
+        "name": "setInlineNewMessageEnabled",
+        "type": "function",
+        "async": true,
+        "parameters": [
+          {
+            "name": "enabled",
+            "type": "boolean"
+          }
+        ]
+      },
+      {
+        "name": "setThreadGuides",
+        "type": "function",
+        "async": true,
+        "parameters": [
+          {
+            "name": "enabled",
+            "type": "boolean"
+          }
+        ]
+      }
+    ],
+    "events": [
+      {
+        "name": "onDkimRequest",
+        "type": "function",
+        "parameters": [
+          {
+            "name": "request",
+            "type": "integer"
+          },
+          {
+            "name": "messageId",
+            "type": "integer"
+          },
+          {
+            "name": "domain",
+            "type": "string"
+          },
+          {
+            "name": "baseDomain",
+            "type": "string"
+          },
+          {
+            "name": "details",
+            "type": "boolean"
+          },
+          {
+            "name": "popupContext",
+            "type": "integer"
+          }
+        ]
       }
     ]
   }

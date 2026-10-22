@@ -4,9 +4,62 @@
   text-shadow: none !important;
 }
 
-/* Hide both header and message cells, so no empty Spam column is left. */
-#threadTree :is(#junkStatusCol, .junkstatuscol-column) {
-  display: none !important;
+/* Native fit-to-pane layout hides the final divider. Leave the column picker
+   its own target and expose the enabled native resize handle just beside it. */
+#threadTree th.last-column[data-gm-last-resizable="true"]:not(.column-dragging) > hr[is="pane-splitter"] {
+  display: block !important;
+  inset-inline-end: 32px !important;
+  z-index: 2;
+  cursor: col-resize;
+}
+
+/* Give the thread arrow a larger target without shifting its icon or text. */
+#threadTree tr.table-layout .thread-container > button.twisty {
+  position: relative;
+  z-index: 2;
+  inline-size: 24px !important;
+  block-size: 24px !important;
+  min-inline-size: 24px !important;
+  min-block-size: 24px !important;
+  margin-inline: -4px !important;
+  cursor: pointer;
+}
+
+/* Connect native expanded-thread rows in the existing twisty gutter. These
+   marks neither indent message text nor take pointer events from the arrow. */
+#threadTree tr[data-gm-thread-guide] .subjectcol-column {
+  position: relative;
+  --gm-thread-guide: light-dark(#8ba2c3, #8ba6cc);
+}
+#threadTree tr[data-gm-thread-guide] .subjectcol-column::before,
+#threadTree tr[data-gm-thread-guide]:is([data-gm-thread-guide="middle"], [data-gm-thread-guide="end"]) .subjectcol-column::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  background: var(--gm-thread-guide);
+  pointer-events: none;
+}
+#threadTree tr[data-gm-thread-guide] .subjectcol-column::before {
+  inset-inline-start: 7px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+}
+#threadTree tr[data-gm-thread-guide="start"] .subjectcol-column::before {
+  top: calc(50% + 8px);
+}
+#threadTree tr[data-gm-thread-guide="end"] .subjectcol-column::before {
+  bottom: 50%;
+}
+#threadTree tr[data-gm-thread-guide]:is([data-gm-thread-guide="middle"], [data-gm-thread-guide="end"]) .subjectcol-column::after {
+  inset-inline-start: 8px;
+  top: 50%;
+  width: 8px;
+  height: 1px;
+}
+@media (forced-colors: active) {
+  #threadTree tr[data-gm-thread-guide] .subjectcol-column { --gm-thread-guide: CanvasText; }
+  #threadTree tr[data-gm-thread-guide].selected .subjectcol-column { --gm-thread-guide: HighlightText; }
 }
 
 /* Follow Thunderbird's native UI Font Size control rather than fixed pixels. */
@@ -35,7 +88,6 @@
   #threadTree .gm-inline-labels { max-width:35% !important; }
 }
 @container gm-inbox (max-width:520px) {
-  #threadTree tr:is(:hover,:focus-within) .gm-inline-labels { display:none !important; }
   #threadTree .gm-row-actions { gap:0 !important; }
   #threadTree .gm-row-actions button { width:24px !important; height:24px !important; padding:3px !important; }
 }

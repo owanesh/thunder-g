@@ -15,8 +15,10 @@ A compact inbox, existing tags as colored chips before the subject, and a conver
 
 Current version: **0.8.0**. Installable package: `thunder-g-0.8.0.xpi`. The companion accepts **Thunderbird 153–158.x**.
 
-Renderer hooks were inspected against Thunderbird **158.0.1 on macOS**. Recent
-visual changes still require live verification; Windows and Linux are unverified.
+Tested on macOS with **Thunderbird 158.0.1** and **Betterbird 153.5.0**
+(Betterbird testing reported by the maintainer). Renderer hooks were inspected
+against Thunderbird 158.0.1. This does not imply that every feature has been
+verified on both clients; Windows and Linux remain unverified.
 
 Release history and detailed changes are in [CHANGELOG.md](CHANGELOG.md).
 
@@ -24,7 +26,7 @@ Release history and detailed changes are in [CHANGELOG.md](CHANGELOG.md).
 
 - Automatic light/dark shell, responsive pencil/Write button, and yellow stars.
 - Native tag chips, searchable Labels menu, and gray snippets from locally available mail.
-- Hidden From/Subject header text and Spam column; UI font size follows Thunderbird.
+- Hidden From/Subject header text; native column visibility and order are respected. UI font size follows Thunderbird.
 - Single-click reading in the current tab; Back restores the list; Previous/Next navigate.
 - Archive, spam, delete, unread, Move, Labels, and a Follow-Up clock in the reader.
 - Return to the full list after archiving, with the native preview collapsed.
@@ -46,18 +48,19 @@ partially succeed if a folder rejects an update.
 
 ## Settings
 
-Open Add-ons Manager → Thunder-G → Preferences and enable **Hide Today Pane
-completely** to hide the calendar pane, its splitter and bottom-right toggle.
-The option is off by default, applies immediately and is saved across restarts.
-Turning it off or disabling Thunder-G restores Thunderbird’s existing visibility
-setting without changing calendar preferences.
+Open **Add-ons Manager → Thunder-G → Preferences**.
+The [settings guide](docs/settings.md) explains each option, its default and when
+it is useful, including experimental features and optional sender-logo downloads.
+
+Outside text-entry fields, Ctrl/Cmd + plus (or equals), minus and zero control
+Thunderbird’s interface font size.
 
 ## Requirements
 
 Python 3.9+ for the installer/build; Node.js 18+ only to run tests. No Python or
 Node packages are downloaded or required.
 
-Install **Thunderbird Conversations** [↗](https://addons.thunderbird.net/en-US/thunderbird/addon/gmail-conversation-view/) separately from Thunderbird's add-on
+For the original reader, install **Thunderbird Conversations** [↗](https://addons.thunderbird.net/en-US/thunderbird/addon/gmail-conversation-view/) separately from Thunderbird's add-on
 manager for the conversation cards and inline replies shown in this project.
 
 The clock requires **mailmindr / Follow-Ups** [↗](https://addons.thunderbird.net/en-US/thunderbird/addon/mailmindr/); it opens that add-on's reminder
@@ -102,6 +105,16 @@ the debugging page is not needed. If the interface is missing after restart,
 check whether Thunder-G is still enabled in Add-ons Manager and that Thunderbird
 opened the same profile.
 
+### Upgrading from the previous extension
+
+The extension ID is now `thunder-g@vschiavoni` (formerly `inline-labels@local.gmail-skin`).
+Thunderbird treats this as a different add-on, rather than an in-place update.
+Uninstall the previous extension, then install the new Thunder-G package;
+add-on-local preferences do not migrate automatically. If using the optional
+local DKIM compatibility patch, rebuild it with the updated sender allowlist.
+For installer-managed profiles, uninstall with the existing rollback snapshot
+before installing the new identity. Native messages and tags are unaffected.
+
 ### Optional column layout
 
 With the intended ordinary folder open, paste the entire
@@ -138,7 +151,8 @@ packages these sources without a network step.
 
 The experiment has broad Thunderbird UI/profile privileges; it is more powerful
 than an ordinary theme. Review the source before installing. The bundled code
-has no telemetry or network requests, but mail actions use your configured mail
+has no telemetry. Optional [BIMI sender logos](docs/settings.md#sender-logos)
+require DNS lookups and logo downloads; mail actions use your configured mail
 service normally. Compatibility can break when Thunderbird internals change.
 Archive actions follow Thunderbird's selected-message/thread semantics; messages
 found only by Conversations, such as additional Sent messages, are not always
@@ -165,6 +179,23 @@ Thunderbird version. See the changelog for validation limits.
 Build a source ZIP and SHA-256 checksum with `python3 package.py`. Packaging uses
 an explicit allowlist excluding generated packages and profile recovery data.
 
+### Content loading and temporary caches
+
+The conversation reader starts Thunderbird's native message viewer while it
+looks up the rest of the conversation. It avoids reloading that viewer when the
+result contains the same messages. Conversation-wide labels and footer replies
+wait for the complete scope so sent replies are included.
+
+The list and reader share up to 300 text previews in memory for five minutes.
+Preview extraction reads only locally available message data; it never starts a
+server fetch. A changed message identity/size/date invalidates its preview, and
+an unavailable body is retried after 30 seconds or an offline-flag change.
+Local Sent summary metadata is cached for 30 seconds, up to 10,000 headers;
+larger scans are still complete but are not retained. Native add/delete/move,
+folder rename/delete and key-change notifications invalidate that metadata.
+Both caches are released when their consumers close. Full bodies, attachments,
+remote-image policy and MIME rendering remain under Thunderbird's native viewer.
+
 ## Publishing to GitHub
 
 Create a repository with this directory's contents (not a Thunderbird profile
@@ -189,3 +220,7 @@ manifest and README, moves Unreleased notes into the new changelog entry, and
 builds XPI/source ZIP files with SHA-256 checksums. It preserves older release
 notes and refuses existing target versions/artifacts. It does not commit, push,
 upload, or install. Keep writing future notes under Unreleased.
+
+Three-state reply verification: 89 automated tests pass. Live Thunderbird checks covered inline/floating transitions and native-window handoff with identity, recipient, subject and quoted body intact. The embedded editor closed only after the successor body loaded. An earlier server draft-copy failure retained the open reply. Attachments were saved/reopened in a native draft, but the separate-window attachment transfer still needs live confirmation. No mail was sent. These handoff checks were performed only in Thunderbird.
+
+Column layouts: the final Date divider stays visible beside the column picker, and dragging the Subject divider redistributes and saves space for Date. The table remains within the mail pane. The reader no longer forces the selection column to be visible or first, and styling no longer hides native Tags or Spam columns. Responsive sizing reads native saved splitter widths and resets temporary preferences when the table is rebuilt. With Thunder-G enabled, Copy view also invokes Thunderbird's native column-copy operation, preserving visibility/order and the selected descendant scope. The separate native Copy columns command remains available; widths are stored globally by Thunderbird. Reply-panel actions have visible labels and panel/window icons rather than standalone arrows.

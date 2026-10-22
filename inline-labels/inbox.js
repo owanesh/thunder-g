@@ -20,8 +20,19 @@ function localMessagePreview(header) {
   finally { try { stream?.close(); } catch (_) {} }
 }
 
+var sharedPreviewCaches=new WeakMap();
 function createPreviewQueue(win) {
-  const cache = new Map(), jobs = new Map();
+  let shared=sharedPreviewCaches.get(win);
+  if(!shared){shared={cache:new Map(),users:0};sharedPreviewCaches.set(win,shared);}
+  shared.users++;
+  const cache=shared.cache,jobs=new Map();
+  const stamp=header=>JSON.stringify([header.messageId || '',header.messageSize || 0,header.dateInSeconds || 0]);
+  function lookup(header,key){
+    const entry=cache.get(key);
+    if(!entry || entry.stamp!==stamp(header) || entry.expiresAt<=Date.now())return null;
+    if(!entry.text && (entry.retryAt<=Date.now() || entry.flags!==header.flags))return null;
+    cache.delete(key);cache.set(key,entry);return entry;
+  }
   let timer = null, closed = false;
   function schedule() {
     if (!closed && timer === null && jobs.size) timer = win.setTimeout(drain, 16);
@@ -33,9 +44,12 @@ function createPreviewQueue(win) {
     if (!key) return;
     jobs.delete(key);
     if (job.isCurrent()) {
-      const text = localMessagePreview(job.header);
-      if (cache.size >= 300) cache.delete(cache.keys().next().value);
-      cache.set(key, {text, flags:job.header.flags, retryAt:Date.now()+30000});
+      // Another consumer may already have read this message while queued.
+      const found=lookup(job.header,key),text=found?found.text:localMessagePreview(job.header);
+      if(!found){
+        if(cache.size>=300)cache.delete(cache.keys().next().value);
+        cache.set(key,{text,stamp:stamp(job.header),flags:job.header.flags,retryAt:Date.now()+30000,expiresAt:Date.now()+300000});
+      }
       if (!closed && job.isCurrent()) job.ready();
     }
     schedule();
@@ -48,17 +62,18 @@ function createPreviewQueue(win) {
       const key = header.folder?.URI && header.messageKey !== undefined
         ? header.folder.URI+'#'+header.messageKey : null;
       if (!key) return '';
-      const found = cache.get(key);
-      if (found && (found.text || (found.retryAt > Date.now() && found.flags === header.flags))) return found.text;
+      const found=lookup(header,key);
+      if(found)return found.text;
       // Keep the queue bounded when scrolling through many virtual rows.
       if (jobs.size >= 100 && !jobs.has(key)) jobs.delete(jobs.keys().next().value);
       jobs.set(key,{header,isCurrent,ready}); schedule();
       return '';
     },
     close() {
-      closed = true;
+      if(closed)return;closed = true;
       if (timer !== null) win.clearTimeout(timer);
-      timer = null; jobs.clear(); cache.clear();
+      timer = null; jobs.clear();
+      if(--shared.users===0){cache.clear();sharedPreviewCaches.delete(win);}
     }
   };
 }
@@ -98,19 +113,33 @@ function installResponsiveColumns(win) {
   if (!tree || !win.ResizeObserver) return {close(){}};
   const saved = new Map();
   const preferred = new Map();
+  const enabledSplitters = new Map();
+  let dragWidths = null;
+  let subjectDrag = null;
+  let currentTable = null;
   let manualWidth = null;
   let closed = false, frame = null;
   function set(element, name, value) {
     if (!saved.has(element)) saved.set(element,new Map());
     const properties = saved.get(element);
     if (!properties.has(name)) properties.set(name,[element.style.getPropertyValue(name),element.style.getPropertyPriority(name)]);
-    element.style.setProperty(name,value,'important');
+    if(element.style.getPropertyValue(name)!==value || element.style.getPropertyPriority(name)!=='important')
+      element.style.setProperty(name,value,'important');
   }
   function restore() {
     for (const [element,properties] of saved) for (const [name,[value,priority]] of properties) {
       if (value) element.style.setProperty(name,value,priority); else element.style.removeProperty(name);
     }
     saved.clear();
+    const last = [...(currentTable?.querySelectorAll('thead th') || [])].filter(item =>
+      !item.hidden && item.dataset.type !== 'icon' &&
+      currentTable.columns?.find(column => column.id === item.id)?.resizable !== false).at(-1);
+    for (const [header,wasResizable] of enabledSplitters) {
+      delete header.dataset.gmLastResizable;
+      // Native layout enables this column itself if it is no longer last.
+      if (header === last && !wasResizable) header.resizable = false;
+    }
+    enabledSplitters.clear();
   }
   function fit() {
     frame = null;
@@ -119,19 +148,41 @@ function installResponsiveColumns(win) {
     const table = tree.table;
     const width = tree.clientWidth;
     if (!table || width <= 0) return;
+    if (table !== currentTable) {restore();preferred.clear();currentTable=table;}
     const headers = [...table.querySelectorAll('thead th')].filter(header =>
       !header.hidden && win.getComputedStyle(header).display !== 'none');
+    const lastResizable = headers.filter(header => header.dataset.type !== 'icon' &&
+      table.columns?.find(column => column.id === header.id)?.resizable !== false).at(-1);
+    for (const header of enabledSplitters.keys()) if (header !== lastResizable) {
+      delete header.dataset.gmLastResizable;
+      enabledSplitters.delete(header);
+    }
+    if (lastResizable && typeof lastResizable.resizable === 'boolean') {
+      if (!enabledSplitters.has(lastResizable)) enabledSplitters.set(lastResizable,lastResizable.resizable);
+      if(lastResizable.dataset.gmLastResizable!=='true')lastResizable.dataset.gmLastResizable = 'true';
+      if (!lastResizable.resizable) lastResizable.resizable = true;
+    }
+    for (const header of headers) {
+      const value=parseFloat(header.style.getPropertyValue(`--${header.id}Splitter-width`));
+      if(Number.isFinite(value) && value>0){
+        preferred.set(header.id,value);
+        const properties=saved.get(header);
+        if(properties?.has(`--${header.id}Splitter-width`))properties.set(`--${header.id}Splitter-width`,[`${value}px`,'']);
+      }
+    }
     const subject = headers.find(header=>header.id==='subjectCol');
     const date = headers.find(header=>header.id==='dateCol');
     if (!subject || !date) return;
     const icons = headers.filter(header=>header.dataset.type==='icon');
     const fixed = icons.reduce((sum,header)=>sum+header.getBoundingClientRect().width,0);
     const others = headers.filter(header=>header!==subject && header!==date && !icons.includes(header));
-    const dateWidth = preferred.get('dateCol') ?? Math.max(88,8*(parseFloat(win.getComputedStyle(tree).fontSize)||14));
+    const available = Math.max(0,width-fixed-4);
+    const desiredDate = preferred.get('dateCol') ?? Math.max(88,8*(parseFloat(win.getComputedStyle(tree).fontSize)||14));
+    const dateWidth = Math.min(desiredDate,Math.max(0,available-Math.min(100,available*.4)));
     const space = Math.max(0,width-fixed-dateWidth-4);
     const desired = others.map(header => preferred.get(header.id) ?? Math.min(180,width*.18));
     const total = desired.reduce((sum,value)=>sum+value,0);
-    const budget = Math.max(0,space-Math.min(100,space*.4));
+    const budget = Math.max(0,space-Math.min(100,space));
     const ratio = total > budget ? budget/total : 1;
     const widths = desired.map(value=>value*ratio);
     const subjectWidth = Math.max(0,space-widths.reduce((sum,value)=>sum+value,0));
@@ -145,13 +196,17 @@ function installResponsiveColumns(win) {
   }
   function schedule() { if (!closed && frame === null) frame=win.requestAnimationFrame(fit); }
   function manualResize(event) {
-    if (!event.target.closest?.('hr[is="pane-splitter"]')) return;
+    const splitter = event.target.closest?.('hr[is="pane-splitter"]');
+    if (!splitter) return;
     // Hand the native splitter the CURRENT geometry, never the old wide layout.
     manualWidth = tree.clientWidth;
     if (frame !== null) { win.cancelAnimationFrame(frame); frame = null; }
     const headers = [...(tree.table?.querySelectorAll('thead th') || [])].filter(header =>
       !header.hidden && header.dataset.type !== 'icon' && win.getComputedStyle(header).display !== 'none');
     const widths = headers.map(header=>header.getBoundingClientRect().width);
+    dragWidths = new Map(headers.map((header,index)=>[header.id,widths[index]]));
+    subjectDrag = splitter.resizeElement?.id === 'subjectCol' && Number.isFinite(event.clientX) ?
+      {x:event.clientX,date:headers.find(header=>header.id==='dateCol'),rtl:win.getComputedStyle(tree).direction==='rtl'} : null;
     headers.forEach((header,index) => {
       const variable = `--${header.id}Splitter-width`;
       set(header,variable,`${widths[index]}px`);
@@ -159,8 +214,37 @@ function installResponsiveColumns(win) {
       set(header,'inline-size',`var(${variable})`);
     });
   }
+  function resizingSubject(event) {
+    if (!subjectDrag?.date || !dragWidths) return;
+    const delta = (event.clientX-subjectDrag.x)*(subjectDrag.rtl?-1:1);
+    // Balance while dragging: a fixed-width HTML table would otherwise give
+    // the freed space straight back to Subject before the native splitter reads it.
+    const width = Math.max(48,Math.min(dragWidths.get('dateCol')+dragWidths.get('subjectCol')-100,
+      dragWidths.get('dateCol')-delta));
+    subjectDrag.date.style.setProperty('--dateColSplitter-width',`${width}px`);
+    subjectDrag.width = width;
+  }
+  function finishResize() {
+    if (manualWidth === null) return;
+    if (Number.isFinite(subjectDrag?.width) && Math.abs(subjectDrag.width-dragWidths.get('dateCol')) >= 1) {
+      tree.table?.setColumnsWidths?.('messenger',{detail:{column:'dateCol',splitter:{width:subjectDrag.width}}});
+    }
+    manualWidth = null;
+    subjectDrag = null;
+    schedule();
+  }
   function resizedColumn(event) {
     const {column,splitter} = event.detail || {};
+    // Subject fills the remaining space. Its native divider must redistribute
+    // that space to Date rather than have the next fit undo the user's drag.
+    if (column === 'subjectCol' && Number.isFinite(splitter?.width) && dragWidths?.has('dateCol')) {
+      const date = [...(tree.table?.querySelectorAll('thead th') || [])].find(item=>item.id==='dateCol');
+      const width = Math.max(48,dragWidths.get('dateCol')+dragWidths.get('subjectCol')-splitter.width);
+      if (date) {
+        date.style.setProperty('--dateColSplitter-width',`${width}px`);
+        tree.table.setColumnsWidths?.('messenger',{detail:{column:'dateCol',splitter:{width}}});
+      }
+    }
     if (column && Number.isFinite(splitter?.width) && splitter.width > 0) {
       preferred.set(column,splitter.width);
       const header = [...(tree.table?.querySelectorAll('thead th') || [])].find(item=>item.id===column);
@@ -171,25 +255,114 @@ function installResponsiveColumns(win) {
         properties.set('width',[`var(--${column}Splitter-width)`,'']);
       }
     }
-    manualWidth = tree.clientWidth;
+    // Refit after the native drag finishes, including a drag of the last
+    // column: its preferred width must not push the table beyond the pane.
+    manualWidth = null;
+    dragWidths = null;
+    subjectDrag = null;
+    schedule();
   }
   tree.addEventListener('pointerdown',manualResize,true);
   tree.addEventListener('column-resized',resizedColumn);
+  win.addEventListener?.('mousemove',resizingSubject,true);
+  win.addEventListener?.('mouseup',finishResize);
   const resize = new win.ResizeObserver(schedule); resize.observe(tree);
-  const changes = new win.MutationObserver(schedule);
+  const changes = new win.MutationObserver(records=>{
+    // Row text, previews and recycled cells do not change the column layout.
+    if(records.some(record=>record.target===tree || record.target===tree.table ||
+      record.target.closest?.('thead')))schedule();
+  });
   changes.observe(tree,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden','data-resizable']});
+  tree.addEventListener('viewchange',schedule);
   schedule();
   return {close(){closed=true;resize.disconnect();changes.disconnect();if(frame!==null)win.cancelAnimationFrame(frame);
-    tree.removeEventListener('pointerdown',manualResize,true);tree.removeEventListener('column-resized',resizedColumn);restore();}};
+    win.removeEventListener?.('mousemove',resizingSubject,true);win.removeEventListener?.('mouseup',finishResize);
+    tree.removeEventListener('pointerdown',manualResize,true);tree.removeEventListener('column-resized',resizedColumn);
+    tree.removeEventListener('viewchange',schedule);restore();}};
 }
 
-function installInboxControls(win) {
+// Copy view includes the visible column layout, using Thunderbird's own folder
+// propagation (including its From/Recipient swap for outgoing folders).
+function installCompleteViewCopy(win) {
+  const pane=win.threadPane, original=pane?._applyView;
+  if(typeof original!=='function' || typeof pane._applyColumns!=='function')return {close(){}};
+  function applyView(folder,useChildren=false){
+    if(!win.gFolder || !folder)return;
+    pane._applyColumns(folder,useChildren);
+    return original.call(this,folder,useChildren);
+  }
+  pane._applyView=applyView;
+  return {close(){if(pane._applyView===applyView)pane._applyView=original;}};
+}
+
+function installThreadToggles(win) {
+  const tree=win.document.getElementById('threadTree');
+  if(!tree?.expandRowAtIndex || !tree.collapseRowAtIndex)return {close(){}};
+  function threadRow(event) {
+    if(event.button!==0 || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey)return null;
+    const row=event.target.closest?.('.twisty')?.closest('tr.table-layout, tr.card-layout');
+    return row && tree.contains(row) && !row.hasAttribute('data-gm-outside-page') ? row : null;
+  }
+  function click(event) {
+    const row=threadRow(event),view=win.gDBView;
+    if(!row || !view?.isContainer(row.index))return;
+    // The native row-click handler ignores detail=0 (button activation) and
+    // detail>1 (rapid clicks). Each arrow activation must toggle exactly once.
+    event.preventDefault();event.stopImmediatePropagation();
+    if(view.isContainerOpen(row.index))tree.collapseRowAtIndex(row.index);
+    else {
+      const added=tree.expandRowAtIndex(row.index);
+      tree.scrollExpandedRowIntoView?.(row.index,added);
+    }
+    tree.ensureCorrectFocus?.();
+  }
+  function doubleClick(event) {
+    if(!threadRow(event))return;
+    // Both click events have already toggled the thread. Do not let dblclick
+    // open a message window or apply a second native thread operation.
+    event.preventDefault();event.stopImmediatePropagation();
+  }
+  tree.addEventListener('click',click,true);
+  tree.addEventListener('dblclick',doubleClick,true);
+  return {close(){
+    tree.removeEventListener('click',click,true);
+    tree.removeEventListener('dblclick',doubleClick,true);
+  }};
+}
+
+function threadGuidePosition(view,index) {
+  if(!view || !Number.isInteger(index) || index<0 || index>=view.rowCount)return null;
+  try {
+    if((view.getFlagsAt?.(index) || 0)&0x20000000)return null;
+    const level=view.getLevel(index),next=index+1<view.rowCount?view.getLevel(index+1):0;
+    if(level>0)return next>0?'middle':'end';
+    if(view.isContainer(index) && view.isContainerOpen(index) && next>0)return 'start';
+  }catch(_){/* A changing native view can briefly invalidate a virtual row. */}
+  return null;
+}
+
+function installInboxControls(win,{threadGuides=true}={}) {
   const doc = win.document;
   const tree = doc.getElementById('threadTree');
   if (!tree) return {close(){}};
   const compose = installComposeLabel(doc);
   const responsive = installResponsiveColumns(win);
+  const viewCopy = installCompleteViewCopy(win);
+  const newMessage = installInlineNewMessage(win);
+  const threadToggles = installThreadToggles(win);
   let closed = false, prototype, original, wrapped, rowClass, originalHeight;
+  let showThreadGuides=threadGuides===true;
+  function renderThreadGuide(row) {
+    delete row.dataset.gmThreadGuide;
+    if(!showThreadGuides || (row.dataset.properties || '').split(' ').includes('dummy') ||
+      win.gViewWrapper?.showGroupedBySort || win.gViewWrapper?.showThreaded===false)return;
+    const position=threadGuidePosition(win.gDBView,row.index);
+    if(position)row.dataset.gmThreadGuide=position;
+  }
+  function setThreadGuides(enabled) {
+    showThreadGuides=enabled===true;
+    if(!closed)for(const row of doc.querySelectorAll('#threadTree tr.table-layout'))renderThreadGuide(row);
+  }
   const previews = createPreviewQueue(win);
   const filter = win.quickFilterBar;
   const wasVisible = filter?.filterer?.visible;
@@ -251,6 +424,7 @@ function installInboxControls(win) {
   `;
   doc.head.append(style);
   function render(row) {
+    renderThreadGuide(row);
     row.querySelector('.gm-row-actions')?.remove();
     row.querySelector('.gm-message-snippet')?.remove();
     row.querySelector('.subject-line')?.classList?.remove('gm-has-snippet');
@@ -336,10 +510,14 @@ function installInboxControls(win) {
     if (prototype?.fillRow === wrapped) prototype.fillRow = original;
     for (const node of doc.querySelectorAll('.gm-row-actions, .gm-message-snippet')) node.remove();
     for (const line of doc.querySelectorAll('.gm-has-snippet')) line.classList.remove('gm-has-snippet');
+    for (const row of doc.querySelectorAll('#threadTree tr.table-layout')) delete row.dataset.gmThreadGuide;
     style.remove();
     previews.close();
     compose.close();
     responsive.close();
+    viewCopy.close();
+    newMessage.close();
+    threadToggles.close();
     if (rowClass && Number.isFinite(originalHeight) && rowClass.ROW_HEIGHT === originalHeight + 6) {
       rowClass.ROW_HEIGHT = originalHeight;
       tree.reset();
@@ -353,5 +531,5 @@ function installInboxControls(win) {
   }
   win.addEventListener('focus',refreshPreviews);
   win.addEventListener('unload',close,{once:true});
-  return {close};
+  return {close,setThreadGuides};
 }

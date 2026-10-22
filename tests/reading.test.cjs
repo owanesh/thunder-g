@@ -63,6 +63,11 @@ test('single click opens the current-tab reader, back restores the list, and dou
   win.gDBView=originalView;
 
   tree.events.click({button:0,target:{closest:selector=>selector==='tr.table-layout'?row:null}});
+  tree.events.click({button:0,target:{closest:selector=>selector==='.twisty'?{}:null}});
+  frameQueue.shift()();
+  assert.equal(layout.messagePaneVisible,false,'a thread-arrow click cancels a queued reader open');
+
+  tree.events.click({button:0,target:{closest:selector=>selector==='tr.table-layout'?row:null}});
   frameQueue.shift()();
   assert.equal(layout.messagePaneVisible,true,'click opens conversation');
   assert.equal(refreshes,1,'first single click explicitly displays the selected message');
@@ -126,7 +131,18 @@ test('single click opens the current-tab reader, back restores the list, and dou
   assert.equal(layout.messagePaneVisible,false,'folder title returns to the list');
   tree.selectedIndices=[1];countHeading.events.click({button:0});
   assert.equal(tree.selectedIndices.length,0,'message count also clears selection');
-  restarted.close();
+  let independentOpens=0,independentHides=0,independentCloses=0,independentPrints=0;
+  scope.installIndependentReader=()=>({print(){independentPrints++},open(){independentOpens++;return Promise.resolve()},hide(){independentHides++},close(){independentCloses++}});
+  const beforeIndependent=refreshes;
+  restarted.setIndependent(true);restarted.openIndex(0);
+  assert.equal(independentOpens,1);
+  const printMessage=elements.find(node=>node.title==='Print message');
+  assert.equal(printMessage.hidden,false,'printing stays visible in independent reading mode');
+  printMessage.events.click();assert.equal(independentPrints,1,'toolbar prints the message displayed by the independent reader');
+  assert.equal(refreshes,beforeIndependent,'independent mode does not invoke native/Conversations selection display');
+  assert.equal(layout.messagePaneVisible,false,'independent mode leaves the native preview collapsed');
+  restarted.setIndependent(false);assert.equal(independentHides,1,'changing preference returns to list and cancels the custom reader');
+  restarted.close();assert.equal(independentCloses,1);
 });
 test('checkbox selection shows bulk toolbar and archives native selection without opening reader',()=>{
   const nodes=[];
@@ -152,7 +168,9 @@ test('checkbox selection shows bulk toolbar and archives native selection withou
     addEventListener(){},removeEventListener(){}};
   Object.defineProperty(tree,'selectedIndices',{set(){selected=[]}});
   const controller=scope.installReadingMode(win);
-  assert.equal(columns[0].id,'selectCol');assert.equal(columns[0].hidden,false);
+  assert.equal(columns[0].id,'flaggedCol');assert.equal(columns[1].hidden,true,'native copied visibility and order survive reader installation');
+  columns.reverse();columns[0].hidden=false;win.threadPane.updateColumns();
+  assert.equal(columns[0].id,'selectCol');assert.equal(columns[0].hidden,false,'later native view changes are preserved');
   const event={button:0,target:{closest:selector=>selector.includes('.selectcol-column')?{}:null}};
   for(const fn of tree.events.click)fn(event);
   while(frames.length)frames.shift()();
@@ -161,10 +179,29 @@ test('checkbox selection shows bulk toolbar and archives native selection withou
   for (const title of ['Print conversation','Previous message','Next message'])
     assert.equal(nodes.find(n=>n.title===title).hidden,true,`${title} is hidden in bulk mode`);
   assert.equal(layout.messagePaneVisible,false);
+  const read=nodes.find(n=>n.title==='Mark as read');
+  read.events.click[0]();
+  assert.equal(calls.pop()[0],'cmd_markAsRead','unread selection must not invoke disabled mark-unread');
+  selected=messages;messages.forEach(message=>message.isRead=true);
+  for(const fn of tree.events.click)fn(event);
+  while(frames.length)frames.shift()();
+  assert.equal(read.title,'Mark as unread');
+  // Simulate flags changing after the toolbar was drawn.
+  messages[1].isRead=false;
+  read.events.click[0]();
+  assert.equal(calls.pop()[0],'cmd_markAsRead','mixed selection is marked read using current flags');
+  selected=messages;messages.forEach(message=>message.isRead=true);
+  for(const fn of tree.events.click)fn(event);
+  while(frames.length)frames.shift()();
+  read.events.click[0]();
+  assert.equal(calls.pop()[0],'cmd_markAsUnread');
+  selected=messages;
+  for(const fn of tree.events.click)fn(event);
+  while(frames.length)frames.shift()();
   const archive=nodes.find(n=>n.title==='Archive');archive.events.click[0]();
   assert.equal(calls[0][0],'cmd_archive');assert.equal(calls[0][1].length,2);
   assert.equal(toolbar.hidden,true);assert.equal(selected.length,0);
-  controller.close();assert.equal(columns.find(c=>c.id==='selectCol').hidden,true);
+  controller.close();assert.equal(columns.find(c=>c.id==='selectCol').hidden,false,'disabling must not restore stale visibility');
 });
 
 test('navigation skips group headers, honors boundaries and current view order',()=>{
@@ -199,7 +236,7 @@ test('label checkboxes distinguish all, some, none, legacy labels and exact keys
   assert.deepEqual(state([]),{checked:false,mixed:false});
   assert.equal(scope.labelAssignmentState({key:'$label1'},[msg('',1)]).checked,true);
 });
-test('picker filters, preserves focus, delegates bulk toggles and rejects changed selection',()=>{
+for(const independentMode of [false,true]) test(`label picker covers the full active scope (independent reader: ${independentMode})`,()=>{
   const nodes=[];
   function el(name){const events={}, attrs={};const n={name,events,children:[],style:{},value:'',isConnected:true,
     classList:{add(){},remove(){}},setAttribute(k,v){attrs[k]=v},getAttribute:k=>attrs[k],
@@ -210,7 +247,8 @@ test('picker filters, preserves focus, delegates bulk toggles and rejects change
     openPopup(){this.events.popupshown?.forEach(f=>f())},hidePopup(){this.events.popuphidden?.forEach(f=>f())}};
     nodes.push(n);return n;}
   const layout=el(),tree=el(),folderTree=el(),threadPane=el();
-  const doc={activeElement:tree,getElementById:id=>({paneLayout:layout,threadTree:tree,folderTree,threadPane})[id],
+  const keyEvents={};
+  const doc={activeElement:tree,querySelectorAll:()=>[],addEventListener:(name,fn)=>keyEvents[name]=fn,removeEventListener(){},getElementById:id=>({paneLayout:layout,threadTree:tree,folderTree,threadPane})[id],
     createElement:el,createElementNS:(_ns,name)=>el(name),createXULElement:el,head:el(),documentElement:el()};
   const messages=[{messageKey:1,folder:{URI:'inbox'},getStringProperty:()=> 'one'},
     {messageKey:2,folder:{URI:'inbox'},getStringProperty:()=> ''}];let selected=messages;const calls=[];
@@ -218,11 +256,40 @@ test('picker filters, preserves focus, delegates bulk toggles and rejects change
   scope.MailServices={mfn:{addListener(){},removeListener(){}},tags:{getAllTags:()=>[
     {key:'one',tag:'Project One',color:'#ff0000'},{key:'two',tag:'Other'}]}};
   const nativeCommands=[];
-  const win={document:doc,gDBView:{getSelectedMsgHdrs:()=>selected},commandController:{_toggleMessageTag:(...args)=>calls.push(args),doCommand:name=>nativeCommands.push(name)},
+  const win={document:doc,top:{document:doc},gDBView:{rowCount:2,getFlagsAt:()=>0,getMsgHdrAt:i=>messages[i],getSelectedMsgHdrs:()=>selected},commandController:{_toggleMessageTag:(...args)=>calls.push(args),doCommand:name=>nativeCommands.push(name)},
     addEventListener(){},removeEventListener(){}};
+  let conversationMessages=[...messages,{messageKey:1,folder:{URI:'Sent'},getStringProperty:()=>''}],refreshes=0;
+  if(independentMode) {
+    scope.installIndependentReader=()=>({open:()=>Promise.resolve(),getMessages:()=>conversationMessages,refresh(){refreshes++},hide(){},close(){}});
+    for(const header of conversationMessages) {
+      header.folder.addKeywordsToMessages=(headers,key)=>calls.push(['add',header.folder.URI,Array.from(headers,h=>h.messageKey),key]);
+      header.folder.removeKeywordsFromMessages=(headers,key)=>calls.push(['remove',header.folder.URI,Array.from(headers,h=>h.messageKey),key]);
+    }
+  }
   const controller=scope.installReadingMode(win);
+  if(independentMode) {
+    controller.setIndependent(true);controller.openIndex(0);
+    const pressL=()=>keyEvents.keydown({key:'l',target:{closest:()=>null},preventDefault(){},stopImmediatePropagation(){}});
+    pressL();
+    assert.ok(nodes.some(n=>n.textContent==='Entire conversation · 3 messages'));
+    assert.equal(nodes.find(n=>n.className==='gm-label-scope').hidden,false,'the full scope explicitly includes sent replies');
+    assert.equal(nodes.find(n=>n.name==='panel').getAttribute('aria-label'),'Labels — Entire conversation · 3 messages');
+    const checkbox=nodes.find(n=>n.type==='checkbox');checkbox.checked=true;checkbox.events.change[0]();
+    assert.deepEqual(JSON.parse(JSON.stringify(calls)),[['add','inbox',[1,2],'one'],['add','Sent',[1],'one']]);
+    checkbox.checked=false;checkbox.events.change[0]();
+    assert.deepEqual(JSON.parse(JSON.stringify(calls.slice(2))),[['remove','inbox',[1,2],'one'],['remove','Sent',[1],'one']]);
+    assert.equal(refreshes,2,'message chips and title labels refresh after a conversation-wide write');
+    conversationMessages=conversationMessages.slice(0,1);checkbox.checked=true;checkbox.events.change[0]();
+    assert.equal(calls.length,4,'changing conversation membership invalidates the open picker');
+    conversationMessages=[];pressL();
+    assert.ok(nodes.some(n=>n.textContent==='Entire conversation · Loading…'),'loading must never imply a partial message count');
+    assert.equal(nodes.find(n=>n.type==='search').disabled,true,'loading cannot fall back to labeling just the selected row');
+    assert.ok(nodes.some(n=>n.textContent==='Conversation is still loading. Close this panel and try again.'));
+    controller.close();return;
+  }
   nodes.find(n=>n.title==='Labels… (L)').events.click[0]();
-  assert.ok(nodes.some(n=>n.textContent==='Label as:'));
+  assert.ok(nodes.some(n=>n.textContent==='2 selected messages'));
+  assert.equal(nodes.find(n=>n.className==='gm-label-scope').hidden,true,'list selection does not claim to label a whole conversation');
   const search=nodes.find(n=>n.type==='search');assert.equal(doc.activeElement,search);
   const first=nodes.find(n=>n.type==='checkbox');assert.equal(first.indeterminate,true);
   first.checked=true;first.events.change[0]();assert.deepEqual(calls,[['one',true]]);
@@ -233,6 +300,9 @@ test('picker filters, preserves focus, delegates bulk toggles and rejects change
   other.checked=true;other.events.change[0]();assert.equal(calls.length,2);assert.equal(doc.activeElement,tree);
   nodes.find(n=>n.textContent==='Manage labels').events.click[0]();
   assert.deepEqual(nativeCommands,['cmd_manageTags']);
+  nodes.find(n=>n.title==='Labels… (L)').events.click[0]();
+  assert.ok(nodes.some(n=>n.textContent==='This message'),'a single native selection is labelled explicitly');
+  assert.equal(nodes.find(n=>n.name==='panel').getAttribute('aria-label'),'Labels — This message');
   selected=messages;nodes.find(n=>n.title==='Labels… (L)').events.click[0]();
   nodes.find(n=>n.textContent==='Create new').events.click[0]();
   assert.deepEqual(nativeCommands,['cmd_manageTags','cmd_addTag']);

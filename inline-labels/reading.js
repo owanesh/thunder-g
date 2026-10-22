@@ -94,6 +94,7 @@ function installReadingMode(win) {
   const folderTree = doc.getElementById('folderTree');
   if (!layout || !tree || !folderTree) return { close() {} };
   let active = false;
+  let useIndependent = false, independent = null;
   let closed = false;
   let pending = null, openTicket = 0;
   let previous = null;
@@ -102,29 +103,6 @@ function installReadingMode(win) {
   const headingTargets = ['threadPaneFolderName', 'threadPaneFolderCountContainer']
     .map(id => doc.getElementById(id)).filter(Boolean);
   const selectionLabel = doc.createElement('span');
-  const originalColumns = new Map();
-  const originalUpdateColumns = win.threadPane?.updateColumns;
-  function checkboxColumns() {
-    const columns = win.threadPane?.columns;
-    if (!columns) return;
-    for (const c of columns) {
-      if (!originalColumns.has(c)) originalColumns.set(c, {hidden:c.hidden, ordinal:c.ordinal});
-    }
-    const select = columns.find(c => c.id === 'selectCol');
-    if (select) {
-      select.hidden = false;
-      columns.sort((a,b) => a.id === 'selectCol' ? -1 : b.id === 'selectCol' ? 1 : a.ordinal-b.ordinal);
-      columns.forEach((c,i) => c.ordinal=i+1);
-    }
-  }
-  function updateColumns(...args) {
-    checkboxColumns();
-    return originalUpdateColumns.apply(win.threadPane, args);
-  }
-  if (originalUpdateColumns) {
-    win.threadPane.updateColumns = updateColumns;
-    updateColumns(); tree.reset();
-  }
   const originalMessagePaneVisible = layout.messagePaneVisible;
   // A message replaces the list inside the current mail tab.
   layout.messagePaneVisible = false;
@@ -241,8 +219,21 @@ function installReadingMode(win) {
   action('Delete', 'M5 6h14 M9 6V3h6v3 M7 6l1 15h8l1-15 M10 9v9 M14 9v9',
     () => command('cmd_deleteMessage', true));
   separator();
-  action('Mark as unread', 'M3 6h18v14H3z M3 7l9 7 9-7 M16 3h5',
-    () => command('cmd_markAsUnread', true));
+  function readAction() {
+    const messages = win.gDBView?.getSelectedMsgHdrs() || [];
+    return messages.some(message => !message.isRead)
+      ? {name:'cmd_markAsRead', label:'Mark as read'}
+      : {name:'cmd_markAsUnread', label:'Mark as unread'};
+  }
+  function syncReadAction() {
+    const {label} = readAction();
+    readButton.title = label;
+    readButton.setAttribute('aria-label', label);
+  }
+  const readButton = action('Mark as unread', 'M3 6h18v14H3z M3 7l9 7 9-7 M16 3h5',
+    // Reading can change flags after opening (including delayed auto-read).
+    // Resolve the operation at click time, not from the initial button label.
+    () => command(readAction().name, true));
   const snoozeButton = action('Snooze / Follow-Up…', 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18 M12 6v6l4 3', () => {
     const { ExtensionParent } = ChromeUtils.importESModule('resource://gre/modules/ExtensionParent.sys.mjs');
     const extension = ExtensionParent.GlobalManager.extensionMap.get('mailmindr@arndissler.net');
@@ -271,7 +262,10 @@ function installReadingMode(win) {
   doc.documentElement.append(tagPopup); popups.push(tagPopup);
   const picker = doc.createElement('div');
   picker.className = 'gm-label-picker';
-  const heading = doc.createElement('div'); heading.textContent = 'Label as:';
+  const heading = doc.createElement('div');
+  const scopeNote = doc.createElement('p'); scopeNote.className = 'gm-label-scope';
+  scopeNote.textContent = 'Includes sent replies in this conversation.';
+  scopeNote.hidden = true;
   const search = doc.createElement('input');
   search.type = 'search';
   const searchBox = doc.createElement('div'); searchBox.className = 'gm-label-search';
@@ -299,15 +293,20 @@ function installReadingMode(win) {
     });
     footer.append(button);
   }
-  picker.append(heading, searchBox, tagList, empty, footer); tagPopup.append(picker);
+  picker.append(heading, scopeNote, searchBox, tagList, empty, footer); tagPopup.append(picker);
   let pickerMessages = [], pickerSelection = [], pickerTags = [], pickerOpen = false, returnFocus = null;
   let pickerConversation = null;
   function conversationDocument() {
     if (!active) return null;
+    if (useIndependent) return independent;
     const document = doc.getElementById('multiMessageBrowser')?.contentDocument;
     return document?.documentURI === 'chrome://conversations/content/experiment-api/stub.html' ? document : null;
   }
   function resolveConversation(document) {
+    if(document===independent) {
+      const messages=independent?.getMessages();
+      return messages?.length ? messages : null;
+    }
     try {
       const { ExtensionParent } = ChromeUtils.importESModule('resource://gre/modules/ExtensionParent.sys.mjs');
       const extension = ExtensionParent.GlobalManager.extensionMap.get('gconversation@xulforum.org');
@@ -315,7 +314,10 @@ function installReadingMode(win) {
     } catch (_) { return null; }
   }
   function applyPickerLabel(key, add) {
-    if (pickerConversation) applyConversationLabel(pickerMessages, key, add);
+    if (pickerConversation) {
+      applyConversationLabel(pickerMessages, key, add);
+      independent?.refresh?.();
+    }
     else win.commandController._toggleMessageTag(key, add);
   }
   function sameSelection() {
@@ -359,6 +361,12 @@ function installReadingMode(win) {
     pickerMessages = pickerConversation ? resolveConversation(pickerConversation) : pickerSelection;
     if (pickerConversation && pickerMessages && !pickerSelection.every(selected =>
       pickerMessages.some(message => message.messageKey === selected.messageKey && message.folder.URI === selected.folder?.URI))) pickerMessages = null;
+    const count = pickerMessages?.length;
+    heading.textContent = pickerConversation
+      ? `Entire conversation · ${count == null ? 'Loading…' : `${count} ${count === 1 ? 'message' : 'messages'}`}`
+      : count === 1 ? 'This message' : `${count} selected messages`;
+    scopeNote.hidden = !pickerConversation;
+    tagPopup.setAttribute('aria-label', `Labels — ${heading.textContent}`);
     if (!pickerMessages) {
       pickerTags = []; pickerMessages = []; search.disabled = true;
       returnFocus = doc.activeElement; search.value = ''; renderTags();
@@ -391,6 +399,7 @@ function installReadingMode(win) {
   // Other tabs, compose editors, search fields and modified shortcuts are untouched.
   const keyDocuments = new Set();
   function labelKey(event) {
+    if(active && useIndependent && !pickerOpen && independent?.handleTagKey?.(event))return;
     if (!isLabelShortcut(event) || pickerOpen || closed) return;
     const tabmail = win.top.document.getElementById('tabmail');
     if (tabmail && tabmail.currentAbout3Pane !== win) return;
@@ -416,6 +425,7 @@ function installReadingMode(win) {
       background:var(--layout-background-0, white); color:var(--layout-color-0, #3c4043);
       font:inherit; font-size:1rem; border-radius:4px; }
     .gm-label-picker > div:first-child { font-weight:400; margin:0 16px 8px; }
+    .gm-label-scope { margin:0 16px 12px; font-size:.85em; color:var(--layout-color-1, #5f6368); }
     .gm-label-search { display:flex; align-items:center; margin:0 8px 16px 16px;
       border-bottom:1px solid var(--layout-border-0, #dadce0); }
     .gm-label-search:focus-within { border-bottom:2px solid #4285f4; }
@@ -443,6 +453,7 @@ function installReadingMode(win) {
       padding:4px 22px 4px 49px; min-height:24px; cursor:pointer; }
     `;
   const printButton = action('Print conversation', 'M6 8V3h12v5 M3 17V9h18v8h-3 M6 14h12v7H6z M17 11h1', () => {
+    if(useIndependent) {independent?.print();return}
     const conversationDoc = doc.getElementById('multiMessageBrowser')?.contentDocument;
     const print = conversationDoc?.querySelector('conversation-footer')?.shadowRoot?.querySelector('.print');
     if (print) print.click();
@@ -465,6 +476,7 @@ function installReadingMode(win) {
   previousButton.hidden = nextButton.hidden = true;
   layout.append(toolbar);
   function syncBulk() {
+    syncReadAction();
     if (active || closed || !threadPane) return;
     previousButton.hidden = nextButton.hidden = true;
     printButton.hidden = true;
@@ -519,6 +531,7 @@ function installReadingMode(win) {
     if (pending !== null) { win.cancelAnimationFrame(pending); pending = null; ++openTicket; }
     if (!active) return;
     active = false;
+    independent?.hide();
     layout.classList.remove('gm-reading');
     bulk = false;
     toolbar.hidden = true;
@@ -554,18 +567,38 @@ function installReadingMode(win) {
     snoozeButton.disabled = false;
     toolbar.setAttribute('aria-label', 'Conversation navigation');
     toolbar.hidden = false;
+    syncReadAction();
     previousButton.hidden = nextButton.hidden = false;
     printButton.hidden = false;
+    printButton.title = useIndependent ? 'Print message' : 'Print conversation';
+    printButton.setAttribute('aria-label',printButton.title);
     previousButton.disabled = adjacentMessageIndex(win.gDBView, row.index, -1) < 0;
     nextButton.disabled = adjacentMessageIndex(win.gDBView, row.index, 1) < 0;
     layout.classList.add('gm-reading');
     // A single click must both reveal the pane and display the selected mail.
     // Do not rely only on a splitter expansion event to refresh the reader.
-    if (!layout.messagePaneVisible) layout.messagePaneVisible = true;
-    win.threadPane?._onSelect(new win.Event('select'));
+    if (useIndependent) {
+      independent ||= installIndependentReader(win);
+      const identity = previous.message;
+      independent.open(header).catch(() => {
+        if (!active || !sameMessage(header,previous?.message) || !sameMessage(header,identity)) return;
+        independent.hide();
+        layout.messagePaneVisible = true;
+        win.threadPane?._onSelect(new win.Event('select'));
+      });
+    } else {
+      if (!layout.messagePaneVisible) layout.messagePaneVisible = true;
+      win.threadPane?._onSelect(new win.Event('select'));
+    }
     back.focus({preventScroll:true});
   }
   function click(event) {
+    if(event.target.closest('.twisty')) {
+      // A preceding text click may still be waiting for the next frame.
+      // Expanding a thread must cancel it rather than open the reader afterward.
+      if(pending!==null){win.cancelAnimationFrame(pending);pending=null;++openTicket;}
+      return;
+    }
     if (!isReadingClick(event)) return;
     const row = event.target.closest('tr.table-layout');
     if (!row || !tree.contains(row)) return;
@@ -611,6 +644,7 @@ function installReadingMode(win) {
   function close() {
     leave(false);
     closed = true;
+    independent?.close();
     threadPane?.classList.remove('gm-bulk-selecting');
     layout.messagePaneVisible = originalMessagePaneVisible;
     MailServices.mfn.removeListener(moveListener);
@@ -618,11 +652,6 @@ function installReadingMode(win) {
     tree.removeEventListener('select', selectionChanged);
     tree.removeEventListener('click', click, true);
     tree.removeEventListener('dblclick', doubleClick, true);
-    for (const [column, state] of originalColumns) Object.assign(column, state);
-    if (originalUpdateColumns && win.threadPane.updateColumns === updateColumns) {
-      win.threadPane.updateColumns = originalUpdateColumns;
-      originalUpdateColumns.call(win.threadPane); tree.reset();
-    }
     folderTree.removeEventListener('select', folderChange, true);
     back.removeEventListener('click', backClick);
     for (const heading of headingTargets) heading.removeEventListener('click', headingClick);
@@ -634,5 +663,22 @@ function installReadingMode(win) {
     win.removeEventListener('unload', close);
   }
   win.addEventListener('unload', close, {once:true});
-  return {close};
+  return {close,
+    setIndependent(enabled) {
+      if (useIndependent === (enabled === true)) return;
+      if (active) leave(true);
+      useIndependent = enabled === true;
+    },
+    openIndex(index) {
+      tree.selectedIndex = index;
+      open({index,dataset:{}});
+    },
+    selectIndices(indices) {
+      if (active) leave(false);
+      tree.selectedIndices = indices;
+      bulk = indices.length > 0;
+      win.threadPaneHeader?.updateSelectedCount();
+      syncBulk();
+    }
+  };
 }
