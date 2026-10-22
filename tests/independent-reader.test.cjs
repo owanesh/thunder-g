@@ -173,7 +173,7 @@ test('local Sent scanning yields and stops when the conversation is left',async(
 });
 test('Sent discovery includes configured custom destinations and folders marked Sent across accounts',()=>{
   const custom={URI:'custom',isSpecialFolder:()=>false},sent={URI:'sent',isSpecialFolder:flag=>flag===512},other={URI:'inbox',isSpecialFolder:()=>false};
-  const scope=context({Ci:{nsMsgFolderFlags:{SentMail:512}},MailServices:{accounts:{allIdentities:[{fccFolder:'custom'}],allFolders:[other,custom,sent]}}});
+  const scope=context({Ci:{nsMsgFolderFlags:{SentMail:512}},MailServices:{accounts:{allIdentities:[{fccFolderURI:'custom'}],allFolders:[other,custom,sent]}}});
   assert.deepEqual(Array.from(scope.independentSentFolders()),[custom,sent]);
 });
 test('Gmail layout keeps previews with the sender and folds quoted history behind a reversible control',async()=>{
@@ -302,4 +302,15 @@ test('native body starts before index lookup while conversation-wide actions wai
  assert.equal(f.browsers.length,1,'identical membership does not reload the native message');
  assert.equal(f.reader.getMessages().length,1);assert.equal(f.actions.children[0].disabled,false);
  f.reader.close();
+});
+
+test('unindexed conversations include replies from an identity-configured unflagged Sent folder',async()=>{
+  const anchor=message(1,'root');
+  anchor.folder.msgDatabase={getThreadContainingMsgHdr:()=>({numChildren:1,getChildHdrAt:()=>anchor})};
+  const reply=references(message(2,'reply','custom',2),'root');
+  const custom={URI:'custom',isSpecialFolder:()=>false,messages:[reply]};
+  const scope=context({Ci:{nsMsgFolderFlags:{SentMail:512}},MailServices:{accounts:{allIdentities:[{fccFolderURI:'custom'}],allFolders:[custom]}}});
+  const result=await scope.independentConversation({},anchor,null,scope.independentSentFolders()).promise;
+  assert.deepEqual(Array.from(result.messages),[anchor,reply]);
+  assert.equal(result.indexed,false);
 });

@@ -35,7 +35,7 @@ function independentReferenceIds(header) {
 }
 function independentSentFolders() {
   try {
-    const configured=new Set(Array.from(MailServices.accounts.allIdentities,identity=>identity.fccFolder));
+    const configured=new Set(Array.from(MailServices.accounts.allIdentities,identity=>identity.fccFolderURI));
     return Array.from(MailServices.accounts.allFolders).filter(folder=>!folder.isServer &&
       (folder.isSpecialFolder(Ci.nsMsgFolderFlags.SentMail,false) || configured.has(folder.URI)));
   }catch(_){return []}
