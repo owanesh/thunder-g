@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.12.0
+
 - Make message and conversation label chips open their exact native tag view, with tooltips and keyboard access; preserve the separate remove action.
 
 ## 0.11.0

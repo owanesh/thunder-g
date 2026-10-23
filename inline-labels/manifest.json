@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "name": "Thunder-G",
   "description": "Gmail-inspired interface for Thunderbird with native tag chips, message previews, quick actions, and conversation styling.",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "browser_specific_settings": {
     "gecko": {
       "id": "thunder-g@vschiavoni",

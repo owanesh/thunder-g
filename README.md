@@ -13,7 +13,7 @@
 
 A compact inbox, existing tags as colored chips before the subject, and a conversation reader with a Back button and message actions.
 
-Current version: **0.11.0**. Installable package: `thunder-g-0.11.0.xpi`. The companion accepts **Thunderbird 153–158.x**.
+Current version: **0.12.0**. Installable package: `thunder-g-0.12.0.xpi`. The companion accepts **Thunderbird 153–158.x**.
 
 Tested on macOS with **Thunderbird 158.0.1** and **Betterbird 153.5.0**
 (Betterbird testing reported by the maintainer). Renderer hooks were inspected
@@ -201,7 +201,7 @@ remote-image policy and MIME rendering remain under Thunderbird's native viewer.
 Create a repository with this directory's contents (not a Thunderbird profile
 and not the original development folder). The included MIT license allows reuse.
 Keep generated XPI files out of Git history; attach the source ZIP, checksum and,
-optionally, the built XPI as release assets tagged `v0.11.0`. The source ZIP is the
+optionally, the built XPI as release assets tagged `v0.12.0`. The source ZIP is the
 complete source bundle; the XPI contains the companion and its bundled styles.
 Mark the first release experimental and include the compatibility/testing limits
 above. No repository has been published by the package preparation step.
