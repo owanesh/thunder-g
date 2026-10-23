@@ -35,6 +35,10 @@
         <section id="inbox" aria-labelledby="inbox-title">
           <div class="section-heading"><h2 id="inbox-title">Inbox</h2><p>A little more room for your messages.</p></div>
           <div class="setting-row">
+            <div class="setting-copy"><label for="show-column-headers">Show column headers</label><p id="column-headers-help">Hidden by default for a Gmail-style list. Show headers to sort, resize, or choose columns. Applies immediately.</p></div>
+            <input class="switch" id="show-column-headers" type="checkbox" role="switch" aria-describedby="column-headers-help">
+          </div>
+          <div class="setting-row">
             <div class="setting-copy"><label for="messages-per-page">Messages per page</label><p id="page-size-help">Choose a page size or keep one continuous list.</p></div>
             <select id="messages-per-page" aria-describedby="page-size-help"><option value="0">All messages</option><option value="25">25 messages</option><option value="50">50 messages</option><option value="100">100 messages</option></select>
           </div>

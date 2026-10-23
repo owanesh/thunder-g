@@ -105,3 +105,22 @@ test('thread guide preference defaults on, preserves opt-out and updates live fr
   changed({threadGuides:{newValue:false}},'sync');assert.equal(calls.length,3);
  }
 });
+
+test('column headers default hidden, restore explicit choice and respond only to local changes',async()=>{
+  for (const saved of [undefined,true,false]) {
+    const calls=[];let changed;
+    const noop=async()=>{};
+    const scope=vm.createContext({console,browser:{runtime:{},storage:{local:{get:async()=>({showColumnHeaders:saved})},onChanged:{addListener(fn){changed=fn}}},inlineLabels:{
+      onDkimRequest:{addListener(){}},setShowColumnHeaders:async value=>calls.push(value),
+      setHideTodayPane:noop,setComposeAutosave:noop,setMessagesPerPage:noop,setIndependentReader:noop,start:noop
+    }}});
+    vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/background.js'),'utf8'),scope);
+    await new Promise(resolve=>setImmediate(resolve));
+    assert.deepEqual(calls,[saved===true]);
+    changed({showColumnHeaders:{newValue:true}},'sync');assert.equal(calls.length,1);
+    changed({showColumnHeaders:{newValue:true}},'local');
+    changed({showColumnHeaders:{newValue:false}},'local');
+    changed({showColumnHeaders:{}},'local');
+    assert.deepEqual(calls,[saved===true,true,false,false]);
+  }
+});

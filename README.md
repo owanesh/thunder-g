@@ -26,6 +26,7 @@ Release history and detailed changes are in [CHANGELOG.md](CHANGELOG.md).
 
 - Automatic light/dark shell, responsive pencil/Write button, and yellow stars.
 - Native tag chips, searchable Labels menu, and gray snippets from locally available mail.
+- Column headers are hidden by default; enable **Show column headers** in Thunder-G settings → Inbox to sort, resize, or choose columns.
 - Hidden From/Subject header text; native column visibility and order are respected. UI font size follows Thunderbird.
 - Single-click reading in the current tab; Back restores the list; Previous/Next navigate.
 - Archive, spam, delete, unread, Move, Labels, and a Follow-Up clock in the reader.

@@ -143,3 +143,20 @@ threadGuides.addEventListener('change', async () => {
     reportStatus('Unable to save. Please try again.');
   } finally { threadGuides.disabled = false; }
 });
+
+const columnHeaders = document.getElementById('show-column-headers');
+columnHeaders.disabled = true;
+browser.storage.local.get({showColumnHeaders:false}).then(settings => {
+  columnHeaders.checked = settings.showColumnHeaders === true;
+  columnHeaders.disabled = false;
+}).catch(() => reportStatus('Unable to load settings.'));
+columnHeaders.addEventListener('change', async () => {
+  columnHeaders.disabled = true;
+  try {
+    await browser.storage.local.set({showColumnHeaders:columnHeaders.checked});
+    reportStatus('Saved.');
+  } catch (_) {
+    columnHeaders.checked = !columnHeaders.checked;
+    reportStatus('Unable to save. Please try again.');
+  } finally { columnHeaders.disabled = false; }
+});

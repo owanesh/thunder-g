@@ -69,7 +69,7 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
     const conversationDocuments = new Map();
     const id = context.extension.id;
     const skinWindows = new Map();
-    let hideTodayPane = false;
+    let hideTodayPane = false, showColumnHeaders = false;
     let messagesPerPage = 0, independentReader = false, threadGuides = true;
     const readers = new Map();
     const pagedDocuments = new Map(), zoomWindows = new Map();
@@ -95,6 +95,7 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
       skinWindows.set(win, cssURI);
     }
     function unloadSkin(win) {
+      win.document?.documentElement?.removeAttribute("data-gm-hide-column-headers");
       const cssURI = skinWindows.get(win);
       if (!skinWindows.delete(win)) return;
       try { win.windowUtils.removeSheetUsingURIString(cssURI, Ci.nsIDOMWindowUtils.USER_SHEET); }
@@ -126,6 +127,7 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
       }
       pendingDocuments.get(doc)?.close(); pendingDocuments.delete(doc);
       loadSkin(doc.defaultView);
+      doc.documentElement.toggleAttribute("data-gm-hide-column-headers", !showColumnHeaders);
       const labels = installInlineLabels(doc.defaultView, MailServices, Services.prefs);
       const nestedLabels = installNestedLabelSidebar(doc.defaultView);
       const reader = installReadingMode(doc.defaultView);
@@ -196,6 +198,10 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
       documents.clear(); windows.clear();
     }});
     return { inlineLabels: {
+      async setShowColumnHeaders(enabled) {
+        showColumnHeaders = enabled === true;
+        for (const doc of documents.keys()) doc.documentElement.toggleAttribute('data-gm-hide-column-headers', !showColumnHeaders);
+      },
       async setThreadGuides(enabled){threadGuides=enabled===true;for(const controller of documents.values())controller.setThreadGuides(threadGuides);},
       async setInlineReplyEnabled(enabled){inlineReplyEnabled=enabled===true;},
       async setInlineNewMessageEnabled(enabled){inlineNewMessageEnabled=enabled===true;},

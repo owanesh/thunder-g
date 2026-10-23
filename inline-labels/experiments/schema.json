@@ -114,6 +114,17 @@
             "type": "boolean"
           }
         ]
+      },
+      {
+        "name": "setShowColumnHeaders",
+        "type": "function",
+        "async": true,
+        "parameters": [
+          {
+            "name": "enabled",
+            "type": "boolean"
+          }
+        ]
       }
     ],
     "events": [

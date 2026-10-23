@@ -7,9 +7,10 @@ browser.inlineLabels.onDkimRequest.addListener(async(request,messageId,domain,ba
 });
 async function startThunderG() {
   // Optional settings must never prevent the companion from starting.
-  let threadGuides = true, independentReader = false, hideTodayPane = false, messagesPerPage = 0, composeAutosave = true, composeAutosaveMinutes = 1, bimiEnabled = false, inlineReplyEnabled = false, inlineNewMessageEnabled = false;
+  let showColumnHeaders = false, threadGuides = true, independentReader = false, hideTodayPane = false, messagesPerPage = 0, composeAutosave = true, composeAutosaveMinutes = 1, bimiEnabled = false, inlineReplyEnabled = false, inlineNewMessageEnabled = false;
   try {
-    const settings = await browser.storage.local.get({threadGuides:true,independentReader:false,hideTodayPane:false,messagesPerPage:0,composeAutosave:true,composeAutosaveMinutes:1,bimiEnabled:false,inlineReplyEnabled:false,inlineNewMessageEnabled:false});
+    const settings = await browser.storage.local.get({showColumnHeaders:false,threadGuides:true,independentReader:false,hideTodayPane:false,messagesPerPage:0,composeAutosave:true,composeAutosaveMinutes:1,bimiEnabled:false,inlineReplyEnabled:false,inlineNewMessageEnabled:false});
+    showColumnHeaders = settings.showColumnHeaders === true;
     threadGuides = settings.threadGuides !== false;
     bimiEnabled = settings.bimiEnabled === true;
     inlineReplyEnabled = settings.inlineReplyEnabled === true;
@@ -20,6 +21,7 @@ async function startThunderG() {
     composeAutosave = settings.composeAutosave !== false;
     composeAutosaveMinutes = settings.composeAutosaveMinutes;
   } catch (error) { console.warn('Thunder-G: using default settings.',error); }
+  await browser.inlineLabels.setShowColumnHeaders?.(showColumnHeaders);
   await browser.inlineLabels.setThreadGuides?.(threadGuides);
   await browser.inlineLabels.setHideTodayPane(hideTodayPane);
   await browser.inlineLabels.setComposeAutosave(composeAutosave,composeAutosaveMinutes || 1);
@@ -30,6 +32,7 @@ async function startThunderG() {
   await browser.inlineLabels.setInlineNewMessageEnabled?.(inlineNewMessageEnabled);
   await browser.inlineLabels.start();
   browser.storage.onChanged.addListener((changes, area) => {
+    if(area==='local' && changes.showColumnHeaders)browser.inlineLabels.setShowColumnHeaders(changes.showColumnHeaders.newValue===true).catch(console.error);
     if(area==='local' && changes.threadGuides)browser.inlineLabels.setThreadGuides(changes.threadGuides.newValue!==false).catch(console.error);
     if (area === 'local' && (changes.composeAutosave || changes.composeAutosaveMinutes)) {
       if (changes.composeAutosave) composeAutosave = changes.composeAutosave.newValue !== false;
