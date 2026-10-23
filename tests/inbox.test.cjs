@@ -303,3 +303,29 @@ test('thread guides follow native expanded-thread boundaries, nested replies and
  view.getFlagsAt=()=>0;view.getLevel=()=>{throw Error('view changed')};assert.equal(scope.threadGuidePosition(view,1),null);
  assert.equal(scope.threadGuidePosition(view,-1),null);assert.equal(scope.threadGuidePosition(view,99),null);
 });
+
+test('threaded views start collapsed, including async searches, and later manual expansion survives updates',()=>{
+  scope.Ci={nsMsgViewCommandType:{collapseAll:7}};
+  let collapses=0,open=true;
+  const view=()=>({doCommand(command){assert.equal(command,7);collapses++;open=false}});
+  const listener={allMessagesLoaded:true,
+    onCreatedView(){assert.equal(this,listener);open=true;return 'created'},
+    onMessagesLoaded(){assert.equal(this,listener);return 'loaded'}};
+  const originalCreated=listener.onCreatedView,originalLoaded=listener.onMessagesLoaded;
+  const win={gDBView:view(),gViewWrapper:{showThreaded:true,_threadExpandAll:true},dbViewWrapperListener:listener};
+  const controller=scope.installCollapsedThreadDefaults(win);
+  assert.equal(open,false);assert.equal(win.gViewWrapper._threadExpandAll,false);
+  open=true;listener.onMessagesLoaded(true);
+  assert.equal(open,true,'live updates preserve threads manually opened after initial loading');
+  win.gDBView=view();win.gViewWrapper._threadExpandAll=true;
+  assert.equal(listener.onCreatedView(),'created');assert.equal(open,false);
+  open=true;assert.equal(listener.onMessagesLoaded(false),'loaded');assert.equal(open,true);
+  listener.onMessagesLoaded(true);assert.equal(open,false,'final native search/selection restoration cannot defeat the default');
+  open=true;listener.onMessagesLoaded(true);assert.equal(open,true);
+  const count=collapses;
+  win.gViewWrapper.showGroupedBySort=true;win.gDBView=view();listener.onCreatedView();listener.onMessagesLoaded(true);
+  assert.equal(collapses,count,'group headers keep their own native state');
+  win.gViewWrapper.showGroupedBySort=false;win.gViewWrapper.showThreaded=false;
+  win.gDBView=view();listener.onCreatedView();listener.onMessagesLoaded(true);assert.equal(collapses,count);
+  controller.close();assert.equal(listener.onCreatedView,originalCreated);assert.equal(listener.onMessagesLoaded,originalLoaded);
+});

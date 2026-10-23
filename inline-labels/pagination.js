@@ -96,7 +96,13 @@ function installNativePagination(win, reader) {
     .gm-page-scroll { position:fixed; z-index:2; overflow-y:scroll; overflow-x:hidden;
       scrollbar-width:auto; scrollbar-color:auto; width:16px; }
     .gm-page-scroll[hidden] { display:none !important; }
-    #threadTree tr[data-gm-outside-page] { visibility:hidden !important; pointer-events:none !important; }
+    /* Native replied/new icons explicitly restore visibility. Hide the whole
+       painted subtree while retaining the virtual tree's row geometry. */
+    #threadTree tr[data-gm-outside-page] { opacity:0 !important; }
+    #threadTree tr[data-gm-outside-page],
+    #threadTree tr[data-gm-outside-page] * {
+      visibility:hidden !important; pointer-events:none !important;
+    }
   `;doc.head.append(style);
   function rows(){
     const view=win.gDBView;

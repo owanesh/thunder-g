@@ -173,6 +173,29 @@ function independentBimiDomain(address,result,baseDomain) {
   if(!from || !result?.dkim?.some(signature=>signature.result==='SUCCESS' && signature.sdid && baseDomain(signature.sdid.toLowerCase())===baseDomain(from)))return null;
   return from;
 }
+// ContextMenuParent routes message-body events to about:3pane, even for our
+// embedded readers. Use the originating message's menu and command controller.
+function installIndependentContextMenu(win, resolve) {
+  const original=win.openContextMenu;
+  function openContextMenu(message,browser,...args) {
+    const target=resolve(browser);
+    if(!target)return original?.call(this,message,browser,...args) ?? false;
+    const {window:messageWindow,activate}=target;
+    const menu=messageWindow.mailContextMenu;
+    const popup=messageWindow.document.getElementById('mailContext');
+    // Never fall back to the inbox selection for one of our own messages.
+    if(!menu || !popup)return true;
+    activate();
+    menu.setAsMessagePaneContextMenu(message.data,message.target.browsingContext);
+    const ratio=messageWindow.devicePixelRatio || win.devicePixelRatio || 1;
+    popup.openPopupAtScreen(message.data.context.screenXDevPx/ratio,
+      message.data.context.screenYDevPx/ratio,true);
+    return true;
+  }
+  win.openContextMenu=openContextMenu;
+  return {close(){if(win.openContextMenu===openContextMenu)win.openContextMenu=original;}};
+}
+
 function installIndependentReader(win) {
   const doc=win.document,layout=doc.getElementById('paneLayout');
   let closed=false,ticket=0,query=null,revealFrame=null,resolving=false;
@@ -259,6 +282,11 @@ function installIndependentReader(win) {
     activeHeader=header;activeCard=card;
     card.setAttribute('data-active-message','');card.setAttribute('aria-current','true');
   }
+  const contextMenu=installIndependentContextMenu(win,browser=>{
+    const header=messageDocs.get(browser?.ownerDocument);
+    if(!header || browser.ownerDocument.getElementById('messagepane')!==browser)return null;
+    return {window:browser.ownerDocument.defaultView,activate:()=>activateMessage(header)};
+  });
   const actions=doc.createElement('div');actions.className='actions';actions.setAttribute('role','group');actions.setAttribute('aria-label','Reply to conversation');
   const buttons=[];
   function runCommand(command) {
@@ -600,7 +628,7 @@ function installIndependentReader(win) {
       status.title=result.indexed?'':'Conversation assembled from this folder and locally available sent messages';
     },
     hide(){if(typeof inlineComposeControllers!=='undefined')inlineComposeControllers.get(win)?.float();++ticket;query?.cancel();query=null;resolving=false;host.hidden=true;layout.classList.remove('gm-independent-open');clearCards()},
-    close(){this.hide();closed=true;sentCache.close();previews.close();win.removeEventListener?.('focus',refreshTags);MailServices.mfn?.removeListener(tagListener);host.remove();layoutStyle.remove()},
+    close(){this.hide();closed=true;contextMenu.close();sentCache.close();previews.close();win.removeEventListener?.('focus',refreshTags);MailServices.mfn?.removeListener(tagListener);host.remove();layoutStyle.remove()},
     refresh:refreshTags,
     print(){runCommand('cmd_print')},
     getMessages(){return resolving?[]:currentHeaders.slice()}

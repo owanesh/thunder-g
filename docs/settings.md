@@ -8,6 +8,8 @@ Open **Add-ons Manager → Thunder-G → Preferences**.
 - **Hide Today Pane** — Hide the calendar pane and its toggle; `off` by default.
 - **Show thread connection lines** — Connect replies in expanded threads; `on` by default.
 
+Threaded message views start with threads collapsed. Use a thread's arrow to expand or collapse it; subsequent mail updates preserve threads you opened manually.
+
 ## Conversations and writing
 
 The conversation reader and in-window writing are **experimental** and `off` by default.

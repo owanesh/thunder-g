@@ -6,6 +6,10 @@
 
 ## 0.12.1
 
+- Hide off-page reply icons and thread guides, including on short message pages.
+- Start threaded message views collapsed while keeping manual expansion available.
+- Route a conversation message's body context menu to that exact message, so labels cannot use the inbox selection.
+
 - Add native automatic updates from stable GitHub Releases, with an HTTPS update
   manifest, versioned XPI links, SHA-256 validation and Thunderbird compatibility bounds.
 - Build and attach XPI, source bundle, checksums and updates.json when a stable

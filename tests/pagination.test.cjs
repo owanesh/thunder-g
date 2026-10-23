@@ -78,6 +78,8 @@ for (const collapsed of [false,true,'short-last']) test(`native pagination retai
     assert.equal(scrolls.at(-1).tailHeight,'234px','short-page extent exists before the only scroll request');
     assert.equal(tree.hasAttribute('data-gm-paginated'),true);
     assert.match(head.children[0].textContent,/scroll-behavior:auto !important/);
+    assert.match(head.children[0].textContent,/#threadTree tr\[data-gm-outside-page\] \{ opacity:0 !important;/);
+    assert.match(head.children[0].textContent,/#threadTree tr\[data-gm-outside-page\] \* \{\s*visibility:hidden !important; pointer-events:none !important;/);
     assert.equal(tree.scrollTop,200*34,'browser scroll clamp must still allow the first of the 19 rows to reach the header');
     assert.equal(rows.filter(row=>!row.hasAttribute('data-gm-outside-page')).length,19);
     assert.equal(tree.children[0].style.height,'234px','only the missing scroll height is added, never a full viewport');
