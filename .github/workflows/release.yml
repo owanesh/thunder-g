@@ -1,0 +1,57 @@
+name: Publish extension update assets
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-assets-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+jobs:
+  release-assets:
+    if: github.repository == 'vschiavoni/thunderbird-gmail-skin' && !github.event.release.prerelease
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test
+        run: |
+          node --test tests/*.test.cjs
+          python3 -m unittest discover -s tests -p '*_test.py'
+      - name: Build and validate release assets
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          python3 build.py
+          python3 package.py
+          python3 release_assets.py --tag "$RELEASE_TAG"
+      - name: Upload assets to this release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          for asset in thunder-g-*.xpi thunder-g-*.xpi.sha256 thunder-g-*-source.zip thunder-g-*-source.zip.sha256 updates.json; do
+            existing=$(gh release view "$RELEASE_TAG" --json assets --jq '.assets[].name')
+            if printf '%s\n' "$existing" | grep -Fxq "$asset"; then
+              mkdir -p /tmp/existing-release-assets
+              gh release download "$RELEASE_TAG" --pattern "$asset" --dir /tmp/existing-release-assets --clobber
+              cmp "$asset" "/tmp/existing-release-assets/$asset" || { echo "Refusing to replace published asset: $asset"; exit 1; }
+            else
+              gh release upload "$RELEASE_TAG" "$asset"
+            fi
+          done

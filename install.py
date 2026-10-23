@@ -40,52 +40,95 @@ def ensure_closed():
 def install(profile):
     state = profile / STATE
     if state.exists():
-        raise RuntimeError('Skin already installed by this installer. Uninstall before upgrading.')
+        raise RuntimeError('Skin already installed. Use --upgrade for the one-time automatic-update migration.')
     if (profile / LEGACY_ADDON).exists():
         raise RuntimeError('Uninstall the previous inline-labels extension before installing Thunder-G under its new ID.')
-    # Build from the source shipped alongside this installer, without downloads.
     subprocess.run([sys.executable, str(ROOT / 'build.py')], check=True)
     version = json.loads((ROOT / 'inline-labels/manifest.json').read_text())['version']
-    prefs = (profile / 'prefs.js').read_text()
-    match = re.search(r'user_pref\("' + re.escape(PREF) + r'",\s*(true|false)\);', prefs)
+    target = profile / ADDON
     state.mkdir()
-    record = {'version': version, 'preference': match.group(1) if match else None,
-              'before': {}, 'after': {}}
-    for name in FILES:
-        target = profile / name
-        record['before'][name] = target.exists()
-        if target.exists():
-            backup = state / 'before' / name
-            backup.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(target, backup)
-    (state / 'state.json').write_text(json.dumps(record, indent=2))
+    record = {'version': version, 'mode': 'extension-only', 'preference': None,
+              'before': {ADDON: target.exists()}, 'after': {}}
+    if target.exists():
+        backup = state / 'before' / ADDON
+        backup.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(target, backup)
+    target.parent.mkdir(parents=True, exist_ok=True)
     try:
-        for name in FILES:
-            (profile / name).parent.mkdir(parents=True, exist_ok=True)
-        for name in ['gmail-inspired.css', 'gmail-columns.css']:
-            shutil.copy2(ROOT / 'chrome' / name, profile / 'chrome' / name)
-        loader = profile / 'chrome/userChrome.css'
-        text = loader.read_text() if loader.exists() else ''
-        imports = '@import url("gmail-columns.css");\n@import url("gmail-inspired.css");\n'
-        if text.startswith('@charset'):
-            end = text.index(';') + 1
-            text = text[:end] + '\n' + imports + text[end:]
+        shutil.copy2(ROOT / f'thunder-g-{version}.xpi', target)
+    except Exception:
+        if record['before'][ADDON]:
+            shutil.copy2(state / 'before' / ADDON, target)
         else:
-            text = imports + text
-        loader.write_text(text)
-        user = profile / 'user.js'
-        text = user.read_text() if user.exists() else ''
-        user.write_text(text + '\nuser_pref("' + PREF + '", true); // gmail-skin\n')
-        shutil.copy2(ROOT / f'thunder-g-{version}.xpi', profile / ADDON)
-        record['after'] = {name: digest(profile / name) for name in FILES}
+            target.unlink(missing_ok=True)
+        record['after'] = {ADDON: digest(target)}
+        (state / 'state.json').write_text(json.dumps(record, indent=2))
+        state.rename(profile / (STATE + '-failed-' + datetime.now().strftime('%Y%m%d-%H%M%S-%f')))
+        raise
+    record['after'] = {ADDON: digest(target)}
+    (state / 'state.json').write_text(json.dumps(record, indent=2))
+    print('Installed extension with bundled styles. Restart Thunderbird; future releases use native automatic updates.')
+
+
+def upgrade(profile):
+    """Replace the XPI and retire only unchanged installer-managed profile CSS."""
+    state = profile / STATE
+    if not (state / 'state.json').is_file():
+        install(profile)
+        return
+    record = json.loads((state / 'state.json').read_text())
+    legacy = record.get('mode') != 'extension-only'
+    styles = [name for name in FILES if name != ADDON and name in record['after']] if legacy else []
+    conflicts = [name for name in styles if digest(profile / name) != record['after'][name]]
+    if conflicts:
+        raise RuntimeError('Managed styles changed; preserve/reconcile them before migrating: ' + ', '.join(conflicts))
+    # Check every original before writing anything.
+    for name in styles:
+        if record['before'][name] and not (state / 'before' / name).is_file():
+            raise RuntimeError('Missing original file for migration: ' + name)
+    subprocess.run([sys.executable, str(ROOT / 'build.py')], check=True)
+    version = json.loads((ROOT / 'inline-labels/manifest.json').read_text())['version']
+    backup = profile / (STATE + '-upgrade-' + datetime.now().strftime('%Y%m%d-%H%M%S-%f'))
+    affected = styles + [ADDON, 'prefs.js']
+    existed = {name: (profile / name).exists() for name in affected}
+    for name in affected:
+        if existed[name]:
+            saved = backup / name
+            saved.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(profile / name, saved)
+    shutil.copytree(state, backup / 'installer-state')
+    try:
+        for name in styles:
+            target = profile / name
+            if record['before'][name]:
+                shutil.copy2(state / 'before' / name, target)
+            else:
+                target.unlink(missing_ok=True)
+        if legacy and 'user.js' in styles:
+            prefs = profile / 'prefs.js'
+            text = prefs.read_text()
+            pattern = r'user_pref\("' + re.escape(PREF) + r'",\s*(true|false)\);\n?'
+            current = re.search(pattern, text)
+            if current and current.group(1) == 'true':
+                text = re.sub(pattern, '', text)
+                if record.get('preference') is not None:
+                    text += '\nuser_pref("' + PREF + '", ' + record['preference'] + ');\n'
+                prefs.write_text(text)
+        target = profile / ADDON
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(ROOT / f'thunder-g-{version}.xpi', target)
+        record.update(version=version, mode='extension-only', after={ADDON: digest(target)})
         (state / 'state.json').write_text(json.dumps(record, indent=2))
     except Exception:
-        # Keep the snapshot usable if any write fails halfway through.
-        record['after'] = {name: digest(profile / name) for name in FILES}
-        (state / 'state.json').write_text(json.dumps(record, indent=2))
+        for name in affected:
+            target = profile / name
+            if existed[name]:
+                shutil.copy2(backup / name, target)
+            else:
+                target.unlink(missing_ok=True)
+        shutil.copy2(backup / 'installer-state/state.json', state / 'state.json')
         raise
-    print('Installed. Restart Thunderbird and review any add-on permission prompt.')
-    print('Local rollback snapshot:', state)
+    print('Upgraded to extension-only automatic updates. Migration backup:', backup)
 
 
 def uninstall_without_state(profile):
@@ -147,22 +190,25 @@ def uninstall(profile, allow_addon_change=False):
             shutil.copy2(state / 'before' / name, target)
         elif target.exists():
             target.unlink()
-    # user.js is applied at startup, so also undo its persisted preference value.
-    prefs = profile / 'prefs.js'
-    text = prefs.read_text()
-    pattern = r'user_pref\("' + re.escape(PREF) + r'",\s*(true|false)\);\n?'
-    text = re.sub(pattern, '', text)
-    if record['preference'] is not None:
-        text += '\nuser_pref("' + PREF + '", ' + record['preference'] + ');\n'
-    prefs.write_text(text)
+    if record.get('mode') != 'extension-only':
+        # user.js is applied at startup, so also undo its persisted preference value.
+        prefs = profile / 'prefs.js'
+        text = prefs.read_text()
+        pattern = r'user_pref\("' + re.escape(PREF) + r'",\s*(true|false)\);\n?'
+        text = re.sub(pattern, '', text)
+        if record['preference'] is not None:
+            text += '\nuser_pref("' + PREF + '", ' + record['preference'] + ');\n'
+        prefs.write_text(text)
     state.rename(profile / (STATE + '-restored-' + datetime.now().strftime('%Y%m%d-%H%M%S-%f')))
-    print('Previous files and CSS preference restored. Restart Thunderbird.')
+    print('Previous installation restored. Restart Thunderbird.')
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('profile', type=Path, help='Existing profile folder containing prefs.js')
-    parser.add_argument('--uninstall', action='store_true')
+    action = parser.add_mutually_exclusive_group()
+    action.add_argument('--uninstall', action='store_true')
+    action.add_argument('--upgrade', action='store_true', help='Migrate managed profile styles to the self-updating XPI')
     parser.add_argument('--allow-addon-change', action='store_true',
                         help='With --uninstall, back up an updated companion and allow its removal/restoration')
     args = parser.parse_args()
@@ -175,6 +221,8 @@ def main():
         ensure_closed()
         if args.uninstall:
             uninstall(profile, allow_addon_change=args.allow_addon_change)
+        elif args.upgrade:
+            upgrade(profile)
         else:
             install(profile)
     except (RuntimeError, OSError, ValueError, subprocess.CalledProcessError) as error:

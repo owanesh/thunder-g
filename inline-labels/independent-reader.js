@@ -173,6 +173,29 @@ function independentBimiDomain(address,result,baseDomain) {
   if(!from || !result?.dkim?.some(signature=>signature.result==='SUCCESS' && signature.sdid && baseDomain(signature.sdid.toLowerCase())===baseDomain(from)))return null;
   return from;
 }
+// ContextMenuParent routes message-body events to about:3pane, even for our
+// embedded readers. Use the originating message's menu and command controller.
+function installIndependentContextMenu(win, resolve) {
+  const original=win.openContextMenu;
+  function openContextMenu(message,browser,...args) {
+    const target=resolve(browser);
+    if(!target)return original?.call(this,message,browser,...args) ?? false;
+    const {window:messageWindow,activate}=target;
+    const menu=messageWindow.mailContextMenu;
+    const popup=messageWindow.document.getElementById('mailContext');
+    // Never fall back to the inbox selection for one of our own messages.
+    if(!menu || !popup)return true;
+    activate();
+    menu.setAsMessagePaneContextMenu(message.data,message.target.browsingContext);
+    const ratio=messageWindow.devicePixelRatio || win.devicePixelRatio || 1;
+    popup.openPopupAtScreen(message.data.context.screenXDevPx/ratio,
+      message.data.context.screenYDevPx/ratio,true);
+    return true;
+  }
+  win.openContextMenu=openContextMenu;
+  return {close(){if(win.openContextMenu===openContextMenu)win.openContextMenu=original;}};
+}
+
 function installIndependentReader(win) {
   const doc=win.document,layout=doc.getElementById('paneLayout');
   let closed=false,ticket=0,query=null,revealFrame=null,resolving=false;
@@ -252,6 +275,20 @@ function installIndependentReader(win) {
   conversation.append(title,scope,status,cards);root.append(style,conversation);
   const titleTags=doc.createElement('span');titleTags.className='title-tags';titleTags.setAttribute('aria-label','Labels in this conversation');
   const cleanups=new Set(),tagRenderers=new Set(),securityRenderers=new Set(),frames=new Map(),messageDocs=new Map(),messageCards=new Map();let currentHeaders=[],actionHeader=null,activeHeader=null,activeCard=null;
+  const zoomResizers=new Map();
+  let messageZoom=null;
+  function zoomConversation(action) {
+    if(closed || host.hidden)return false;
+    const manager=win.top?.ZoomManager || win.ZoomManager;
+    const method={increaseSize:'enlarge',reduceSize:'reduce',resetSize:'reset'}[action];
+    const panes=[...frames.values()].map(frame=>frame.contentDocument.getElementById('messagepane')).filter(Boolean);
+    if(manager && method && panes.length){
+      manager[method](panes[0]);messageZoom=manager.getZoomForBrowser(panes[0]);
+      for(const pane of panes)manager.setZoomForBrowser(pane,messageZoom);
+      for(const resize of zoomResizers.values())resize();
+    }
+    return true;
+  }
   function activateMessage(header) {
     const card=messageCards.get(header);
     if(closed || !card || activeCard===card)return;
@@ -259,6 +296,11 @@ function installIndependentReader(win) {
     activeHeader=header;activeCard=card;
     card.setAttribute('data-active-message','');card.setAttribute('aria-current','true');
   }
+  const contextMenu=installIndependentContextMenu(win,browser=>{
+    const header=messageDocs.get(browser?.ownerDocument);
+    if(!header || browser.ownerDocument.getElementById('messagepane')!==browser)return null;
+    return {window:browser.ownerDocument.defaultView,activate:()=>activateMessage(header)};
+  });
   const actions=doc.createElement('div');actions.className='actions';actions.setAttribute('role','group');actions.setAttribute('aria-label','Reply to conversation');
   const buttons=[];
   function runCommand(command) {
@@ -395,6 +437,7 @@ function installIndependentReader(win) {
       for(const [document,message] of messageDocs)if(message===header)messageDocs.delete(document);
       frames.delete(independentMessageKey(header));updateActions();
       zoom?.close();zoom=null;
+      zoomResizers.delete(browser);
       browser?.remove();browser=null;ready=false;
 
     }
@@ -418,7 +461,7 @@ function installIndependentReader(win) {
             restoreCommands=()=>{for(const [name,value] of originals)controller[name]=value};
           }
           browser.docShell.allowDNSPrefetch=false;
-          zoom=installMailZoom(browser.contentWindow,ChromeUtils.importESModule('resource:///modules/UIFontSize.sys.mjs').UIFontSize);
+          zoom=installMailZoom(browser.contentWindow,ChromeUtils.importESModule('resource:///modules/UIFontSize.sys.mjs').UIFontSize,zoomConversation);
           browser.contentWindow.displayMessage(header.folder.getUriForMsg(header));
         }catch(_){release();error.hidden=false}
       },true);
@@ -471,6 +514,7 @@ function installIndependentReader(win) {
         // Size the envelope to the rendered message; the conversation owns the
         // scrollbar. Read layout only: MIME content and its security stay native.
         const pane=browser.contentDocument.getElementById('messagepane');
+        if(pane && messageZoom!==null)(win.top?.ZoomManager || win.ZoomManager)?.setZoomForBrowser(pane,messageZoom);
         const content=pane?.contentDocument;
         if(content) {
           messageDocs.set(content,header);
@@ -484,10 +528,13 @@ function installIndependentReader(win) {
             if(browser!==frame || closed || token!==ticket || body.hidden)return;
             const chrome=Math.max(0,frame.clientHeight-pane.clientHeight);
             const contentHeight=independentContentHeight(content);
-            const height=Math.ceil(contentHeight+chrome);
+            // Content rectangles use the message document's CSS pixels;
+            // the enclosing browser height uses the unzoomed chrome's pixels.
+            const height=Math.ceil(contentHeight*(pane.fullZoom || 1)+chrome);
             if(Math.abs(frame.clientHeight-height)>1)frame.style.blockSize=height+'px';
           };
           const scheduleResize=()=>{if(resizeFrame===null)resizeFrame=win.requestAnimationFrame(resizeBody)};
+          zoomResizers.set(frame,scheduleResize);
           // Presentation only, in the disposable native viewer. Stored MIME and
           // message text are untouched, and the user can reveal every quote.
           const quotes=content.querySelectorAll('blockquote[type="cite"], .gmail_quote');
@@ -526,7 +573,7 @@ function installIndependentReader(win) {
       activateMessage(header);
       if(latest)return;
       if(body.hidden) {
-        if(browser) {body.hidden=false;preview.hidden=true;article.setAttribute('data-expanded','');toggle.setAttribute('aria-expanded','true')}
+        if(browser) {body.hidden=false;preview.hidden=true;article.setAttribute('data-expanded','');toggle.setAttribute('aria-expanded','true');zoomResizers.get(browser)?.();}
         else expandCard();
       } else {
         // Retain a loaded frame while folded so footer Reply/Print still target
@@ -572,6 +619,7 @@ function installIndependentReader(win) {
     setMessageTag(header,tag.key,!(keys.includes(tag.key) || tag.key===`$label${header.label}`));
   }
   return {
+    zoom:zoomConversation,
     handleTagKey(event) {
       const number=independentTagKey(event);
       if(number===null || host.hidden || closed)return false;
@@ -600,7 +648,7 @@ function installIndependentReader(win) {
       status.title=result.indexed?'':'Conversation assembled from this folder and locally available sent messages';
     },
     hide(){if(typeof inlineComposeControllers!=='undefined')inlineComposeControllers.get(win)?.float();++ticket;query?.cancel();query=null;resolving=false;host.hidden=true;layout.classList.remove('gm-independent-open');clearCards()},
-    close(){this.hide();closed=true;sentCache.close();previews.close();win.removeEventListener?.('focus',refreshTags);MailServices.mfn?.removeListener(tagListener);host.remove();layoutStyle.remove()},
+    close(){this.hide();closed=true;contextMenu.close();sentCache.close();previews.close();win.removeEventListener?.('focus',refreshTags);MailServices.mfn?.removeListener(tagListener);host.remove();layoutStyle.remove()},
     refresh:refreshTags,
     print(){runCommand('cmd_print')},
     getMessages(){return resolving?[]:currentHeaders.slice()}

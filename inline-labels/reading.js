@@ -439,7 +439,18 @@ function installReadingMode(win) {
   // Capture in each document of this mail pane, including Conversations' browser.
   // Other tabs, compose editors, search fields and modified shortcuts are untouched.
   const keyDocuments = new Set();
+  function zoomReading(action) {
+    if(closed || !active)return false;
+    if(useIndependent){independent?.zoom(action);return true;}
+    const browser=conversationDocument() ? doc.getElementById('multiMessageBrowser') :
+      doc.getElementById('messageBrowser')?.contentWindow?.getMessagePaneBrowser?.();
+    zoomNativeMessage(win,browser,action);
+    // Consume the shortcut even while loading, so it cannot resize the UI.
+    return true;
+  }
   function labelKey(event) {
+    const action=mailZoomAction(event);
+    if(action && zoomReading(action)){event.preventDefault();event.stopImmediatePropagation();return;}
     if(active && useIndependent && !pickerOpen && independent?.handleTagKey?.(event))return;
     if (!isLabelShortcut(event) || pickerOpen || closed) return;
     const tabmail = win.top.document.getElementById('tabmail');
@@ -716,7 +727,7 @@ function installReadingMode(win) {
     win.removeEventListener('unload', close);
   }
   win.addEventListener('unload', close, {once:true});
-  return {close,
+  return {close,zoom:zoomReading,
     setIndependent(enabled) {
       if (useIndependent === (enabled === true)) return;
       if (active) leave(true);

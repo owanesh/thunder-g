@@ -5,6 +5,8 @@ and stay after restart.
 
 ## Inbox
 
+- **Show column headers** *(off by default)* — Restore clickable headers, column resizing and the column picker. Applies immediately without changing the sort order or saved widths.
+
 - **Messages per page** — Show 25, 50 or 100 messages at a time. **All messages**
   (default) keeps one continuous list. Totals include messages in collapsed threads.
 - **Hide Today Pane** *(off by default)* — Hide the calendar pane and its toggle
@@ -18,7 +20,7 @@ and stay after restart.
   related messages together, including locally available sent replies. The newest
   message opens expanded; click earlier messages to read them. A slim marker shows
   which message receives numeric tag shortcuts. **L** labels the whole conversation;
-  its picker shows the scope and message count, including sent replies.
+  includes sent replies.
 
 Disable **Thunderbird Conversations** before enabling this reader or **Reply in
 this window**: Thunder-G handles the conversation itself. After switching readers,

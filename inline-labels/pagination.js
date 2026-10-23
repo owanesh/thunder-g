@@ -41,13 +41,21 @@ function mailZoomAction(event) {
   if (event.key === '0' || event.code === 'Numpad0') return 'resetSize';
   return null;
 }
-function installMailZoom(win, fontSize) {
+function zoomNativeMessage(win, browser, action) {
+  const manager=win.top?.ZoomManager || win.ZoomManager;
+  const method={increaseSize:'enlarge',reduceSize:'reduce',resetSize:'reset'}[action];
+  if(!browser || !method || !manager)return false;
+  manager[method](browser);
+  return true;
+}
+function installMailZoom(win, fontSize, zoomContent = null) {
   function keydown(event) {
     const tab=win.document.getElementById('tabmail')?.currentTabInfo;
     if (tab && tab.mode?.name !== 'mail3PaneTab') return;
     const action=mailZoomAction(event);
     if (!action) return;
-    event.preventDefault(); event.stopImmediatePropagation(); fontSize[action]();
+    event.preventDefault(); event.stopImmediatePropagation();
+    if (!zoomContent?.(action)) fontSize[action]();
   }
   win.addEventListener('keydown',keydown,true);
   return {close(){win.removeEventListener('keydown',keydown,true)}};
@@ -96,7 +104,13 @@ function installNativePagination(win, reader) {
     .gm-page-scroll { position:fixed; z-index:2; overflow-y:scroll; overflow-x:hidden;
       scrollbar-width:auto; scrollbar-color:auto; width:16px; }
     .gm-page-scroll[hidden] { display:none !important; }
-    #threadTree tr[data-gm-outside-page] { visibility:hidden !important; pointer-events:none !important; }
+    /* Native replied/new icons explicitly restore visibility. Hide the whole
+       painted subtree while retaining the virtual tree's row geometry. */
+    #threadTree tr[data-gm-outside-page] { opacity:0 !important; }
+    #threadTree tr[data-gm-outside-page],
+    #threadTree tr[data-gm-outside-page] * {
+      visibility:hidden !important; pointer-events:none !important;
+    }
   `;doc.head.append(style);
   function rows(){
     const view=win.gDBView;

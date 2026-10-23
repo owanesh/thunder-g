@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 0.14.0
+
+- Enable native updates from stable GitHub Releases with versioned downloads, SHA-256 checks and compatibility bounds.
+- Add a stable-release workflow and reproducible XPI/source packaging; refuse to replace different published assets.
+- Use extension-bundled styles for new installs and provide backed-up legacy CSS migration with conflict checks.
+- Route reader zoom to message content, including conversation cards and separate message windows.
+- Hide pagination artifacts, open threaded views collapsed and route message-body context menus to the correct message.
+- Add installation, update, label and development guides while retaining the 0.13.0 label and column-header features.
+
 ## 0.13.0
 
 - Move attachment indicators immediately before the date.

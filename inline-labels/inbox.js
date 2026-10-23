@@ -341,6 +341,40 @@ function threadGuidePosition(view,index) {
   return null;
 }
 
+function installCollapsedThreadDefaults(win) {
+  const listener=win.dbViewWrapperListener;
+  if(!listener?.onCreatedView || !listener.onMessagesLoaded)return {close(){}};
+  const created=listener.onCreatedView,loaded=listener.onMessagesLoaded;
+  const completed=new WeakSet();
+  function collapse() {
+    const view=win.gDBView,wrapper=win.gViewWrapper;
+    if(!view || !wrapper?.showThreaded || wrapper.showGroupedBySort)return;
+    wrapper._threadExpandAll=false;
+    view.doCommand(Ci.nsMsgViewCommandType.collapseAll);
+  }
+  function onCreatedView(...args) {
+    if(win.gViewWrapper?.showThreaded && !win.gViewWrapper.showGroupedBySort)
+      win.gViewWrapper._threadExpandAll=false;
+    const result=created.apply(this,args);
+    collapse();
+    return result;
+  }
+  function onMessagesLoaded(all,...args) {
+    const result=loaded.call(this,all,...args),view=win.gDBView;
+    // Native search and selection restoration can re-expand threads during
+    // loading. Apply the default once, then allow the user to expand freely.
+    if(all && view && !completed.has(view)){completed.add(view);collapse();}
+    return result;
+  }
+  listener.onCreatedView=onCreatedView;listener.onMessagesLoaded=onMessagesLoaded;
+  collapse();
+  if(win.gDBView && listener.allMessagesLoaded)completed.add(win.gDBView);
+  return {close(){
+    if(listener.onCreatedView===onCreatedView)listener.onCreatedView=created;
+    if(listener.onMessagesLoaded===onMessagesLoaded)listener.onMessagesLoaded=loaded;
+  }};
+}
+
 function installInboxControls(win,{threadGuides=true}={}) {
   const doc = win.document;
   const tree = doc.getElementById('threadTree');
@@ -350,6 +384,7 @@ function installInboxControls(win,{threadGuides=true}={}) {
   const viewCopy = installCompleteViewCopy(win);
   const newMessage = installInlineNewMessage(win);
   const threadToggles = installThreadToggles(win);
+  const threadDefaults = installCollapsedThreadDefaults(win);
   let closed = false, prototype, original, wrapped, rowClass, originalHeight;
   let showThreadGuides=threadGuides===true;
   function renderThreadGuide(row) {
@@ -518,6 +553,7 @@ function installInboxControls(win,{threadGuides=true}={}) {
     viewCopy.close();
     newMessage.close();
     threadToggles.close();
+    threadDefaults.close();
     if (rowClass && Number.isFinite(originalHeight) && rowClass.ROW_HEIGHT === originalHeight + 6) {
       rowClass.ROW_HEIGHT = originalHeight;
       tree.reset();

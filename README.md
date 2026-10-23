@@ -13,7 +13,7 @@
 
 A compact inbox, existing tags as colored chips before the subject, and a conversation reader with a Back button and message actions.
 
-Current version: **0.13.0**. Installable package: `thunder-g-0.13.0.xpi`. The companion accepts **Thunderbird 153–158.x**.
+Current version: **0.14.0**. Installable package: `thunder-g-0.14.0.xpi`. The companion accepts **Thunderbird 153–158.x**.
 
 Tested on macOS with **Thunderbird 158.0.1** and **Betterbird 153.5.0**
 (Betterbird testing reported by the maintainer). Renderer hooks were inspected
@@ -54,7 +54,7 @@ The [settings guide](docs/settings.md) explains each option, its default and whe
 it is useful, including experimental features and optional sender-logo downloads.
 
 Outside text-entry fields, Ctrl/Cmd + plus (or equals), minus and zero control
-Thunderbird’s interface font size.
+Thunderbird’s interface font size in the inbox; in an open reader they zoom message content.
 
 ## Requirements
 
@@ -74,37 +74,17 @@ These third-party add-ons are not bundled or automatically installed.
 
 ## Install
 
-1. In Thunderbird, open Help → Troubleshooting Information → Profile Folder and
-   locate the profile you want to customize. Quit Thunderbird completely.
-2. Download and extract the source ZIP, or clone this repository.
-3. In a terminal in this directory, run (replace the example path):
+Download the XPI from the latest GitHub release. In Thunderbird, open
+**Add-ons Manager → gear → Install Add-on From File**, select it and restart.
+Styles are bundled in the extension; new users do not need profile CSS or Python.
+Use the built-in System theme, Classic layout and Table View.
+The optional Conversations and mailmindr integrations remain separate add-ons.
 
-   ```sh
-   python3 install.py "/absolute/path/to/your/Thunderbird/profile"
-   ```
-
-   On Windows use `py -3` instead of `python3` if appropriate.
-4. Restart Thunderbird. Review any add-on permission prompt. Select the built-in
-   System theme for automatic dark mode, Classic layout, and **Table View**. Enable threaded
-   sorting. The companion starts with the message preview collapsed.
-5. Optionally enable Tags folder-pane mode and the folder-pane header.
-
-The installer builds the XPI from the included source, installs it and both CSS
-files, preserves existing userChrome.css rules, and enables the custom-stylesheet
-preference. It saves original affected files under `.gmail-skin-install` **inside
-the selected profile**. It does not copy accounts, passwords, messages, tags,
-sessions, or someone else's preferences into your profile. Do not share that
-snapshot: pre-existing profile files may contain personal settings.
-
-Alternatively build with `python3 build.py` and install the resulting XPI through
-Add-ons Manager → gear → Install Add-on From File. The XPI also bundles shell and Conversations styles, loaded while the companion
-is active. The installer additionally manages persistent profile CSS and rollback.
-
-The installer places the companion permanently in the selected profile’s
-`extensions` directory. It should survive restarts; temporary installation from
-the debugging page is not needed. If the interface is missing after restart,
-check whether Thunder-G is still enabled in Add-ons Manager and that Thunderbird
-opened the same profile.
+For an older installation made with `install.py`, quit Thunderbird and run
+`python3 install.py "/absolute/path/to/profile" --upgrade` from the new source
+bundle once. It backs up affected files and retires unchanged installer-managed
+CSS, preserving personal customization. Edited managed files stop migration.
+See [updates and migration](docs/updates.md) before upgrading.
 
 ### Upgrading from the previous extension
 
@@ -113,8 +93,8 @@ Thunderbird treats this as a different add-on, rather than an in-place update.
 Uninstall the previous extension, then install the new Thunder-G package;
 add-on-local preferences do not migrate automatically. If using the optional
 local DKIM compatibility patch, rebuild it with the updated sender allowlist.
-For installer-managed profiles, uninstall with the existing rollback snapshot
-before installing the new identity. Native messages and tags are unaffected.
+For installations under the current ID, use `--upgrade` for the one-time CSS
+migration rather than uninstalling first. See the [maintenance guide](docs/updates.md).
 
 ### Optional column layout
 
@@ -197,30 +177,21 @@ folder rename/delete and key-change notifications invalidate that metadata.
 Both caches are released when their consumers close. Full bodies, attachments,
 remote-image policy and MIME rendering remain under Thunderbird's native viewer.
 
-## Publishing to GitHub
+## Publishing and automatic updates
 
-Create a repository with this directory's contents (not a Thunderbird profile
-and not the original development folder). The included MIT license allows reuse.
-Keep generated XPI files out of Git history; attach the source ZIP, checksum and,
-optionally, the built XPI as release assets tagged `v0.13.0`. The source ZIP is the
-complete source bundle; the XPI contains the companion and its bundled styles.
-Mark the first release experimental and include the compatibility/testing limits
-above. No repository has been published by the package preparation step.
+See [release publishing](docs/updates.md#publishing-a-release). Prepare the next
+version with `python3 publish.py 0.14.0 --dry-run`, then omit `--dry-run` to run
+checks and build the XPI, source archive, checksums and update feed.
+Preparation does not commit, push, publish or install.
 
+Publish a stable release for the matching tag after the workflow is on that tag.
+The release workflow tests, builds and attaches the assets automatically. A push,
+tag alone, draft or prerelease does not distribute an update.
+Existing users must install the first update-enabled XPI manually; subsequent
+compatible releases follow Thunderbird's native update preferences.
 
-## Prepare a local release
-
-Preview a version change without modifying files:
-
-```sh
-python3 publish.py 0.7.3 --dry-run
-```
-
-Prepare it with `python3 publish.py 0.7.3`. The command runs tests, updates the
-manifest and README, moves Unreleased notes into the new changelog entry, and
-builds XPI/source ZIP files with SHA-256 checksums. It preserves older release
-notes and refuses existing target versions/artifacts. It does not commit, push,
-upload, or install. Keep writing future notes under Unreleased.
+More guides: [labels](docs/labels.md), [settings](docs/settings.md),
+[development](docs/development.md), and [migration/rollback](docs/updates.md).
 
 Three-state reply verification: 89 automated tests pass. Live Thunderbird checks covered inline/floating transitions and native-window handoff with identity, recipient, subject and quoted body intact. The embedded editor closed only after the successor body loaded. An earlier server draft-copy failure retained the open reply. Attachments were saved/reopened in a native draft, but the separate-window attachment transfer still needs live confirmation. No mail was sent. These handoff checks were performed only in Thunderbird.
 
