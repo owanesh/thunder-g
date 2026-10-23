@@ -16,10 +16,10 @@
   }
   for (const column of columns) {
     if (["correspondentCol", "betweenColumn"].includes(column.id)) column.hidden = true;
-    if (["senderCol", "subjectCol", "dateCol"].includes(column.id)) column.hidden = false;
+    if (["senderCol", "subjectCol", "attachmentCol", "dateCol"].includes(column.id)) column.hidden = false;
   }
-  const order = ["selectCol", "threadCol", "flaggedCol", "attachmentCol",
-    "unreadButtonColHeader", "junkStatusCol", "senderCol", "subjectCol", "dateCol"];
+  const order = ["selectCol", "threadCol", "flaggedCol",
+    "unreadButtonColHeader", "junkStatusCol", "senderCol", "subjectCol", "attachmentCol", "dateCol"];
   const rank = id => order.includes(id) ? order.indexOf(id) : order.length;
   columns.sort((a,b) => rank(a.id) - rank(b.id));
   columns.forEach((c,i) => { c.ordinal = i + 1; });
@@ -38,5 +38,5 @@
     pane.document.getElementById(column).style.setProperty(`--${column}Splitter-width`, `${width}px`);
     pane.threadPane.treeTable.setColumnsWidths("messenger", {detail:{column, splitter:{width}}});
   }
-  console.log("GMAIL-COLUMNS: saved previous layout; From, inline labels/subject, then Date.");
+  console.log("GMAIL-COLUMNS: saved previous layout; From, inline labels/subject, attachment, then Date.");
 })().catch(console.error);

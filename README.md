@@ -31,7 +31,7 @@ Release history and detailed changes are in [CHANGELOG.md](CHANGELOG.md).
 - Archive, spam, delete, unread, Move, Labels, and a Follow-Up clock in the reader.
 - Return to the full list after archiving, with the native preview collapsed.
 - Native quick-filter chips and row actions for archive, delete, and read/unread.
-- Optional Conversations styling and reversible From → Subject → Date layout scripts.
+- Optional Conversations styling and reversible From → Subject → Attachment → Date layout scripts.
 
 ## Label picker
 
