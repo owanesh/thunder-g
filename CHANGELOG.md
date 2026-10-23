@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.13.0
+
+- Move attachment indicators immediately before the date.
+- Make the label assignment panel more compact.
+- Redesign the label color palette with text previews.
+- Hide column headers by default, with a setting to restore them.
+
 ## 0.12.0
 
 - Make message and conversation label chips open their exact native tag view, with tooltips and keyboard access; preserve the separate remove action.
