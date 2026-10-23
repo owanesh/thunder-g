@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Make message and conversation label chips open their exact native tag view, with tooltips and keyboard access; preserve the separate remove action.
+
 ## 0.11.0
 
 - Constrain sidebar label menu buttons to 28 pixels at the right edge; preserve space for label names and message counts.

@@ -98,6 +98,7 @@ function installInlineLabels(window = globalThis.window, MailServices = globalTh
       chip.className = "gm-inline-label";
       chip.textContent = tag.tag;
       chip.title = tag.tag;
+      bindLabelNavigation(chip,tag,window);
       const colors = chipColors(tag.color);
       chip.style.setProperty("--gm-chip-bg", colors.background);
       chip.style.setProperty("--gm-chip-fg", colors.foreground);

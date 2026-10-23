@@ -34,6 +34,7 @@ function installConversationStyle(win, css, resolveTags = null) {
       const chip = win.document.createElement('span');
       chip.textContent = tag.name;
       chip.title = tag.name;
+      bindLabelNavigation(chip,tag,win);
       const colors = conversationTagColors(tag.color);
       chip.style.setProperty('--gm-tag-bg',colors.background);
       chip.style.setProperty('--gm-tag-fg',colors.foreground);
@@ -99,6 +100,7 @@ function installConversationStyle(win, css, resolveTags = null) {
       const chip = win.document.createElement('span');
       chip.textContent = tag.name;
       chip.title = tag.name + ' — present in this conversation';
+      bindLabelNavigation(chip,tag,win);
       const colors = conversationTagColors(tag.color);
       chip.style.setProperty('--gm-tag-bg',colors.background);
       chip.style.setProperty('--gm-tag-fg',colors.foreground);
@@ -107,11 +109,14 @@ function installConversationStyle(win, css, resolveTags = null) {
     titleRoot.append(titleChips);
   }
   const tags = new Map();
+  const tagLinks=new Map();
   const tagSelector = '.regular-tags > li[color], li[is="message-tag"][color]';
   function paintTag(tag) {
     if (!tag.getAttribute || !tag.style?.getPropertyValue) return;
     if (!tags.has(tag)) tags.set(tag, ['--gm-tag-bg','--gm-tag-fg'].map(name=>
       [name,tag.style.getPropertyValue(name),tag.style.getPropertyPriority(name)]));
+    const key=tag.getAttribute('key');
+    if(key && !tagLinks.has(tag))tagLinks.set(tag,bindLabelNavigation(tag,{key},win));
     const colors=conversationTagColors(tag.getAttribute('color'));
     tag.style.setProperty('--gm-tag-bg',colors.background);
     tag.style.setProperty('--gm-tag-fg',colors.foreground);
@@ -193,6 +198,7 @@ function installConversationStyle(win, css, resolveTags = null) {
     for (const [tag,values] of tags) for (const [name,value,priority] of values) {
       if (value) tag.style.setProperty(name,value,priority); else tag.style.removeProperty(name);
     }
+    for(const close of tagLinks.values())close();tagLinks.clear();
     tags.clear();
     for (const [list,value] of correctedLists) {
       if (value === null) list.removeAttribute("tags"); else list.setAttribute("tags",value);

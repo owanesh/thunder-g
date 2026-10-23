@@ -8,6 +8,8 @@ const code = fs.readFileSync(require('node:path').join(__dirname, '../inline-lab
 function fixture() {
   class Element {
     constructor() { this.children = []; this.dataset = {}; this.style = { setProperty() {} }; }
+    addEventListener() {}
+    removeEventListener() {}
     append(child) { child.parent = this; this.children.push(child); }
     remove() { if (this.parent) this.parent.children = this.parent.children.filter(x => x !== this); }
     setAttribute(key, value) { this[key] = value; }
@@ -28,7 +30,7 @@ function fixture() {
   const win = {windowUtils:{loadSheetUsingURIString(uri,type){sheets.push([uri,type]);},
     removeSheetUsingURIString(uri,type){assert.deepEqual(sheets.pop(),[uri,type]);}},document:doc, customElements:{whenDefined:async()=>{},get:()=>ThreadRow}, gDBView:{getMsgHdrAt:()=>({getStringProperty:()=>keywords})}, addEventListener(){},removeEventListener(){}};
   const scope = vm.createContext({Ci:{nsIDOMWindowUtils:{USER_SHEET:1}},window:win,MailServices:{tags:{getAllTags:()=>tags}},console});
-  vm.runInContext(menuCode+"\n"+code, scope);
+  vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'../inline-labels/label-navigation.js'),'utf8')+'\n'+menuCode+'\n'+code, scope);
   return { scope, row, nativeSubject, tags, sheets, setKeywords(value){keywords=value;} };
 }
 
