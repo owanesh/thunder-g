@@ -4,7 +4,7 @@
 function isReadingClick(event) {
   return event.button === 0 && !event.ctrlKey && !event.metaKey &&
     !event.shiftKey && !event.altKey &&
-    !event.target.closest('button, input, a, .button-column, .select-column, .selectcol-column, .twisty, .gm-reading-toolbar');
+    !event.target.closest('button, input, a, .button-column, .select-column, .selectcol-column, .twisty, .gm-reading-toolbar, [data-gm-label-link]');
 }
 
 function readingMessageWasMoved(previous, move, messages) {
@@ -684,6 +684,8 @@ function installReadingMode(win) {
   };
   MailServices.mfn.addListener(moveListener, Ci.nsIMsgFolderNotificationService.msgsMoveCopyCompleted);
   function folderChange() { tagPopup.hidePopup(); leave(false); bulk = false; toolbar.hidden = true; threadPane?.classList.remove('gm-bulk-selecting'); }
+  function labelViewOpened(){leave(true);}
+  win.addEventListener('gm-open-label-view',labelViewOpened);
   function backClick() { if (active) leave(true); else clearBulk(); }
   tree.addEventListener('click', selectionClick, true);
   tree.addEventListener('select', selectionChanged);
@@ -704,6 +706,7 @@ function installReadingMode(win) {
     tree.removeEventListener('dblclick', doubleClick, true);
     folderTree.removeEventListener('select', folderChange, true);
     back.removeEventListener('click', backClick);
+    win.removeEventListener('gm-open-label-view',labelViewOpened);
     for (const heading of headingTargets) heading.removeEventListener('click', headingClick);
     for (const document of keyDocuments) document.removeEventListener("keydown", labelKey, true);
     win.removeEventListener("load", documentLoaded, true);

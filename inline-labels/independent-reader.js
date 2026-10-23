@@ -289,7 +289,7 @@ function installIndependentReader(win) {
     for(const tag of tags.values()) {
       const chip=text('span','tag',tag.tag),colors=chipColors(tag.color);
       chip.style.backgroundColor=colors.background;chip.style.color=colors.foreground;
-      chip.title=`${tag.tag} — present in this conversation`;titleTags.append(chip);
+      chip.title=`${tag.tag} — present in this conversation`;bindLabelNavigation(chip,tag,win);titleTags.append(chip);
     }
   }
   const tagListener={msgPropertyChanged(header,property){if(['keywords','label'].includes(property))refreshTags();if(property==='dkim_verifier@pl-result')for(const render of securityRenderers)render()}};
@@ -359,7 +359,7 @@ function installIndependentReader(win) {
       for(const tag of assignedTags(header,MailServices.tags.getAllTags())) {
         const chip=text('span','tag',''),colors=chipColors(tag.color);
         chip.style.backgroundColor=colors.background;chip.style.color=colors.foreground;
-        const label=text('span','tag-label',tag.tag),remove=text('button','tag-remove','×');remove.type='button';
+        const label=text('span','tag-label',tag.tag);bindLabelNavigation(label,tag,win);const remove=text('button','tag-remove','×');remove.type='button';
         remove.setAttribute('aria-label',`Remove ${tag.tag} from this message`);remove.title=`Remove ${tag.tag}`;
         remove.addEventListener('click',event=>{
           event.preventDefault();event.stopPropagation();
