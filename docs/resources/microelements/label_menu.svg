@@ -1,0 +1,27 @@
+
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="110" height="90" viewBox="0 0 110 90">
+
+  <!-- Docs: checked -->
+  <rect x="7.5" y="7.5" width="13" height="13"
+        fill="none" stroke="#222" stroke-width="1"/>
+  <path d="M10 13.5 L12.5 16 L18 10"
+        fill="none" stroke="#222" stroke-width="1.5"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="33" y="20" font-family="Arial, sans-serif"
+        font-size="15" fill="#222">Docs</text>
+
+  <rect x="27.5" y="37.5" width="13" height="13"
+        fill="none" stroke="#222" stroke-width="1"/>
+  <text x="53" y="50" font-family="Arial, sans-serif"
+        font-size="15" fill="#222">How to</text>
+
+  <!-- labels: indeterminate -->
+  <rect x="27.5" y="67.5" width="13" height="13"
+        fill="none" stroke="#222" stroke-width="1"/>
+  <path d="M31 74 H37"
+        stroke="#222" stroke-width="1.5"
+        stroke-linecap="round"/>
+  <text x="53" y="80" font-family="Arial, sans-serif"
+        font-size="15" fill="#222">Labels</text>
+</svg>

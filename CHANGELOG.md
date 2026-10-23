@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Shorten the README and move settings, label usage, maintenance and contributor instructions into concise guides.
+
+## 0.12.1
+
+- Add native automatic updates from stable GitHub Releases, with an HTTPS update
+  manifest, versioned XPI links, SHA-256 validation and Thunderbird compatibility bounds.
+- Build and attach XPI, source bundle, checksums and updates.json when a stable
+  release is published. Validate the release tag against the source and packaged manifest.
+- Install bundled extension styles only. Add a backed-up one-time upgrade for legacy
+  installer-managed CSS, preserving personal customization and stopping on conflicts.
+- Document initial installation, native update controls, migration and release publishing.
+
 ## 0.12.0
 
 - Make message and conversation label chips open their exact native tag view, with tooltips and keyboard access; preserve the separate remove action.

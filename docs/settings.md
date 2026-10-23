@@ -1,60 +1,31 @@
 # Settings
 
-Open **Add-ons Manager → Thunder-G → Preferences**. Changes save automatically
-and stay after restart.
+Open **Add-ons Manager → Thunder-G → Preferences**.
 
 ## Inbox
 
-- **Messages per page** — Show 25, 50 or 100 messages at a time. **All messages**
-  (default) keeps one continuous list. Totals include messages in collapsed threads.
-- **Hide Today Pane** *(off by default)* — Hide the calendar pane and its toggle
-  to make room for mail. Turning this off restores Thunderbird’s visibility setting.
-- **Show thread connection lines** *(on by default)* — Draw a subtle line between
-  messages in expanded threads, so replies are easier to follow. Applies immediately.
+- **Messages per page** — Limit the list to 25, 50 or 100 messages; `All messages` is the default.
+- **Hide Today Pane** — Hide the calendar pane and its toggle; `off` by default.
+- **Show thread connection lines** — Connect replies in expanded threads; `on` by default.
 
-## Conversations
+## Conversations and writing
 
-- **Use Thunder-G’s conversation reader** *(experimental, off by default)* — Read
-  related messages together, including locally available sent replies. The newest
-  message opens expanded; click earlier messages to read them. A slim marker shows
-  which message receives numeric tag shortcuts. **L** labels the whole conversation;
-  its picker shows the scope and message count, including sent replies.
+The conversation reader and in-window writing are **experimental** and `off` by default.
 
-Disable **Thunderbird Conversations** before enabling this reader or **Reply in
-this window**: Thunder-G handles the conversation itself. After switching readers,
-open a message again from the list.
+Disable **Thunderbird Conversations** before enabling the reader or in-window replies.
 
-## Writing
+- **Use Thunder-G’s conversation reader** — Group related mail, including locally available sent replies, with the newest message expanded.
+- **Write new messages in this window** — Open a resizable floating composer that remembers its size and can expand or move to a separate window.
+- **Reply in this window** — Open replies below the conversation, with an option to detach them.
+- **Automatically save drafts** — Save to the account’s Drafts folder; on by default, with **✓ Saved** shown after a successful save.
+- **Save every** — Choose 1, 2, 5 or 10 minutes; the default is 1 minute and changes apply to newly opened composers.
 
-- **Write new messages in this window** *(experimental, off by default)* — Write
-  opens a floating composer beside the folder sidebar. Resize it, expand it within
-  the mail area, or move it to a separate window. Your floating size is remembered
-  for future messages and after restart, adapting to the available space.
-- **Reply in this window** *(experimental, off by default)* — Reply and Reply all
-  open below the conversation. You can detach the reply into a floating panel and
-  return it, or move it to a separate window.
-- **Automatically save drafts** *(on by default)* — Save unsent work to the
-  account’s configured Drafts folder. The in-window editor shows green **✓ Saved**
-  only after a successful save; further edits show **Unsaved changes**.
-- **Save every** *(default: 1 minute)* — Choose 1, 2, 5 or 10 minutes between
-  automatic saves. Available when autosave is on. Autosave changes apply to newly
-  opened composers.
-
-In-window writing uses Thunderbird’s editor, including your signatures,
-attachments and drafts. The folder sidebar stays visible. Navigating or turning
-an in-window option off keeps open work available; closing uses the usual
-Save, Discard and Cancel choices. Forward keeps its separate window.
+These composers use Thunderbird’s signatures, attachments and drafts, and keep the sidebar visible.
+Forward still opens a separate window.
 
 ## Sender logos
 
-- **Show sender logos with BIMI** *(off by default)* — Look up the sender’s BIMI
-  DNS record and download its advertised HTTPS SVG logo. Contact photos take
-  priority; missing or invalid logos leave the usual avatar in place.
-
-Requires a successful aligned DKIM check through the [local DKIM integration](../integrations/README.md).
-An ordinary DKIM Verifier installation does not provide this integration.
-
-**Enabling this downloads remote images; the logo host can see your IP address.**
-Only the advertised logo is downloaded, without an external logo lookup service.
-Logos and missing results are cached for one hour during the session. Turning
-this off stops new downloads and restores the usual avatars.
+**Show sender logos with BIMI** is off by default and requires aligned DKIM success through the [local DKIM integration](../integrations/README.md), not just an ordinary DKIM Verifier installation.
+It looks up BIMI in DNS and downloads the advertised HTTPS SVG; **the logo host can see your IP address**.
+Contact photos take priority, and missing logos leave the usual avatar in place.
+Results are cached for one hour per session; disabling the option stops new downloads.
