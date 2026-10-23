@@ -330,7 +330,7 @@ function installReadingMode(win) {
       checkbox.checked = state.checked; checkbox.indeterminate = state.mixed;
       checkbox.setAttribute('aria-label', tag.tag);
       const name = doc.createElement('span'); name.textContent = search.value.trim()?tag.tag:entry.name;
-      row.title=tag.tag;row.style.paddingInlineStart=`${8+entry.depth*20}px`;
+      row.title=tag.tag;row.style.paddingInlineStart=`${20+entry.depth*16}px`;
       const toggle=doc.createElement('button');toggle.type='button';toggle.className='gm-label-disclosure';
       toggle.textContent=entry.children.length?(collapsedLabels.has(entry.path)?'▸':'▾'):'';
       toggle.disabled=!entry.children.length;toggle.setAttribute('aria-label',`Expand or collapse ${tag.tag}`);
@@ -363,11 +363,11 @@ function installReadingMode(win) {
     if (pickerConversation && pickerMessages && !pickerSelection.every(selected =>
       pickerMessages.some(message => message.messageKey === selected.messageKey && message.folder.URI === selected.folder?.URI))) pickerMessages = null;
     const count = pickerMessages?.length;
-    heading.textContent = pickerConversation
-      ? `Entire conversation · ${count == null ? 'Loading…' : `${count} ${count === 1 ? 'message' : 'messages'}`}`
-      : count === 1 ? 'This message' : `${count} selected messages`;
-    scopeNote.hidden = !pickerConversation;
-    tagPopup.setAttribute('aria-label', `Labels — ${heading.textContent}`);
+    heading.textContent = 'Label as:';
+    scopeNote.hidden = true;
+    tagPopup.setAttribute('aria-label', pickerConversation
+      ? `Label as — entire conversation, ${count ?? 'loading'} messages, includes sent replies`
+      : `Label as — ${count} selected messages`);
     if (!pickerMessages) {
       pickerTags = []; pickerMessages = []; search.disabled = true;
       returnFocus = doc.activeElement; search.value = ''; renderTags();
@@ -461,7 +461,7 @@ function installReadingMode(win) {
     watchKeys(doc); win.addEventListener('load', documentLoaded, true);
   }
   style.textContent += `
-    .gm-label-disclosure { border:0; background:transparent; color:inherit; width:20px; padding:0; flex:none; cursor:pointer; }
+    .gm-label-disclosure { border:0; background:transparent; color:inherit; width:12px; min-width:12px; max-width:12px; height:20px; min-height:0; margin:0; padding:0; flex:0 0 12px; appearance:none; cursor:pointer; }
     .gm-label-disclosure:disabled { opacity:0; }
     .gm-new-label { width:min(420px,80vw); padding:24px; color:var(--layout-color-0,#202124); background:var(--layout-background-0,#fff); }
     .gm-new-label h2 { margin:0 0 24px; font-size:22px; font-weight:400; }
@@ -471,21 +471,21 @@ function installReadingMode(win) {
     .gm-new-label button { padding:8px 16px; border:0; border-radius:18px; font:inherit; color:inherit; background:var(--layout-background-1,#f1f3f4); cursor:pointer; }
     .gm-new-label button:disabled { opacity:.5; cursor:default; }
     .gm-label-panel { --panel-padding:0; --panel-border-radius:4px; }
-    .gm-label-picker { width:400px; max-width:80vw; padding:16px 0 8px; box-sizing:border-box;
+    .gm-label-picker { width:360px; max-width:80vw; padding:12px 0 6px; box-sizing:border-box;
       background:var(--layout-background-0, white); color:var(--layout-color-0, #3c4043);
       font:inherit; font-size:1rem; border-radius:4px; }
-    .gm-label-picker > div:first-child { font-weight:400; margin:0 16px 8px; }
+    .gm-label-picker > div:first-child { font-weight:400; margin:0 12px 6px; }
     .gm-label-scope { margin:0 16px 12px; font-size:.85em; color:var(--layout-color-1, #5f6368); }
-    .gm-label-search { display:flex; align-items:center; margin:0 8px 16px 16px;
+    .gm-label-search { display:flex; align-items:center; margin:0 8px 10px 12px;
       border-bottom:1px solid var(--layout-border-0, #dadce0); }
     .gm-label-search:focus-within { border-bottom:2px solid #4285f4; }
     .gm-label-search > input { appearance:none; box-sizing:border-box; width:100%; min-width:0;
       height:28px; padding:0; color:inherit; background:transparent; font:inherit;
       border:0; border-radius:0; outline:none; box-shadow:none; }
     .gm-label-search > svg { width:20px; height:20px; flex:none; margin-inline:8px; }
-    .gm-label-list { max-height:240px; overflow-y:auto; padding-block:4px 8px; }
-    .gm-label-option { display:flex; align-items:center; gap:12px; min-height:24px;
-      box-sizing:border-box; padding:2px 22px; cursor:pointer; }
+    .gm-label-list { max-height:260px; overflow-y:auto; padding-block:4px 8px; }
+    .gm-label-option { display:flex; align-items:center; gap:8px; height:24px; min-height:24px; margin:0;
+      box-sizing:border-box; padding:2px 12px; cursor:pointer; }
     .gm-label-option:hover, .gm-label-option:focus-within,
     .gm-label-footer > button:hover { background:var(--treeitem-background-hover, #f1f3f4); }
     .gm-label-option input { appearance:none; box-sizing:border-box; width:15px; height:15px;
@@ -495,12 +495,12 @@ function installReadingMode(win) {
       border-left:2px solid currentColor; border-bottom:2px solid currentColor; transform:translateY(-1px) rotate(-45deg); }
     .gm-label-option input:indeterminate::before { content:''; width:8px; height:2px; background:currentColor; }
     .gm-label-option input:focus-visible { outline:2px solid #4285f4; outline-offset:2px; }
-    .gm-label-option > span:last-child { overflow-wrap:anywhere; }
+    .gm-label-option > span:last-child { min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .gm-label-picker > [role="status"] { padding:8px 22px; }
     .gm-label-footer { border-top:1px solid var(--layout-border-0, #e8eaed); padding-top:4px; }
     .gm-label-footer > button { display:block; width:100%; text-align:start; font:inherit;
       color:inherit; background:transparent; border:0; border-radius:0; margin:0;
-      padding:4px 22px 4px 49px; min-height:24px; cursor:pointer; }
+      padding:4px 12px 4px 48px; height:26px; min-height:26px; box-sizing:border-box; cursor:pointer; }
     `;
   const printButton = action('Print conversation', 'M6 8V3h12v5 M3 17V9h18v8h-3 M6 14h12v7H6z M17 11h1', () => {
     if(useIndependent) {independent?.print();return}

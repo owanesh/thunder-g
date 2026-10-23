@@ -272,9 +272,9 @@ for(const independentMode of [false,true]) test(`label picker covers the full ac
     controller.setIndependent(true);controller.openIndex(0);
     const pressL=()=>keyEvents.keydown({key:'l',target:{closest:()=>null},preventDefault(){},stopImmediatePropagation(){}});
     pressL();
-    assert.ok(nodes.some(n=>n.textContent==='Entire conversation · 3 messages'));
-    assert.equal(nodes.find(n=>n.className==='gm-label-scope').hidden,false,'the full scope explicitly includes sent replies');
-    assert.equal(nodes.find(n=>n.name==='panel').getAttribute('aria-label'),'Labels — Entire conversation · 3 messages');
+    assert.ok(nodes.some(n=>n.textContent==='Label as:'));
+    assert.equal(nodes.find(n=>n.className==='gm-label-scope').hidden,true,'scope remains in the accessible panel name');
+    assert.equal(nodes.find(n=>n.name==='panel').getAttribute('aria-label'),'Label as — entire conversation, 3 messages, includes sent replies');
     const checkbox=nodes.find(n=>n.type==='checkbox' && n.getAttribute('aria-label')==='Project One');checkbox.checked=true;checkbox.events.change[0]();
     assert.deepEqual(JSON.parse(JSON.stringify(calls)),[['add','inbox',[1,2],'one'],['add','Sent',[1],'one']]);
     checkbox.checked=false;checkbox.events.change[0]();
@@ -283,13 +283,13 @@ for(const independentMode of [false,true]) test(`label picker covers the full ac
     conversationMessages=conversationMessages.slice(0,1);checkbox.checked=true;checkbox.events.change[0]();
     assert.equal(calls.length,4,'changing conversation membership invalidates the open picker');
     conversationMessages=[];pressL();
-    assert.ok(nodes.some(n=>n.textContent==='Entire conversation · Loading…'),'loading must never imply a partial message count');
+    assert.ok(nodes.some(n=>n.getAttribute?.('aria-label')?.includes('loading')),'loading must never imply a partial message count');
     assert.equal(nodes.find(n=>n.type==='search').disabled,true,'loading cannot fall back to labeling just the selected row');
     assert.ok(nodes.some(n=>n.textContent==='Conversation is still loading. Close this panel and try again.'));
     controller.close();return;
   }
   nodes.find(n=>n.title==='Labels… (L)').events.click[0]();
-  assert.ok(nodes.some(n=>n.textContent==='2 selected messages'));
+  assert.ok(nodes.some(n=>n.textContent==='Label as:'));
   assert.equal(nodes.find(n=>n.className==='gm-label-scope').hidden,true,'list selection does not claim to label a whole conversation');
   const search=nodes.find(n=>n.type==='search');assert.equal(doc.activeElement,search);
   const first=nodes.find(n=>n.type==='checkbox' && n.getAttribute('aria-label')==='Project One');assert.equal(first.indeterminate,true);
@@ -302,8 +302,8 @@ for(const independentMode of [false,true]) test(`label picker covers the full ac
   nodes.find(n=>n.textContent==='Manage labels').events.click[0]();
   assert.deepEqual(nativeCommands,['cmd_manageTags']);
   nodes.find(n=>n.title==='Labels… (L)').events.click[0]();
-  assert.ok(nodes.some(n=>n.textContent==='This message'),'a single native selection is labelled explicitly');
-  assert.equal(nodes.find(n=>n.name==='panel').getAttribute('aria-label'),'Labels — This message');
+  assert.ok(nodes.some(n=>n.textContent==='Label as:'),'a single native selection is labelled explicitly');
+  assert.equal(nodes.find(n=>n.name==='panel').getAttribute('aria-label'),'Label as — 1 selected messages');
   selected=messages;nodes.find(n=>n.title==='Labels… (L)').events.click[0]();
   nodes.find(n=>n.textContent==='Create new').events.click[0]();
   assert.deepEqual(nativeCommands,['cmd_manageTags']);
