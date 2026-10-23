@@ -275,6 +275,20 @@ function installIndependentReader(win) {
   conversation.append(title,scope,status,cards);root.append(style,conversation);
   const titleTags=doc.createElement('span');titleTags.className='title-tags';titleTags.setAttribute('aria-label','Labels in this conversation');
   const cleanups=new Set(),tagRenderers=new Set(),securityRenderers=new Set(),frames=new Map(),messageDocs=new Map(),messageCards=new Map();let currentHeaders=[],actionHeader=null,activeHeader=null,activeCard=null;
+  const zoomResizers=new Map();
+  let messageZoom=null;
+  function zoomConversation(action) {
+    if(closed || host.hidden)return false;
+    const manager=win.top?.ZoomManager || win.ZoomManager;
+    const method={increaseSize:'enlarge',reduceSize:'reduce',resetSize:'reset'}[action];
+    const panes=[...frames.values()].map(frame=>frame.contentDocument.getElementById('messagepane')).filter(Boolean);
+    if(manager && method && panes.length){
+      manager[method](panes[0]);messageZoom=manager.getZoomForBrowser(panes[0]);
+      for(const pane of panes)manager.setZoomForBrowser(pane,messageZoom);
+      for(const resize of zoomResizers.values())resize();
+    }
+    return true;
+  }
   function activateMessage(header) {
     const card=messageCards.get(header);
     if(closed || !card || activeCard===card)return;
@@ -423,6 +437,7 @@ function installIndependentReader(win) {
       for(const [document,message] of messageDocs)if(message===header)messageDocs.delete(document);
       frames.delete(independentMessageKey(header));updateActions();
       zoom?.close();zoom=null;
+      zoomResizers.delete(browser);
       browser?.remove();browser=null;ready=false;
 
     }
@@ -446,7 +461,7 @@ function installIndependentReader(win) {
             restoreCommands=()=>{for(const [name,value] of originals)controller[name]=value};
           }
           browser.docShell.allowDNSPrefetch=false;
-          zoom=installMailZoom(browser.contentWindow,ChromeUtils.importESModule('resource:///modules/UIFontSize.sys.mjs').UIFontSize);
+          zoom=installMailZoom(browser.contentWindow,ChromeUtils.importESModule('resource:///modules/UIFontSize.sys.mjs').UIFontSize,zoomConversation);
           browser.contentWindow.displayMessage(header.folder.getUriForMsg(header));
         }catch(_){release();error.hidden=false}
       },true);
@@ -499,6 +514,7 @@ function installIndependentReader(win) {
         // Size the envelope to the rendered message; the conversation owns the
         // scrollbar. Read layout only: MIME content and its security stay native.
         const pane=browser.contentDocument.getElementById('messagepane');
+        if(pane && messageZoom!==null)(win.top?.ZoomManager || win.ZoomManager)?.setZoomForBrowser(pane,messageZoom);
         const content=pane?.contentDocument;
         if(content) {
           messageDocs.set(content,header);
@@ -512,10 +528,13 @@ function installIndependentReader(win) {
             if(browser!==frame || closed || token!==ticket || body.hidden)return;
             const chrome=Math.max(0,frame.clientHeight-pane.clientHeight);
             const contentHeight=independentContentHeight(content);
-            const height=Math.ceil(contentHeight+chrome);
+            // Content rectangles use the message document's CSS pixels;
+            // the enclosing browser height uses the unzoomed chrome's pixels.
+            const height=Math.ceil(contentHeight*(pane.fullZoom || 1)+chrome);
             if(Math.abs(frame.clientHeight-height)>1)frame.style.blockSize=height+'px';
           };
           const scheduleResize=()=>{if(resizeFrame===null)resizeFrame=win.requestAnimationFrame(resizeBody)};
+          zoomResizers.set(frame,scheduleResize);
           // Presentation only, in the disposable native viewer. Stored MIME and
           // message text are untouched, and the user can reveal every quote.
           const quotes=content.querySelectorAll('blockquote[type="cite"], .gmail_quote');
@@ -554,7 +573,7 @@ function installIndependentReader(win) {
       activateMessage(header);
       if(latest)return;
       if(body.hidden) {
-        if(browser) {body.hidden=false;preview.hidden=true;article.setAttribute('data-expanded','');toggle.setAttribute('aria-expanded','true')}
+        if(browser) {body.hidden=false;preview.hidden=true;article.setAttribute('data-expanded','');toggle.setAttribute('aria-expanded','true');zoomResizers.get(browser)?.();}
         else expandCard();
       } else {
         // Retain a loaded frame while folded so footer Reply/Print still target
@@ -600,6 +619,7 @@ function installIndependentReader(win) {
     setMessageTag(header,tag.key,!(keys.includes(tag.key) || tag.key===`$label${header.label}`));
   }
   return {
+    zoom:zoomConversation,
     handleTagKey(event) {
       const number=independentTagKey(event);
       if(number===null || host.hidden || closed)return false;

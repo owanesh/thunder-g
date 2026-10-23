@@ -177,3 +177,29 @@ test('native group headers do not inflate message totals and stay with the first
  const first=scope.nativeMessagePage(rows,2,0);assert.equal(first.rowStart,0);assert.equal(first.rowEnd,3);
  const last=scope.nativeMessagePage(rows,2,1);assert.equal(last.rowStart,3);assert.equal(last.rowEnd,4);
 });
+
+test('zoom shortcuts use the active reader and return to UI sizing only in the inbox',()=>{
+  const events={},calls=[];let reading=true,tab={mode:{name:'mail3PaneTab'}};
+  const win={document:{getElementById:()=>({currentTabInfo:tab})},
+    addEventListener(name,fn){events[name]=fn},removeEventListener(name){delete events[name]}};
+  const controller=scope.installMailZoom(win,{increaseSize(){calls.push('UI+')}},action=>{
+    if(!reading)return false;calls.push(action);return true;
+  });
+  const press=key=>{const event={ctrlKey:true,key,target:{closest:()=>null},preventDefault(){this.prevented=true},stopImmediatePropagation(){this.stopped=true}};events.keydown(event);return event};
+  for(const key of ['+','-','0']){const event=press(key);assert.equal(event.prevented,true);assert.equal(event.stopped,true);}
+  assert.deepEqual(calls,['increaseSize','reduceSize','resetSize']);
+  reading=false;press('+');assert.equal(calls.at(-1),'UI+');
+  reading=true;tab.mode.name='contentTab';assert.equal(press('+').prevented,undefined,'other tabs keep their native shortcuts');
+  controller.close();assert.deepEqual(events,{});
+});
+
+test('native content zoom always passes an explicit message browser, including separate message windows',()=>{
+  const pane={},calls=[],manager={enlarge:browser=>calls.push(['+',browser]),reduce:browser=>calls.push(['-',browser]),reset:browser=>calls.push(['0',browser])};
+  for(const win of [{ZoomManager:manager},{top:{ZoomManager:manager}}]){
+    for(const action of ['increaseSize','reduceSize','resetSize'])assert.equal(scope.zoomNativeMessage(win,pane,action),true);
+  }
+  assert.deepEqual(calls,[['+',pane],['-',pane],['0',pane],['+',pane],['-',pane],['0',pane]]);
+  assert.equal(scope.zoomNativeMessage({ZoomManager:manager},null,'increaseSize'),false);
+  assert.equal(scope.zoomNativeMessage({},pane,'increaseSize'),false);
+  assert.equal(calls.length,6,'loading or missing browsers cannot zoom a default UI browser');
+});

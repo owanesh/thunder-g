@@ -4,6 +4,7 @@ const vm = require('node:vm');
 const fs = require('node:fs');
 const path = require('node:path');
 const scope = vm.createContext({});
+vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/pagination.js'),'utf8'),scope);
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/nested-labels.js'),'utf8'),scope);
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/reading.js'),'utf8'),scope);
 test('only unmodified left clicks on message text open reading mode',()=>{
@@ -39,7 +40,8 @@ test('single click opens the current-tab reader, back restores the list, and dou
   const tree = element(); tree.scrollTop=120; tree.scrollLeft=0;
   tree.contains=()=>true; tree.table={body:element()};
   const folderTree=element(), heading=element(), countHeading=element();
-  const doc={getElementById:id=>({paneLayout:layout,threadTree:tree,folderTree,threadPaneFolderName:heading,threadPaneFolderCountContainer:countHeading})[id],
+  const messagePane={},messageBrowser={contentWindow:{getMessagePaneBrowser:()=>messagePane}},zoomCalls=[];
+  const doc={getElementById:id=>({messageBrowser,paneLayout:layout,threadTree:tree,folderTree,threadPaneFolderName:heading,threadPaneFolderCountContainer:countHeading})[id],
     createElement:element,createElementNS:element,createXULElement:element,
     head:element(),documentElement:element()};
   const frameQueue=[]; let listener; let refreshes=0;
@@ -51,7 +53,9 @@ test('single click opens the current-tab reader, back restores the list, and dou
     threadPane:{_onSelect(){refreshes++}},Event:class {},
     requestAnimationFrame:fn=>{frameQueue.push(fn);return frameQueue.length},
     cancelAnimationFrame(){},addEventListener(){},removeEventListener(){}};
+  win.top={ZoomManager:{enlarge:browser=>zoomCalls.push(['enlarge',browser]),reduce:browser=>zoomCalls.push(['reduce',browser]),reset:browser=>zoomCalls.push(['reset',browser])}};
   const controller=scope.installReadingMode(win);
+  assert.equal(controller.zoom('increaseSize'),false,'the inbox retains UI sizing');
   assert.equal(layout.messagePaneVisible,false,'startup must be list only');
   const row={index:0,dataset:{}};
   const stale={index:0,dataset:{}};
@@ -72,6 +76,8 @@ test('single click opens the current-tab reader, back restores the list, and dou
   frameQueue.shift()();
   assert.equal(layout.messagePaneVisible,true,'click opens conversation');
   assert.equal(refreshes,1,'first single click explicitly displays the selected message');
+  for(const action of ['increaseSize','reduceSize','resetSize'])assert.equal(controller.zoom(action),true);
+  assert.deepEqual(zoomCalls,[['enlarge',messagePane],['reduce',messagePane],['reset',messagePane]],'the native reader zooms its message browser, never the chrome');
   let prevented=false, stopped=false;
   tree.events.dblclick({button:0,target:{closest:selector=>selector==='tr.table-layout'?row:null},
     preventDefault(){prevented=true},stopImmediatePropagation(){stopped=true}});
@@ -110,6 +116,7 @@ test('single click opens the current-tab reader, back restores the list, and dou
   assert.equal(tree.selectedIndices.length,0,'Back clears implicit conversation selection');
   assert.equal(countRefreshes,1,'Back refreshes the native Selected counter');
   assert.equal(layout.messagePaneVisible,false,'Back closes the current-tab reader');
+  assert.equal(controller.zoom('increaseSize'),false,'Back returns shortcut control to UI sizing');
   while(frameQueue.length)frameQueue.shift()();
   tree.events.click({button:0,target:{closest:selector=>selector==='tr.table-layout'?row:null}});
   frameQueue.shift()();

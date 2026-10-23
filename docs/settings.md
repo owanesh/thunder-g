@@ -25,6 +25,8 @@ Disable **Thunderbird Conversations** before enabling the reader or in-window re
 These composers use Thunderbird’s signatures, attachments and drafts, and keep the sidebar visible.
 Forward still opens a separate window.
 
+With a message or conversation open, **Ctrl/Cmd +**, **−** and **0** enlarge, reduce and reset message content. Expanded messages share the zoom level, including messages opened later. In the inbox, these shortcuts adjust the UI size.
+
 ## Sender logos
 
 **Show sender logos with BIMI** is off by default and requires aligned DKIM success through the [local DKIM integration](../integrations/README.md), not just an ordinary DKIM Verifier installation.

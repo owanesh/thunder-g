@@ -6,6 +6,7 @@
 
 ## 0.12.1
 
+- Zoom open messages and conversations with Ctrl/Cmd +/−/0 without resizing the application UI; keep UI sizing shortcuts in the inbox.
 - Hide off-page reply icons and thread guides, including on short message pages.
 - Start threaded message views collapsed while keeping manual expansion available.
 - Route a conversation message's body context menu to that exact message, so labels cannot use the inbox selection.

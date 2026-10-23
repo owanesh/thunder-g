@@ -99,6 +99,9 @@ test('short messages shrink independently of viewport, growing images and pane r
   assert.equal(frame.style.blockSize,'1316px');
   frame.content.bottom=108;frame.content.body.scrollHeight=2000;f.resizes[0].fn();f.flush();
   assert.equal(frame.style.blockSize,'216px','short content is measured rather than the old 2000px viewport');
+  frame.pane.fullZoom=2;f.resizes[0].fn();f.flush();
+  assert.equal(frame.style.blockSize,'332px','message height includes content zoom without scaling envelope chrome');
+  frame.pane.fullZoom=1;
   frame.content.bottom=1808;frame.content.emit('load');f.flush();assert.equal(frame.style.blockSize,'1916px');
   frame.content.bottom=908;f.mutations[0].fn();f.flush();assert.equal(frame.style.blockSize,'1016px');
   f.resizes[0].fn();assert.equal(f.animationFrames.size,1);f.reader.hide();assert.equal(f.animationFrames.size,0);
@@ -340,4 +343,29 @@ test('actual body context menu is routed from the outer inbox to the exact embed
   delete win.mailContextMenu;
   assert.equal(f.win.openContextMenu(event,frame.pane),true,'an unavailable message menu must not label the inbox selection');
   f.reader.close();assert.equal(f.win.openContextMenu,undefined);
+});
+
+test('conversation zoom targets all message bodies, persists for newly expanded replies and leaves the UI alone',async()=>{
+  const f=readerFixture(),sent=f.prepare(message(2,'sent','sent',2)),latest=f.prepare(message(3,'latest','inbox',3));
+  f.anchor.folder.msgDatabase={getThreadContainingMsgHdr:()=>({numChildren:3,getChildHdrAt:i=>[f.anchor,sent,latest][i]})};
+  const applied=[];
+  f.win.top={ZoomManager:{
+    getZoomForBrowser:pane=>pane.fullZoom || 1,
+    setZoomForBrowser(pane,value){pane.fullZoom=value;applied.push(pane)},
+    enlarge(pane){pane.fullZoom=(pane.fullZoom || 1)+.1},
+    reduce(pane){pane.fullZoom=(pane.fullZoom || 1)-.1},reset(pane){pane.fullZoom=1}}};
+  assert.equal(f.reader.zoom('increaseSize'),false,'a hidden reader does not consume inbox shortcuts');
+  await f.reader.open(f.anchor);f.loaded();
+  assert.equal(f.reader.zoom('increaseSize'),true);
+  assert.equal(f.browsers[0].pane.fullZoom,1.1);
+  f.cards.children[1].children[0].children[0].emit('click');f.loaded();
+  assert.equal(f.browsers[1].pane.fullZoom,1.1,'newly opened Sent reply inherits conversation zoom');
+  f.reader.zoom('increaseSize');
+  for(const frame of f.browsers)assert.ok(Math.abs(frame.pane.fullZoom-1.2)<.001);
+  f.reader.zoom('reduceSize');
+  for(const frame of f.browsers)assert.ok(Math.abs(frame.pane.fullZoom-1.1)<.001);
+  f.reader.zoom('resetSize');
+  for(const frame of f.browsers)assert.equal(frame.pane.fullZoom,1);
+  assert.ok(applied.every(pane=>f.browsers.some(frame=>frame.pane===pane)),'only the inner message browsers receive zoom');
+  f.reader.hide();assert.equal(f.reader.zoom('increaseSize'),false);f.reader.close();
 });
