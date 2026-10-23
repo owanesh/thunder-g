@@ -35,8 +35,11 @@ function installSidebarLabelMenu(win,service,prefs) {
     .gm-sidebar-label-menu p { margin:10px 22px; overflow-wrap:anywhere; }
     .gm-sidebar-label-menu form { margin:12px 22px; }
     .gm-sidebar-label-menu input[type=text] { box-sizing:border-box; width:100%; margin:10px 0; padding:8px; color:inherit; background:var(--layout-background-0,#fff); border:1px solid var(--layout-border-0,#888); border-radius:4px; font:inherit; }
-    .gm-label-colors { display:grid; grid-template-columns:repeat(4,32px); gap:10px; padding:12px 22px; }
-    .gm-label-colors button { width:28px; height:28px; border:1px solid var(--layout-border-0,#aaa); border-radius:4px; cursor:pointer; }
+    .gm-label-colors { display:grid; grid-template-columns:repeat(6,22px); gap:4px; padding:4px 22px 8px 42px; }
+    .gm-label-colors button { appearance:none; box-sizing:border-box; width:22px; min-width:22px; max-width:22px; height:22px; min-height:22px; padding:0; margin:0; border:1px solid color-mix(in srgb,currentColor 15%,transparent); border-radius:50%; font:500 15px/20px sans-serif; cursor:pointer; }
+    .gm-label-colors button:hover,.gm-label-colors button:focus-visible { outline:2px solid var(--layout-color-0,#202124); outline-offset:1px; }
+    .gm-label-colors button[aria-pressed=true] { box-shadow:0 0 0 2px var(--layout-background-0,#fff),0 0 0 3px var(--layout-color-0,#202124); }
+    .gm-sidebar-label-menu > .gm-color-back { width:auto; min-width:0; padding:4px 12px; font-size:.85em; }
     .gm-sidebar-label-menu form button { margin-inline-end:8px; padding:6px 12px; font:inherit; }
   `;doc.head.append(style);
   function tag(){const item=service.getAllTags().find(t=>t.key===currentKey);if(!item)throw new Error('This label no longer exists.');return item;}
@@ -59,14 +62,24 @@ function installSidebarLabelMenu(win,service,prefs) {
     });button('Add sublabel',()=>editor(true));
   }
   function colors(){
-    tag();content.replaceChildren();button('‹  Back',home);text('Label color');
+    tag();content.replaceChildren();const back=button('‹ Back',home);back.className='gm-color-back';text('Label color');
     const grid=doc.createElement('div');grid.className='gm-label-colors';content.append(grid);
-    for(const color of ['#ea4335','#fbbc04','#34a853','#4285f4','#a142f4','#24c1e0','#f538a0','#5f6368']){
-      const node=doc.createElement('button');node.type='button';node.style.backgroundColor=color;node.setAttribute('aria-label',`Set label color ${color}`);
+    grid.setAttribute('role','group');grid.setAttribute('aria-label','Label colors');
+    for(const color of ['#cccccc','#6d9eeb','#76a5af','#8e7cc3','#c27ba0','#cc0000',
+      '#666666','#1155cc','#134f5c','#674ea7','#a64d79','#990000',
+      '#e69138','#f6b26b','#f1c232','#ffd966','#93c47d','#6aa84f',
+      '#ff6d01','#fbbc04','#d5a6bd','#a64d79','#34a853','#0b804b',
+      '#000000','#ffffff','#ead1dc','#a142f4','#4285f4','#24c1e0']){
+      const preview=chipColors(color);
+      const node=doc.createElement('button');node.type='button';node.textContent='a';
+      node.style.backgroundColor=preview.background;node.style.color=preview.foreground;
+      node.title=`Label color ${color}`;node.setAttribute('aria-label',`Set label color ${color}`);
+      node.setAttribute('aria-pressed',String((tag().color || '').toLowerCase()===color));
       node.addEventListener('click',()=>{try{tag();service.setColorForKey(currentKey,color);panel.hidePopup();}catch(error){failure(error);}});grid.append(node);
     }
-    const custom=doc.createElement('input');custom.type='color';custom.value=/^#[0-9a-f]{6}$/i.test(tag().color)?tag().color:'#5f6368';custom.setAttribute('aria-label','Custom label color');
-    content.append(custom);button('Apply custom color',()=>{tag();service.setColorForKey(currentKey,custom.value);panel.hidePopup();});
+    const custom=doc.createElement('input');custom.type='color';custom.hidden=true;custom.value=/^#[0-9a-f]{6}$/i.test(tag().color)?tag().color:'#5f6368';custom.setAttribute('aria-label','Custom label color');
+    custom.addEventListener('change',()=>{try{tag();service.setColorForKey(currentKey,custom.value);panel.hidePopup();}catch(error){failure(error);}});
+    content.append(custom);button('Add custom color',()=>custom.click());
     button('Remove color',()=>{tag();service.setColorForKey(currentKey,'');panel.hidePopup();});
   }
   function editor(child){
