@@ -134,7 +134,7 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
       readers.set(doc,reader); reader.setIndependent(independentReader);
       const pages = installNativePagination(doc.defaultView,reader);
       pagedDocuments.set(doc,pages); pages.setSize(messagesPerPage);
-      const zoom = installMailZoom(doc.defaultView,fontSize);
+      const zoom = installMailZoom(doc.defaultView,fontSize,action=>reader.zoom(action));
       const dates = installCompactDates(doc.defaultView);
       const inbox = installInboxControls(doc.defaultView,{threadGuides});
       const conversationBrowser = watchConversationBrowser(doc.defaultView, attach);
@@ -153,7 +153,13 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
     };
     const loadWindow = win => {
       loadSkin(win);
-      if (!zoomWindows.has(win)) zoomWindows.set(win,installMailZoom(win,fontSize));
+      if (!zoomWindows.has(win)) zoomWindows.set(win,installMailZoom(win,fontSize,action=>{
+        const tabmail=win.document.getElementById('tabmail');
+        if(!tabmail)return zoomNativeMessage(win,
+          win.document.getElementById('messageBrowser')?.contentWindow?.getMessagePaneBrowser?.(),action);
+        const pane=tabmail.currentAbout3Pane;
+        return readers.get(pane?.document)?.zoom(action) || false;
+      }));
       // Today Pane visibility belongs to the user. Do not persist calendar UI
       // changes when a skin attaches, restarts, or is disabled.
       const listener = event => { if (event.target?.nodeType === 9) attach(event.target); };

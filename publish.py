@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Prepare a local release; never commits, pushes, uploads, or installs."""
 import argparse
-import hashlib
 import json
 from pathlib import Path
 import re
@@ -53,28 +52,33 @@ def main():
         edits = plan_release(ROOT, args.version)
         outputs = [ROOT / ('thunder-g-' + args.version + suffix) for suffix in
                    ['.xpi', '.xpi.sha256', '-source.zip', '-source.zip.sha256']]
-        if any(path.exists() for path in outputs):
+        outputs.append(ROOT / 'updates.json')
+        if any(path.exists() for path in outputs[:-1]):
             raise ValueError('Target release artifacts already exist; move them before preparing this release.')
         if args.dry_run:
             print('Would update manifest and README, move Unreleased notes to ' + args.version +
-                  ', run tests, and create XPI/source ZIP with SHA-256 checksums. No files changed.')
+                  ', run tests, and create XPI/source ZIP, SHA-256 checksums and updates.json. No files changed.')
             return
         subprocess.run(['node', '--test', *map(str, sorted((ROOT / 'tests').glob('*.test.cjs')))], check=True)
-        subprocess.run([sys.executable, str(ROOT / 'tests/installer_test.py')], check=True)
-        subprocess.run([sys.executable, str(ROOT / 'tests/publish_test.py')], check=True)
+        subprocess.run([sys.executable, '-m', 'unittest', 'discover', '-s', str(ROOT / 'tests'), '-p', '*_test.py'], check=True)
         originals = {path: path.read_bytes() for path in edits}
+        feed = ROOT / 'updates.json'
+        previous_feed = feed.read_bytes() if feed.exists() else None
         try:
             for path, text in edits.items():
                 path.write_text(text)
             subprocess.run([sys.executable, str(ROOT / 'build.py')], check=True)
             subprocess.run([sys.executable, str(ROOT / 'package.py')], check=True)
-            xpi = outputs[0]
-            outputs[1].write_text(hashlib.sha256(xpi.read_bytes()).hexdigest() + '  ' + xpi.name + '\n')
+            subprocess.run([sys.executable, str(ROOT / 'release_assets.py'), '--tag', 'v' + args.version], check=True)
         except Exception:
             for path, data in originals.items():
                 path.write_bytes(data)
-            for path in outputs:
+            for path in outputs[:-1]:
                 path.unlink(missing_ok=True)
+            if previous_feed is None:
+                feed.unlink(missing_ok=True)
+            else:
+                feed.write_bytes(previous_feed)
             raise
         print('Prepared local release ' + args.version + '. Nothing committed, uploaded, or installed.')
     except (ValueError, OSError, subprocess.CalledProcessError) as error:
