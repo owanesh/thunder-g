@@ -13,7 +13,7 @@
 
 A compact inbox, existing tags as colored chips before the subject, and a conversation reader with a Back button and message actions.
 
-Current version: **0.14.0**. Installable package: `thunder-g-0.14.0.xpi`. The companion accepts **Thunderbird 153–158.x**.
+Current version: **0.15.0**. Installable package: `thunder-g-0.15.0.xpi`. The companion accepts **Thunderbird 153–158.x**.
 
 Tested on macOS with **Thunderbird 158.0.1** and **Betterbird 153.5.0**
 (Betterbird testing reported by the maintainer). Renderer hooks were inspected
@@ -33,6 +33,14 @@ Release history and detailed changes are in [CHANGELOG.md](CHANGELOG.md).
 - Return to the full list after archiving, with the native preview collapsed.
 - Native quick-filter chips and row actions for archive, delete, and read/unread.
 - Optional Conversations styling and reversible From → Subject → Attachment → Date layout scripts.
+
+## Optional Gmail label import
+
+Settings → Labels can fetch custom label names from a chosen Google account and
+preview their creation under `GMAIL-Labels`. Dry run is enabled by default;
+import requires a reviewed preview and an explicit action. No emails are imported.
+A separately configured Google Desktop OAuth client is currently required only
+for this optional feature. See [setup, permissions and limits](docs/gmail-import.md).
 
 ## Label picker
 
