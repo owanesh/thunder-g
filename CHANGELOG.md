@@ -2,9 +2,13 @@
 
 ## Unreleased
 
+## 0.15.0
+
+- Fix live Gmail authentication cleanup after native OAuth completion and use the mail window’s network globals for label fetching.
+
 - Add an optional Gmail label importer in settings: external-browser Google sign-in, verified account identity, custom-label selection and nested native tags under a configurable parent.
 - Default to dry run with per-path create/skip/conflict reporting, branch exclusions and explicit import; recheck the local plan before writes, preserve existing labels and support safe retries after partial failure.
-- Keep Google credentials/tokens session-only, request no Gmail message scope, and document the optional Desktop OAuth client setup. Real Google sign-in still requires client configuration and end-to-end validation.
+- Keep Google credentials/tokens session-only, request no Gmail message scope, and document the optional Desktop OAuth client setup. Live Google sign-in, full dry run and a small repeat-safe native import validated in an isolated Thunderbird 153.5.1 profile; the optional client configuration is still required.
 
 ## 0.14.0
 

@@ -108,7 +108,7 @@ function createNativeGmailImporter(service) {
   let oauth=null, authTimer=null;
   function cancelAuth() {
     if(authTimer!==null)clearTimeout(authTimer);authTimer=null;
-    if(oauth){oauth.finishAuthorizationRequest();oauth.onAuthorizationFailed(null,'Google connection cancelled.','cancelled');oauth=null;}
+    if(oauth){try{oauth.finishAuthorizationRequest();}catch(_){}oauth.onAuthorizationFailed(null,'Google connection cancelled.','cancelled');oauth=null;}
   }
   async function authorize(data) {
     if (!/^[a-zA-Z0-9_-]+\.apps\.googleusercontent\.com$/.test(data.clientId || '')) throw new Error('Configure an optional Google Desktop OAuth client first. See Gmail import setup.');
@@ -129,15 +129,21 @@ function createNativeGmailImporter(service) {
     } catch (_) {throw new Error('Google sign-in failed, was cancelled, or timed out. Check the Desktop client configuration, Gmail API access and Google consent.');}
     finally {
       if(authTimer!==null)clearTimeout(authTimer);authTimer=null;
-      request.finishAuthorizationRequest();request.accessToken=null;request.refreshToken=null;
+      // Native OAuth may already have removed its observer after the callback.
+      try{request.finishAuthorizationRequest();}catch(_){}
+      request.accessToken=null;request.refreshToken=null;
       if(oauth===request)oauth=null;
     }
   }
   authorize.cancel=cancelAuth;
   async function fetchJSON(url,token) {
-    const abort=new AbortController(),timer=setTimeout(()=>abort.abort(),30000);
+    // Experiment sandboxes do not expose web networking globals. Use the
+    // existing privileged mail window, rather than assuming global fetch/AbortController.
+    const network=Services.wm.getMostRecentWindow('mail:3pane');
+    if(!network?.fetch || !network?.AbortController)throw new Error('Open a Thunderbird mail window before connecting to Gmail.');
+    const abort=new network.AbortController(),timer=setTimeout(()=>abort.abort(),30000);
     try {
-      const response=await fetch(url,{headers:{Authorization:'Bearer '+token},credentials:'omit',redirect:'error',signal:abort.signal});
+      const response=await network.fetch(url,{headers:{Authorization:'Bearer '+token},credentials:'omit',redirect:'error',signal:abort.signal});
       if(!response.ok)throw new Error(response.status===401 ? 'Google authorization expired. Connect again.' : `Google could not fetch account or label information (HTTP ${response.status}).`);
       return await response.json();
     } catch(error) {if(error.name==='AbortError')throw new Error('Google request timed out. Connect again to retry.');throw error;}

@@ -101,10 +101,11 @@ test('native OAuth adapter requests only identity/label scope with PKCE and forg
  class OAuth2 {
   constructor(scope,config){this.scope=scope;this.config=config;this.accessToken='one-shot-token';request=this}
   async connect(withUI,refresh){assert.equal(withUI,true);assert.equal(refresh,false)}
-  finishAuthorizationRequest(){} onAuthorizationFailed(){}
+  finishAuthorizationRequest(){throw Error('observer already removed')} onAuthorizationFailed(){}
  }
- const local=vm.createContext({Services:{prefs:{getBoolPref:()=>true},uuid:{generateUUID:()=>'{preview}'}},ChromeUtils:{importESModule:()=>({OAuth2})},clearTimeout,setTimeout,AbortController,
+ const local=vm.createContext({Services:{prefs:{getBoolPref:()=>true},uuid:{generateUUID:()=>'{preview}'}},ChromeUtils:{importESModule:()=>({OAuth2})},clearTimeout,setTimeout,
   fetch:async(url,options)=>{requests.push([url,options]);return {ok:true,json:async()=>url.includes('userinfo')?{email:'real-choice@example.invalid',email_verified:true}:{labels:remote}}}});
+ local.Services.wm={getMostRecentWindow:()=>({AbortController,fetch:local.fetch})};
  vm.runInContext(code,local);const importer=local.createNativeGmailImporter({getAllTags:()=>[]});
  const result=await importer.run('connect',{clientId:'123.apps.googleusercontent.com',clientSecret:'desktop-config'});
  assert.equal(result.email,'real-choice@example.invalid');assert.equal(request.config.usePKCE,true);assert.equal(request.config.useExternalBrowser,true);

@@ -84,6 +84,13 @@ that tag synchronization; this importer does not change Exchange limitations.
 `node --test tests/gmail-import*.test.cjs` covers pure planning, hierarchy,
 conflicts, duplicate prevention, selection changes, dry-run gating, one-use
 previews, partial writes, cancellation and the native OAuth adapter. Authentication
-and Google responses are mocked in automated tests. A real Desktop OAuth client
-and consenting test account are required for an end-to-end Google sign-in test;
-no such client was available during this implementation.
+and Google responses are mocked in automated tests. Live Google Desktop OAuth sign-in, account verification and label fetching were
+validated on Thunderbird 153.5.1 ESR with a consenting personal Gmail account in
+an isolated profile. The full dry run proposed 1,281 local paths with no conflicts
+and left the native tag count unchanged. Importing one custom label created three
+nested paths; a repeat preview skipped all three. Other Thunderbird versions and
+Workspace administrator policies still need separate live validation.
+
+The live test also covers native OAuth cleanup after an already-removed observer
+and networking through the mail window: Experiment sandboxes do not provide a
+global AbortController. The automated adapter test reproduces both conditions.
