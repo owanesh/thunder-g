@@ -143,6 +143,21 @@ function independentContentHeight(content) {
   return Math.max(48,Math.ceil(bounds.bottom-body.top+
     (parseFloat(css.marginTop)||0)+(parseFloat(css.marginBottom)||0)+(parseFloat(css.paddingBottom)||0)));
 }
+// RFC 5322 Sender describes an agent sending on behalf of From. It is
+// header metadata, not a verified identity or a guess from relay hostnames.
+function independentViaDomain(from,sender,parser) {
+  try {
+    const addresses=parser.parseDecodedHeader(sender || '');
+    if(addresses.length!==1)return null;
+    const domain=addresses[0].email?.split('@').at(-1)?.toLowerCase();
+    const fromDomain=from.split('@').at(-1)?.toLowerCase();
+    return domain && /^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/.test(domain) && domain.includes('.') && domain!==fromDomain?domain:null;
+  }catch(_){return null;}
+}
+function independentSenderSelected(selection,sender) {
+  return !!selection && !selection.isCollapsed &&
+    (sender.contains?.(selection.anchorNode) || sender.contains?.(selection.focusNode));
+}
 function independentAvatar(address) {
   try { return MailServices.ab.cardForEmailAddress(address)?.photoURL || null; }
   catch (_) { return null; }
@@ -210,7 +225,7 @@ function installIndependentReader(win) {
       font:inherit; border-radius:0 0 1em 1em; }
     :host([hidden]) { display:none !important; }
     .conversation { --message-inset:56px; padding:14px 16px 20px; color-scheme:light dark; }
-    h1 { margin:0 0 16px var(--message-inset); font-size:1.6em; line-height:1.4; font-weight:400; overflow-wrap:anywhere; }
+    h1 { margin:0 0 16px var(--message-inset); font-size:1.6em; line-height:1.4; font-weight:400; overflow-wrap:anywhere; user-select:text; cursor:text; }
     .scope,.status { font-size:.85em; opacity:.75; margin:0 0 8px var(--message-inset); }
     .title-tags { display:inline-flex; flex-wrap:wrap; gap:4px; margin-inline-start:10px; vertical-align:middle; font-size:.6em; font-weight:400; }
     .cards { display:flex; flex-direction:column; }
@@ -239,6 +254,8 @@ function installIndependentReader(win) {
     .dkim-status[data-tone="warning"] { background:light-dark(#feefc3,#493617); color:light-dark(#8a4b00,#fdd663); }
     .dkim-status[data-tone="failure"] { background:light-dark(#fce8e6,#4c2524); color:light-dark(#b3261e,#f6aea9); }
     .avatar img { inline-size:100%; block-size:100%; border-radius:inherit; object-fit:cover; }
+    .name,.address,.via { user-select:text; cursor:text; }
+    .via { font-weight:400; margin-inline-start:.35em; }
     .name { display:block; font-weight:600; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
     .address { display:block; font-size:.85em; opacity:.75; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
     time { font-size:.85em; white-space:nowrap; opacity:.8; padding-block-start:2px; }
@@ -414,7 +431,8 @@ function installIndependentReader(win) {
     const isCurrent=()=>!closed && token===ticket;
     const updatePreview=()=>{preview.textContent=previews.get(header,isCurrent,()=>{})};
     preview.textContent=previews.get(header,isCurrent,updatePreview);
-    const sender=text('span','sender','');sender.append(text('span','name',name),text('span','address',address),preview);
+    const sender=text('span','sender',''),senderAddress=text('span','address',address),via=text('span','via','');
+    via.hidden=true;senderAddress.append(via);sender.append(text('span','name',name),senderAddress,preview);
     const avatar=text('span','avatar',initials),photo=independentAvatar(address);
     if(photo) {
       const image=doc.createElement('img');image.alt='';image.setAttribute('src',photo);
@@ -525,6 +543,10 @@ function installIndependentReader(win) {
         if(closed || token!==ticket || browser!==frame)return;
         if(timeout!==null)win.clearTimeout(timeout);timeout=null;ready=true;error.hidden=true;
         frames.set(independentMessageKey(header),frame);updateActions();
+        const senderHeader=frame.contentWindow.currentHeaderData?.sender?.headerValue;
+        const viaDomain=independentViaDomain(address,senderHeader,MailServices.headerParser);
+        via.hidden=!viaDomain;via.textContent=viaDomain?`via ${viaDomain}`:'';
+        via.title=viaDomain?'Sending agent from the message’s Sender header (not an authentication result)':'';
         // Style only the native envelope chrome. Remote-content and encryption
         // notifications and attachments remain present and functional.
         const frameStyle=browser.contentDocument.createElement('style');
@@ -626,6 +648,7 @@ function installIndependentReader(win) {
     article.addEventListener('pointerdown',()=>activateMessage(header));
     article.addEventListener('focusin',()=>activateMessage(header));
     toggle.addEventListener('click',()=>{
+      if(independentSenderSelected(win.getSelection?.(),sender))return;
       activateMessage(header);
       if(header===actionHeader)return;
       if(body.hidden) {

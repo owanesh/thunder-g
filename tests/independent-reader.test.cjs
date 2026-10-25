@@ -454,3 +454,18 @@ test('send failure removes temporary card, and late feedback cannot populate ano
  placement.onSendState({...state,state:'saving-draft'});assert.equal(f.cards.children.length,1);
  f.reader.hide();placement.onSendState({...state,state:'sent'});assert.equal(f.cards.children.length,0);f.reader.close();
 });
+
+test('via uses a distinct Sender domain, never inventing a relay from From or malformed headers',()=>{
+ const scope=context(),parser={parseDecodedHeader:value=>value?[{email:value}]:[]};
+ assert.equal(scope.independentViaDomain('person@example.org','agent@mailer.example.net',parser),'mailer.example.net');
+ assert.equal(scope.independentViaDomain('person@example.org','other@EXAMPLE.ORG',parser),null);
+ assert.equal(scope.independentViaDomain('person@example.org','',parser),null);
+ assert.equal(scope.independentViaDomain('person@example.org','bad@<script>',parser),null);
+ assert.equal(scope.independentViaDomain('person@example.org','multiple',{parseDecodedHeader:()=>[{},{}]}),null);
+});
+test('selecting sender text does not toggle a conversation card',()=>{
+ const scope=context(),inside={},outside={},sender={contains:node=>node===inside};
+ assert.equal(scope.independentSenderSelected({isCollapsed:false,anchorNode:inside,focusNode:inside},sender),true);
+ assert.equal(!!scope.independentSenderSelected({isCollapsed:true,anchorNode:inside},sender),false);
+ assert.equal(!!scope.independentSenderSelected({isCollapsed:false,anchorNode:outside,focusNode:outside},sender),false);
+});
