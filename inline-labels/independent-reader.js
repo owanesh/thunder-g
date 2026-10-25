@@ -302,12 +302,41 @@ function installIndependentReader(win) {
     return {window:browser.ownerDocument.defaultView,activate:()=>activateMessage(header)};
   });
   const actions=doc.createElement('div');actions.className='actions';actions.setAttribute('role','group');actions.setAttribute('aria-label','Reply to conversation');
-  const buttons=[];
+  const buttons=[],pendingReplies=new Map();
+  const normalizeSendId=value=>String(value || '').trim().replace(/^<|>$/g,'');
+  function reconcilePendingReplies() {
+    for(const [id,entry] of pendingReplies) {
+      if(entry.messageId && currentHeaders.some(header=>normalizeSendId(header.messageId)===normalizeSendId(entry.messageId))) {
+        entry.card.remove();pendingReplies.delete(id);
+      }
+    }
+  }
+  function sendFeedback(state,token) {
+    if(closed || host.hidden || token!==ticket)return;
+    if(['saving-draft','draft-saved','draft-error'].includes(state.state)) {
+      pendingReplies.get(state.id)?.card.remove();pendingReplies.delete(state.id);return;
+    }
+    let entry=pendingReplies.get(state.id);
+    if(!entry) {
+      const card=doc.createElement('article');card.className='gm-pending-reply';card.setAttribute('data-expanded','');
+      const heading=text('div','card-header',''),sender=text('strong','name',state.from || 'Me'),notice=text('span','status','');
+      notice.setAttribute('role','status');heading.append(sender,notice);
+      const recipients=text('div','address',state.to),body=text('pre','body',state.body);
+      body.style.cssText='white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;';
+      card.append(heading,recipients,body);
+      if(state.attachments?.length)card.append(text('div','address',state.attachments.join(' · ')));
+      cards.append(card);entry={card,notice};pendingReplies.set(state.id,entry);
+      card.scrollIntoView({block:'nearest',inline:'nearest'});
+    }
+    entry.messageId=state.messageId;entry.notice.textContent=state.state==='sent'?'Sent':'Sending…';
+    reconcilePendingReplies();
+  }
   function runCommand(command) {
     if(typeof inlineReplyEnabled!=='undefined' && inlineReplyEnabled && ['cmd_replySender','cmd_replyall'].includes(command)) {
       let composer=inlineComposeControllers.get(win);
       if(!composer){composer=createInlineCompose(win);inlineComposeControllers.set(win,composer);}
-      composer.open(actionHeader,command,{container:conversation,scrollHost:host});return;
+      const token=ticket;
+      composer.open(actionHeader,command,{container:conversation,scrollHost:host,onSendState:state=>sendFeedback(state,token)});return;
     }
     const frame=frames.get(independentMessageKey(actionHeader || {}));
     const controller=frame?.contentWindow?.commandController;
@@ -339,11 +368,38 @@ function installIndependentReader(win) {
   for(const name of ['msgAdded','msgsDeleted','msgsMoveCopyCompleted','folderDeleted','folderRenamed','msgKeyChanged']){
     tagListener[name]=()=>sentCache.invalidate();notifications|=Ci.nsIMsgFolderNotificationService[name] || 0;
   }
+  tagListener.msgAdded=header=>{
+    sentCache.invalidate();
+    if(closed || host.hidden || !currentHeaders.length || !header?.folder)return;
+    // Draft saves also emit msgAdded. Only actual Sent copies can become a
+    // sent reply, and References must connect them to this open conversation.
+    if(!independentSentFolders().some(folder=>folder.URI===header.folder.URI))return;
+    const related=independentRelatedSent(currentHeaders,[{header,ids:independentReferenceIds(header)}]);
+    const next=independentMessages(related,currentHeaders[0]);
+    if(next.length===currentHeaders.length){reconcilePendingReplies();return;}
+    // Insert only the new card: existing viewers, scroll state and any other
+    // unsent composer remain alive, even if the server reports an older date.
+    const previous=next.at(-1)!==actionHeader?messageCards.get(actionHeader):null;
+    previous?.removeAttribute('data-latest');
+    const toggle=previous?.children[0]?.children[0];
+    toggle?.removeAttribute('aria-disabled');if(toggle)toggle.title='';
+    currentHeaders=next;actionHeader=next.at(-1);
+    const following=messageCards.get(next[next.indexOf(header)+1]);
+    const card=buildCard(header,true,ticket,following);
+    updateActions();refreshTags();reconcilePendingReplies();
+    status.textContent=`${next.length} messages`;status.hidden=false;
+    if(revealFrame!==null)win.cancelAnimationFrame(revealFrame);
+    const token=ticket;
+    revealFrame=win.requestAnimationFrame(()=>{
+      revealFrame=null;
+      if(!closed && !host.hidden && token===ticket)card.scrollIntoView({block:'nearest',inline:'nearest'});
+    });
+  };
   if(MailServices.mfn)MailServices.mfn.addListener(tagListener,notifications);
   win.addEventListener?.('focus',refreshTags);
-  function clearCards(){if(revealFrame!==null)win.cancelAnimationFrame(revealFrame);revealFrame=null;for(const cleanup of cleanups)cleanup();cleanups.clear();cards.replaceChildren();tagRenderers.clear();securityRenderers.clear();messageDocs.clear();messageCards.clear();titleTags.replaceChildren();frames.clear();currentHeaders=[];actionHeader=null;activeHeader=null;activeCard=null;updateActions()}
+  function clearCards(){pendingReplies.clear();if(revealFrame!==null)win.cancelAnimationFrame(revealFrame);revealFrame=null;for(const cleanup of cleanups)cleanup();cleanups.clear();cards.replaceChildren();tagRenderers.clear();securityRenderers.clear();messageDocs.clear();messageCards.clear();titleTags.replaceChildren();frames.clear();currentHeaders=[];actionHeader=null;activeHeader=null;activeCard=null;updateActions()}
   function text(tag,className,value){const node=doc.createElement(tag);node.className=className;node.textContent=value;return node}
-  function buildCard(header,expand,token) {
+  function buildCard(header,expand,token,before=null) {
     const article=doc.createElement('article');
     messageCards.set(header,article);
     const cardHeader=doc.createElement('div');cardHeader.className='card-header';
@@ -571,7 +627,7 @@ function installIndependentReader(win) {
     article.addEventListener('focusin',()=>activateMessage(header));
     toggle.addEventListener('click',()=>{
       activateMessage(header);
-      if(latest)return;
+      if(header===actionHeader)return;
       if(body.hidden) {
         if(browser) {body.hidden=false;preview.hidden=true;article.setAttribute('data-expanded','');toggle.setAttribute('aria-expanded','true');zoomResizers.get(browser)?.();}
         else expandCard();
@@ -581,10 +637,11 @@ function installIndependentReader(win) {
         body.hidden=true;preview.hidden=false;article.removeAttribute('data-expanded');toggle.setAttribute('aria-expanded','false');
       }
     });
-    cleanups.add(release);cards.append(article);if(expand)expandCard();
+    cleanups.add(release);if(before)cards.insertBefore(article,before);else cards.append(article);if(expand)expandCard();
     return article;
   }
   function render(headers,anchor,token){
+    const pending=[...pendingReplies];
     clearCards();currentHeaders=headers;
     actionHeader=headers.at(-1) || anchor;
     let latestCard;
@@ -592,7 +649,8 @@ function installIndependentReader(win) {
       const card=buildCard(header,header===actionHeader,token);
       if(header===actionHeader)latestCard=card;
     }
-    updateActions();refreshTags();
+    for(const [id,entry] of pending){cards.append(entry.card);pendingReplies.set(id,entry);}
+    updateActions();refreshTags();reconcilePendingReplies();
     revealFrame=win.requestAnimationFrame(()=>{
       revealFrame=null;
       if(!closed && token===ticket)latestCard?.scrollIntoView({block:'nearest',inline:'nearest'});
@@ -641,6 +699,9 @@ function installIndependentReader(win) {
       const result=await query.promise;
       if(closed || token!==ticket)return;
       resolving=false;
+      // A Sent notification can arrive while the initial index query is still
+      // running. Keep that confirmed message when the older query finishes.
+      result.messages=independentMessages([...result.messages,...currentHeaders],header);
       const same=currentHeaders.length===result.messages.length && currentHeaders.every((message,index)=>independentMessageKey(message)===independentMessageKey(result.messages[index]));
       if(!same)render(result.messages,header,token);else updateActions();
       status.textContent=`${result.messages.length} ${result.messages.length===1?'message':'messages'}`;

@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+## 0.16.0
+
+- Keep the native editor rendered during inline sending to prevent initialization failures. Wait for native transport callbacks, recover terminal startup errors, and make the composer Close action save a draft before closing.
+
+- Make send notices compact, dismissible and positioned above composer controls; include native failure details and automatically dismiss completed/error notices.
+
+- Wait for native send/save completion before recovering a failed send as a draft, and clear stale failure notices after a successful manual or automatic draft save.
+
+- Show inline replies immediately with Sending/Sent feedback and a Gmail-style bottom-left notice; automatically save failed sends as native drafts, retaining the editor if recovery fails. Replace routine inline-send progress dialogs while preserving security and authentication prompts.
+
+- Show newly saved sent replies immediately in the open conversation, without reopening the thread.
+
 ## 0.15.0
 
 - Fix live Gmail authentication cleanup after native OAuth completion and use the mail window’s network globals for label fetching.

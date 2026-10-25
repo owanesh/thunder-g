@@ -45,3 +45,11 @@ See [release publishing](updates.md#publishing-a-release) for versioning and dis
 The optional Gmail importer uses Thunderbird's native external-browser OAuth2
 module and the Gmail labels API. See [setup and validation](gmail-import.md). No
 Google client credentials are distributed with the source or required for builds.
+
+### Sent replies in an open conversation
+
+The independent reader listens for native `msgAdded` notifications in Sent or identity-configured sent-copy folders. A reply is inserted only when its Message-ID/References connect to the open thread; drafts and unrelated messages are ignored. Existing native viewers and any inline composer are preserved. The message appears when Thunderbird saves or synchronizes the actual Sent copy, without waiting for global indexing. Accounts configured not to save a Sent copy cannot provide this update.
+
+Inline sends additionally create an immediate plain-text reply snapshot (including attachment names), updated by native `aftersend` confirmation. It is replaced by the native Sent card using Message-ID once available. The black bottom-left notice reports Sending, Sent or draft recovery. Failed native sends automatically save the original composer as a draft; draft failure keeps the editor open. Preflight cancellation and Send Later do not report Sent. Routine progress dialogs are suppressed only during embedded sending; authentication, security and actionable native error prompts remain available.
+
+The embedded compose panel must remain rendered while sending: hiding it destroys the editor before native serialization. Native transport may still be active when the outer compose call returns, so terminal send/error callbacks control status and recovery. Close explicitly saves a draft and releases the editor only after native draft confirmation.

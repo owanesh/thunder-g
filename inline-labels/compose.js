@@ -105,7 +105,7 @@ function saveInlineReplyDraft(native,clock,timeoutMs=60000) {
 
 // Observe native saves; never report success merely because a timer fired or
 // an older draft URI exists. Thunderbird keeps ownership of autosave and MIME.
-function installComposeDraftStatus(native,status,clock,modes=Ci.nsIMsgCompDeliverMode) {
+function installComposeDraftStatus(native,status,clock,modes=Ci.nsIMsgCompDeliverMode,onState=()=>{}) {
   const compose=native.gMsgCompose;
   let closed=false,pending=false,started=0,timer=null,completion=null,state='';
   function show(next) {
@@ -114,6 +114,7 @@ function installComposeDraftStatus(native,status,clock,modes=Ci.nsIMsgCompDelive
     status.textContent={saved:'✓ Saved',saving:'Saving…',dirty:'Unsaved changes',error:'Save failed',initial:'Not saved'}[next];
     status.title={saved:'Saved to Drafts',saving:'Saving to Drafts',dirty:'Changes have not been saved yet',error:'Could not save to Drafts. Use Save draft to retry.',initial:'Draft has not been saved yet'}[next];
     status.style.color=next==='saved'?'light-dark(#137333,#81c995)':next==='error'?'light-dark(#b3261e,#f2b8b5)':'light-dark(#5f6368,#bdc1c6)';
+    onState(next);
   }
   const dirty=()=>!!(native.gContentChanged || compose.bodyModified);
   function edited(event) {
@@ -156,6 +157,113 @@ function installComposeDraftStatus(native,status,clock,modes=Ci.nsIMsgCompDelive
     if(closed)return;closed=true;clock.clearTimeout(timer);if(completion!==null)clock.clearTimeout(completion);
     for(const doc of documents)for(const name of changes)doc.removeEventListener(name,edited,true);
     native.removeEventListener('compose-send-message',saving);compose.UnregisterStateListener(listener);
+  }};
+}
+
+// The native progress dialog is controlled by a shared preference. Lease it
+// only during embedded sends and restore it after the last concurrent send.
+var inlineSendProgressLease=null;
+function suppressInlineSendProgress(prefs=typeof Services==='undefined'?null:Services.prefs) {
+  if(!prefs)return ()=>{};
+  const key='mailnews.show_send_progress';
+  if(!inlineSendProgressLease) {
+    inlineSendProgressLease={users:0,user:prefs.prefHasUserValue(key),value:prefs.getBoolPref(key,true)};
+    prefs.setBoolPref(key,false);
+  }
+  const lease=inlineSendProgressLease;lease.users++;let released=false;
+  return ()=>{
+    if(released)return;released=true;
+    if(--lease.users)return;
+    inlineSendProgressLease=null;
+    if(prefs.getBoolPref(key,true)!==false)return;
+    if(lease.user)prefs.setBoolPref(key,lease.value);else prefs.clearUserPref(key);
+  };
+}
+
+// Observe the native async operation, not a button click or a guessed timeout.
+// GenericSendMessage catches native failures itself, so a completed call without
+// aftersend is a failure/cancellation only if compose-send-message actually ran.
+function inlineSendFailure(status,message) {
+  const detail=typeof message==='string'?message.replace(/[\x00-\x1f\x7f]/g,' ').trim().slice(0,240):'';
+  if(detail)return detail;
+  if(typeof status==='number' && status!==0) {
+    const name=typeof Components==='undefined'?null:Object.keys(Components.results).find(key=>Components.results[key]===status);
+    return name || `Thunderbird error 0x${(status>>>0).toString(16).padStart(8,'0')}`;
+  }
+  return 'Thunderbird did not provide a failure reason.';
+}
+function installInlineSendStatus(native,clock,onState,saveDraft=()=>saveInlineReplyDraft(native,clock),modes=Ci.nsIMsgCompDeliverMode) {
+  const original=native.GenericSendMessage,compose=native.gMsgCompose;
+  if(typeof original!=='function')return {close(){}};
+  let closed=false,job=null,sequence=0,idleTimer=null,idleCancel=null;
+  function waitForIdle() {
+    return new Promise((resolve,reject)=>{
+      let checks=0;
+      const finish=error=>{if(idleTimer!==null)clock.clearTimeout(idleTimer);idleTimer=null;idleCancel=null;error?reject(error):resolve()};
+      idleCancel=()=>finish(new Error('Composer closed.'));
+      const check=()=>{
+        if(closed)return finish(new Error('Composer closed.'));
+        if(!native.gSendOperationInProgress && !native.gSaveOperationInProgress)return finish();
+        if(++checks>=300)return finish(new Error('Composer is still busy; reply remains open.'));
+        idleTimer=clock.setTimeout(check,100);
+      };check();
+    });
+  }
+  function draftSaved() {
+    if(closed || !job || !job.done || job.delivered)return;
+    job.recovered=true;job.draftURI=compose.compFields.draftId;emit('draft-saved');
+  }
+  function snapshot() {
+    const fields=compose.compFields;
+    let body='';try{body=native.GetCurrentEditor().outputToString('text/plain',0)}catch(_){}
+    ++sequence;return {id:{},from:fields.from || native.gCurrentIdentity?.email || '',to:fields.to || '',
+      subject:fields.subject || '',body,messageId:fields.messageId || '',attachments:Array.from(native.gAttachmentBucket?.itemChildren || [],item=>item.attachment?.name || '').filter(Boolean)};
+  }
+  function emit(state){if(!closed && job)onState({...job,state})}
+  function starting(event) {
+    if(event.defaultPrevented || ![modes.Now,modes.Background].includes(event.detail?.msgType))return;
+    job=snapshot();emit('sending');
+  }
+  function sent(){if(!job || job.done)return;job.messageId=compose.compFields.messageId || job.messageId;job.done=true;job.delivered=true;emit('sent')}
+  function recoverLater(){clock.setTimeout(()=>{if(!closed && job?.error && !job.done)recover();},0)}
+  async function recover(){
+    if(closed || !job || job.done)return;
+    job.done=true;job.error ||= inlineSendFailure();emit('saving-draft');
+    if((!job.transportStarted || job.transportStopped) && native.gSendOperationInProgress){native.gSendOperationInProgress=false;native.ToggleWindowLock?.(false);}
+    const failedJob=job;
+    try{
+      await waitForIdle();
+      if(closed || job!==failedJob || job.delivered || job.recovered)return;
+      job.draftURI=await saveDraft();job.recovered=true;emit('draft-saved');
+    }catch(error){if(!closed && job===failedJob && !job.recovered){job.draftError=inlineSendFailure(error?.result,error?.message);emit('draft-error')}}
+  }
+  const stateListener={NotifyComposeFieldsReady(){},NotifyComposeBodyReady(){},SaveInFolderDone(){},ComposeProcessDone(result){if(result!==0 && job && !job.done){job.transportStopped=true;job.error=inlineSendFailure(result);recoverLater()}}};
+  const listener={onStartSending(){if(job)job.transportStarted=true},onSendProgress(){},onStatus(){},onGetDraftFolderURI(){},
+    onSendNotPerformed(id,status){if(job){job.transportStopped=true;job.error=inlineSendFailure(status);recoverLater()}},
+    onStopSending(id,status,message){if(job)job.transportStopped=true;if(job && id)job.messageId=id;if(status===0)sent();else if(job){job.error=inlineSendFailure(status,message);recoverLater()}},
+    onTransportSecurityError(id,status){if(job)job.error=inlineSendFailure(status,'Connection security error. Check Thunderbird’s security prompt.')}};
+  async function send(mode,...args) {
+    const sending=[modes.Now,modes.Background].includes(mode),before=sequence;
+    const restoreProgress=sending?suppressInlineSendProgress():()=>{};
+    try{return await original.call(this,mode,...args)}
+    catch(error){if(job)job.error=inlineSendFailure(error?.result,error?.message);throw error}
+    finally {
+      restoreProgress();
+      // The native call may resolve while transport is still active. That is
+      // not a failure: wait for a native terminal callback instead.
+      if(sending && !closed && sequence!==before && job && !job.done &&
+        (job.error || !native.gSendOperationInProgress))await recover();
+    }
+  }
+  native.GenericSendMessage=send;
+  native.addEventListener('compose-send-message',starting);
+  native.addEventListener('aftersend',sent);
+  compose.addMsgSendListener?.(listener);compose.RegisterStateListener?.(stateListener);
+  return {draftSaved,close(){
+    if(closed)return;closed=true;idleCancel?.();
+    if(native.GenericSendMessage===send)native.GenericSendMessage=original;
+    native.removeEventListener('compose-send-message',starting);native.removeEventListener('aftersend',sent);
+    compose.removeMsgSendListener?.(listener);compose.UnregisterStateListener?.(stateListener);
   }};
 }
 
@@ -272,10 +380,12 @@ function installEmbeddedAttachmentPicker(native,main,classes=Cc,interfaces=Ci) {
 }
 function createInlineCompose(win) {
   const doc=win.document;let browser=null,panel=null,originalHeader=null,originalCommand=null,ready=false,observer=null;
-  let restoreChrome=null,loadingTimer=null,inlineContainer=null,scrollHost=null,presentation='inline',bar=null,title=null,floatButton=null,windowButton=null,transferBusy=false,attachmentPicker=null,draftStatus=null,floatingResize=null;
+  let restoreChrome=null,loadingTimer=null,inlineContainer=null,scrollHost=null,presentation='inline',bar=null,title=null,floatButton=null,windowButton=null,transferBusy=false,attachmentPicker=null,draftStatus=null,floatingResize=null,sendStatus=null;
+  let sendNotice=null,noticeTimer=null;
   const main=win.browsingContext.topChromeWindow;
   function stopObserver(){if(observer){Services.obs.removeObserver(observer,'chrome-document-global-created');observer=null;}}
   function dispose(){
+    sendStatus?.close();sendStatus=null;
     draftStatus?.close();draftStatus=null;floatingResize?.close();floatingResize=null;
     attachmentPicker?.close();attachmentPicker=null;
     stopObserver();if(loadingTimer!==null)win.clearTimeout(loadingTimer);loadingTimer=null;
@@ -290,6 +400,18 @@ function createInlineCompose(win) {
     if(native.ComposeCanClose()){dispose();return true;}
     return false;
   }
+  async function saveAndClose(){
+    if(!browser || transferBusy)return;
+    const native=browser.contentWindow;
+    if(!native.gMsgCompose){dispose();return;}
+    if(native.gSendOperationInProgress || native.gSaveOperationInProgress){title.textContent='Wait for the current send or save to finish.';return;}
+    transferBusy=true;
+    try{
+      if(native.gContentChanged || native.gMsgCompose.bodyModified || !native.gMsgCompose.compFields.draftId)await saveInlineReplyDraft(native,win);
+      dispose();
+    }catch(error){title.textContent=error.message || 'Could not save the draft. Your reply remains open.';}
+    finally{transferBusy=false;}
+  }
   function parentClose(event){if(browser && !requestClose())event.preventDefault();}
   main.addEventListener('close',parentClose,true);
   const tabmail=main.document.getElementById('tabmail');
@@ -301,14 +423,24 @@ function createInlineCompose(win) {
   }
   if(mode)mode.tryCloseTab=tryCloseTab;
   function detach(){
-    sidebarResize?.disconnect();win.removeEventListener('resize',fitComposeToContent);
+    sidebarResize?.disconnect();win.removeEventListener('resize',fitComposeToContent);win.removeEventListener('scroll',positionSendNotice,true);
     main.removeEventListener('close',parentClose,true);
     if(mode?.tryCloseTab===tryCloseTab)mode.tryCloseTab=previousTryClose;
     win.removeEventListener('unload',unload);
   }
-  function unload(){detach();dispose();}
+  function unload(){detach();dispose();sendNotice?.remove();if(noticeTimer!==null)win.clearTimeout(noticeTimer);}
   win.addEventListener('unload',unload,{once:true});
+  function hideSendNotice(){if(sendNotice){sendNotice.hidden=true;sendNotice.style.display='none';}}
+  function positionSendNotice(){
+    if(!sendNotice)return;
+    const footer=browser?.contentDocument?.getElementById('compose-toolbox');
+    const frameTop=browser?.getBoundingClientRect?.().top;
+    const footerTop=footer?.getBoundingClientRect?.().top;
+    const bottom=panel && !panel.hidden && Number.isFinite(frameTop) && Number.isFinite(footerTop)?Math.max(88,win.innerHeight-frameTop-footerTop+8):24;
+    sendNotice.style.bottom=`${bottom}px`;
+  }
   function fitComposeToContent(){
+    positionSendNotice();
     if(!panel)return;
     const sidebar=doc.getElementById('folderPane')?.getBoundingClientRect?.();
     const viewport=doc.documentElement.getBoundingClientRect?.();
@@ -325,7 +457,7 @@ function createInlineCompose(win) {
   }
   const sidebarResize=win.ResizeObserver?new win.ResizeObserver(fitComposeToContent):null;
   const sidebar=doc.getElementById('folderPane');if(sidebar)sidebarResize?.observe(sidebar);
-  win.addEventListener('resize',fitComposeToContent);
+  win.addEventListener('resize',fitComposeToContent);win.addEventListener('scroll',positionSendNotice,true);
   function setPresentation(next){
     if(!panel)return;
     presentation=next;panel.setAttribute('data-presentation',next);
@@ -421,6 +553,27 @@ function createInlineCompose(win) {
         // Never replace another unsent message when navigating or pressing Reply again.
         panel.hidden=false;browser.focus();return;
       }
+      const onSendState=state=>{
+        if(!sendNotice){
+          sendNotice=doc.createElement('div');sendNotice.className='gm-send-notice';sendNotice.setAttribute('role','status');sendNotice.setAttribute('aria-live','polite');
+          sendNotice.style.cssText='position:fixed;z-index:10000;bottom:24px;left:24px;max-width:min(440px,calc(100vw - 48px));box-sizing:border-box;padding:8px 10px;border-radius:4px;background:#202124;color:#fff;font:12px/1.35 sans-serif;display:flex;align-items:flex-start;gap:12px;box-shadow:0 4px 16px #0004;';
+          doc.documentElement.append(sendNotice);
+        }
+        if(noticeTimer!==null)win.clearTimeout(noticeTimer);noticeTimer=null;sendNotice.hidden=false;sendNotice.style.display='flex';
+        const labels={sending:'Sending…',sent:'Sent', 'saving-draft':'Sending failed. Saving draft…','draft-saved':'Not sent. Saved to Drafts.','draft-error':'Not sent. Draft could not be saved. Your reply is still open.'};
+        const message=doc.createElement('span');message.textContent=labels[state.state];
+        if(state.error && !['sending','sent'].includes(state.state))message.textContent+=` ${state.error}`;
+        if(state.state==='draft-error' && state.draftError)message.textContent+=` Draft: ${state.draftError}`;
+        const dismiss=button('×',hideSendNotice);dismiss.setAttribute('aria-label','Dismiss notification');dismiss.title='Dismiss';
+        dismiss.style.cssText='flex:none;border:0;padding:0 2px;background:transparent;color:#fff;font:18px/1 sans-serif;cursor:pointer;';
+        sendNotice.replaceChildren(message,dismiss);
+        // display:none destroys the embedded editor. Thunderbird serializes
+        // that editor AFTER compose-send-message, so keep its layout alive.
+        if(panel){panel.hidden=false;panel.style.opacity=state.state==='sending'?'.65':'';}
+        try{placement.onSendState?.(state)}catch(error){console.error('Thunder-G: could not update send feedback.',error)}
+        positionSendNotice();
+        if(['sent','draft-saved','draft-error'].includes(state.state))noticeTimer=win.setTimeout(()=>{noticeTimer=null;hideSendNotice();},state.state==='sent'?6000:12000);
+      };
       const isNew=command==='cmd_newMessage';
       const params=isNew?inlineNewMessageParams(placement.folder):inlineReplyParams(header,command);originalHeader=header;originalCommand=command;
       inlineContainer=placement.container || doc.documentElement;scrollHost=placement.scrollHost || null;
@@ -434,7 +587,7 @@ function createInlineCompose(win) {
       const save=button('',()=>browser?.contentWindow.goDoCommand('cmd_saveAsDraft'));save.disabled=true;labelControl(save,'save','Save draft');
       floatButton=button('',()=>{if(presentation!=='floating')float();else returnInline();});
       windowButton=button('',separateWindow);labelControl(windowButton,'window','Separate window',isNew?'Open message in a separate window':'Open reply in a separate window');windowButton.disabled=true;
-      const close=button('',requestClose);labelControl(close,'close','Close',isNew?'Close message':'Close reply');
+      const close=button('',saveAndClose);labelControl(close,'close','Close',isNew?'Close message':'Close reply');
       bar.append(titleGroup,save,floatButton,windowButton,close);panel.append(bar);floatingResize=installFloatingComposeResize(win,panel);setPresentation(placement.container?'inline':'floating');
       browser=doc.createXULElement('browser');browser.setAttribute('type','content');browser.setAttribute('maychangeremoteness','false');browser.setAttribute('disablehistory','true');browser.setAttribute('flex','1');browser.style.cssText='display:block;flex:1 1 0;min-height:0;min-width:0;width:100%;height:0;border:0;background:light-dark(#ffffff,#18181b);';
       const frame=browser;
@@ -471,7 +624,7 @@ function createInlineCompose(win) {
         const started=Date.now();
         const check=()=>{
           if(browser!==frame)return;
-          if(native.gMsgCompose && native.GetCurrentEditor?.()) {ready=true;save.disabled=false;windowButton.disabled=false;draftStatus=installComposeDraftStatus(native,savedStatus,win);if(loadingTimer!==null)win.clearTimeout(loadingTimer);loadingTimer=null;native.SetMsgBodyFrameFocus?.();return;}
+          if(native.gMsgCompose && native.GetCurrentEditor?.()) {ready=true;save.disabled=false;windowButton.disabled=false;draftStatus=installComposeDraftStatus(native,savedStatus,win,Ci.nsIMsgCompDeliverMode,state=>{if(state==='saved')sendStatus?.draftSaved()});sendStatus=installInlineSendStatus(native,win,onSendState);if(loadingTimer!==null)win.clearTimeout(loadingTimer);loadingTimer=null;native.SetMsgBodyFrameFocus?.();return;}
           if(Date.now()-started>20000){
             title.textContent='Editor could not finish starting. Close and use a classic reply.';restoreChrome?.();restoreChrome=null;return;
           }
