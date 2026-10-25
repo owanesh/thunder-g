@@ -46,16 +46,16 @@ test('inline replies pass exact header, native reply type, identity and default 
  }
  assert.throws(()=>scope.inlineReplyParams(header,'cmd_forwardInline',{},Ci,Cc,{}));
 });
-test('inline compose preserves an open reply across navigation and guards dirty window/tab closure with native draft prompts',()=>{
+test('inline compose preserves an open reply across navigation and guards dirty window/tab closure with native draft prompts',async()=>{
  let observer,frame,mayClose=false,paramsReceived;const events=new Map(),timers=new Map();
- function element(tag){return {tag,style:{},dataset:{},children:[],events:{},getBoundingClientRect:()=>({width:0,height:0}),setAttribute(){},append(...values){for(const value of values){value.parentNode=this;this.children.push(value)}},moveBefore(value){if(value.parentNode)value.parentNode.children=value.parentNode.children.filter(item=>item!==value);this.append(value)},scrollIntoView(){this.revealed=true},isConnected:true,remove(){this.removed=true},focus(){this.focused=true},addEventListener(name,fn){this.events[name]=fn},removeEventListener(name){delete this.events[name]}};}
+ function element(tag){return {tag,style:{},dataset:{},children:[],events:{},getBoundingClientRect:()=>({width:0,height:0}),setAttribute(){},append(...values){for(const value of values){value.parentNode=this;this.children.push(value)}},replaceChildren(...values){this.children=[];this.append(...values)},moveBefore(value){if(value.parentNode)value.parentNode.children=value.parentNode.children.filter(item=>item!==value);this.append(value)},scrollIntoView(){this.revealed=true},isConnected:true,remove(){this.removed=true},focus(){this.focused=true},addEventListener(name,fn){this.events[name]=fn},removeEventListener(name){delete this.events[name]}};}
  const appChrome={XULBrowserWindow:{original:true}},oldChrome=appChrome.XULBrowserWindow;
  const mode={tryCloseTab:()=>true},tab={mode},main={document:{getElementById:()=>({tabInfo:[tab]})},docShell:{treeOwner:{QueryInterface(){return {getInterface:()=>appChrome}}}},addEventListener(name,fn){events.set(name,fn)},removeEventListener(name){events.delete(name)}};
  const native={addEventListener(){},removeEventListener(){},document:{addEventListener(){},removeEventListener(){}},gMsgCompose:{compFields:{draftId:''},RegisterStateListener(){},UnregisterStateListener(){}},GetCurrentEditor:()=>({}),ComposeCanClose:()=>mayClose,SetMsgBodyFrameFocus(){}};
  const sidebar={getBoundingClientRect:()=>({width:260,right:260,left:0})};
  const doc={getElementById:id=>id==='folderPane'?sidebar:null,documentElement:element('html'),createElement:element,createElementNS:(ns,tag)=>element(tag),createXULElement(){
   frame=element('browser');frame.browsingContext={};native.browsingContext=frame.browsingContext;
-  frame.contentWindow=native;frame.contentDocument={documentURI:'chrome://messenger/content/messengercompose/messengercompose.xhtml',createElement:element,documentElement:element('html')};
+  frame.contentWindow=native;frame.contentDocument={getElementById:()=>null,documentURI:'chrome://messenger/content/messengercompose/messengercompose.xhtml',createElement:element,documentElement:element('html')};
   frame.loadURI=()=>{observer.observe(native);paramsReceived=native.arguments[0];frame.events.load({target:frame.contentDocument})};return frame;
  }};
  const win={document:doc,browsingContext:{topChromeWindow:main},setTimeout(fn){timers.set(1,fn);return 1},clearTimeout(id){timers.delete(id)},addEventListener(name,fn){events.set('pane-'+name,fn)},removeEventListener(name){events.delete('pane-'+name)}};tab.chromeBrowser={contentWindow:win};
@@ -65,6 +65,7 @@ test('inline compose preserves an open reply across navigation and guards dirty 
   MailServices:{},ChromeUtils:{importESModule:()=>({MailUtils:{getIdentityForHeader:()=>[{key:'chosen-account'}]}})},
   Services:{obs:{addObserver(value){observer=value},removeObserver(){}},io:{newURI:value=>value},scriptSecurityManager:{getSystemPrincipal:()=>({})}}
  });vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/compose.js'),'utf8'),testScope);
+ let feedback;testScope.installInlineSendStatus=(native,clock,onState)=>{feedback=onState;return {close(){}}};
  const composer=testScope.createInlineCompose(win),header={mime2DecodedSubject:'Original',folder:{getUriForMsg:()=> 'imap-message://Sent#42'}};
  const inline=element('conversation'),scrollHost={hidden:false};
  composer.open(header,'cmd_replyall',{container:inline,scrollHost});assert.equal(composer.presentation,'inline');assert.equal(composer.active,true);assert.equal(paramsReceived.type,2);assert.equal(paramsReceived.identity.key,'chosen-account');assert.equal(appChrome.XULBrowserWindow,oldChrome);
@@ -73,7 +74,10 @@ test('inline compose preserves an open reply across navigation and guards dirty 
  assert.equal(controls[2].children[1].textContent,'Detach reply');
  assert.equal(controls[3].children[1].textContent,'Separate window');
  assert.equal(controls[3].children[0].tag,'svg','window action has a window illustration, not a send arrow');
- const originalFrame=frame;native.gMsgCompose.bodyModified=true;
+ const originalFrame=frame;
+ feedback({state:'sending'});assert.equal(inline.children[0].hidden,false,'sending must never hide/destroy the embedded editor');assert.equal(frame.removed,undefined);
+ feedback({state:'draft-error',error:'Connection failed',draftError:'Disk full'});assert.equal(inline.children[0].hidden,false);
+ native.gMsgCompose.bodyModified=true;
  composer.float();assert.equal(composer.presentation,'floating');assert.equal(frame,originalFrame);assert.equal(native.gMsgCompose.bodyModified,true);
  assert.equal(controls[2].children.at(-1).textContent,'Return to conversation');
  composer.returnInline();assert.equal(composer.presentation,'inline');assert.equal(frame,originalFrame);
@@ -88,7 +92,12 @@ test('inline compose preserves an open reply across navigation and guards dirty 
  const fullPanel=doc.documentElement.children.at(-1);assert.equal(fullPanel.style.left,'260px','full composer must leave the sidebar visible');
  sidebar.getBoundingClientRect=()=>({width:340,right:340,left:0});events.get('pane-resize')();assert.equal(fullPanel.style.left,'340px','sidebar resizing moves the composer boundary');
  composer.float();assert.equal(composer.presentation,'floating');const newFrame=frame;composer.returnInline();assert.equal(composer.presentation,'full');assert.equal(frame,newFrame);
- composer.open(header,'cmd_replySender');assert.equal(composer.command,'cmd_newMessage','Reply must not replace an open new message');mayClose=true;assert.equal(composer.close(),true);assert.equal(composer.active,false);assert.equal(events.has('close'),false);
+ composer.open(header,'cmd_replySender');assert.equal(composer.command,'cmd_newMessage','Reply must not replace an open new message');let closeSaves=0;testScope.saveInlineReplyDraft=async()=>{closeSaves++;throw new Error('Draft folder unavailable')};
+ const closeControl=doc.documentElement.children.at(-1).children[0].children[4];
+ await closeControl.events.click();assert.equal(composer.active,true,'failed close-save preserves reply');
+ testScope.saveInlineReplyDraft=async()=>{closeSaves++;return 'draft://confirmed'};
+ await closeControl.events.click();assert.equal(closeSaves,2);assert.equal(composer.active,false,'Close waits for saved draft');
+ mayClose=true;assert.equal(composer.close(),true);assert.equal(composer.active,false);assert.equal(events.has('close'),false);
 });
 test('separate-window transfer waits for native draft completion and retains failures',async()=>{
  const draftScope=vm.createContext({Ci:{nsIMsgCompDeliverMode:{SaveAsDraft:4}}});
@@ -263,4 +272,97 @@ test('invalid floating size preferences fall back safely and oversized drags sav
  f.corner.emit('pointerdown',event());f.corner.emit('pointermove',event({clientX:-10000,clientY:-10000}));f.corner.emit('pointerup',event());
  assert.deepEqual(JSON.parse(prefs.getStringPref(key)),{width:900,height:700},'remember the visible size, not how far the pointer overshot');
  f.hook.update(true,{maxWidth:1600,maxHeight:1000});assert.equal(f.panel.style.width,'900px');assert.equal(f.panel.style.height,'700px');f.hook.close();
+});
+
+function sendFixture({result='success',draftFails=false,busy=false}={}) {
+ const events=new Map(),states=[],timers=new Map();let sendListener,saved=0,timerId=0;
+ const modes={Now:0,Later:1,SaveAsDraft:4,Background:8};
+ const compose={compFields:{from:'Me <me@example.org>',to:'You <you@example.org>',subject:'Re: Thread',messageId:''},
+  addMsgSendListener(listener){sendListener=listener},removeMsgSendListener(listener){assert.equal(listener,sendListener);sendListener=null}};
+ const native={gSendOperationInProgress:busy,gMsgCompose:compose,gAttachmentBucket:{itemChildren:[{attachment:{name:'notes.pdf'}}]},
+  GetCurrentEditor:()=>({outputToString:()=>'<literal text> reply'}),
+  addEventListener:(name,fn)=>events.set(name,fn),removeEventListener:name=>events.delete(name),
+  async GenericSendMessage(mode){
+   if(result==='preflight-cancel')return;
+   events.get('compose-send-message')?.({detail:{msgType:mode}});
+   if(busy)sendListener.onStartSending();
+   if(mode!==modes.Now && mode!==modes.Background)return;
+   if(result==='success'){
+    sendListener.onStopSending('<outgoing-id>',0);compose.compFields.messageId='<outgoing-id>';
+    events.get('aftersend')?.();
+   }
+   if(result==='server-error')sendListener.onStopSending('<failed>',0x80004005,'SMTP server refused the connection');
+   if(result==='throw')throw new Error('network failed');
+  }};
+ const original=native.GenericSendMessage;
+ const clock={setTimeout(fn){timers.set(++timerId,fn);return timerId},clearTimeout(id){timers.delete(id)}};
+ const status=scope.installInlineSendStatus(native,clock,state=>states.push(state),async()=>{saved++;if(draftFails)throw new Error('disk full');return 'draft://42'},modes);
+ return {native,states,status,original,modes,timers,fail(){sendListener.onStopSending('',1,'Send failed')},tick(){const pending=[...timers.values()];timers.clear();for(const fn of pending)fn()},get saved(){return saved}};
+}
+test('inline send shows an immediate snapshot and reports Sent only after native aftersend',async()=>{
+ const f=sendFixture();await f.native.GenericSendMessage(f.modes.Now);
+ assert.deepEqual(f.states.map(s=>s.state),['sending','sent']);
+ assert.equal(f.states[0].body,'<literal text> reply');assert.equal(f.states[0].attachments[0],'notes.pdf');
+ assert.equal(f.states[1].messageId,'<outgoing-id>');assert.equal(f.states[0].id,f.states[1].id);
+ assert.equal(f.saved,0);f.status.close();assert.equal(f.native.GenericSendMessage,f.original);
+});
+test('native failure saves the real composer as a draft and exposes draft-save failure honestly',async()=>{
+ for(const draftFails of [false,true]){
+  const f=sendFixture({result:'failure',draftFails});await f.native.GenericSendMessage(f.modes.Now);
+  assert.deepEqual(f.states.map(s=>s.state),['sending','saving-draft',draftFails?'draft-error':'draft-saved']);
+  assert.equal(f.saved,1);if(!draftFails)assert.equal(f.states.at(-1).draftURI,'draft://42');f.status.close();
+ }
+ const f=sendFixture({result:'throw'});await assert.rejects(()=>f.native.GenericSendMessage(f.modes.Now));
+ assert.equal(f.states.at(-1).state,'draft-saved');f.status.close();
+});
+test('preflight cancellation, draft autosave and queued mail do not pretend to send',async()=>{
+ const cancelled=sendFixture({result:'preflight-cancel'});await cancelled.native.GenericSendMessage(cancelled.modes.Now);
+ assert.equal(cancelled.states.length,0);assert.equal(cancelled.saved,0);cancelled.status.close();
+ const f=sendFixture();await f.native.GenericSendMessage(f.modes.SaveAsDraft);await f.native.GenericSendMessage(f.modes.Later);
+ assert.equal(f.states.length,0);assert.equal(f.saved,0);f.status.close();
+});
+test('native progress preference is restored after concurrent embedded sends without overwriting user changes',()=>{
+ const prefs=preferences({'mailnews.show_send_progress':true});
+ const a=scope.suppressInlineSendProgress(prefs),b=scope.suppressInlineSendProgress(prefs);
+ assert.equal(prefs.getBoolPref('mailnews.show_send_progress'),false);a();a();
+ assert.equal(prefs.getBoolPref('mailnews.show_send_progress'),false);b();
+ assert.equal(prefs.getBoolPref('mailnews.show_send_progress'),true);
+ const c=scope.suppressInlineSendProgress(prefs);prefs.setBoolPref('mailnews.show_send_progress',true);c();
+ assert.equal(prefs.getBoolPref('mailnews.show_send_progress'),true);
+});
+
+test('failed-send recovery waits for native send and save operations to finish',async()=>{
+ const f=sendFixture({result:'failure',busy:true});const sending=f.native.GenericSendMessage(f.modes.Now);
+ await new Promise(setImmediate);f.native.gSaveOperationInProgress=true;f.fail();f.tick();await new Promise(setImmediate);assert.equal(f.saved,0);assert.equal(f.states.at(-1).state,'saving-draft');
+ f.native.gSendOperationInProgress=false;f.native.gSaveOperationInProgress=true;f.tick();await new Promise(setImmediate);assert.equal(f.saved,0);
+ f.native.gSaveOperationInProgress=false;f.tick();await sending;await new Promise(setImmediate);
+ assert.equal(f.saved,1);assert.equal(f.states.at(-1).state,'draft-saved');f.status.close();
+});
+test('a later successful manual draft save clears a stale recovery failure notice',async()=>{
+ const f=sendFixture({result:'failure',draftFails:true});await f.native.GenericSendMessage(f.modes.Now);
+ assert.equal(f.states.at(-1).state,'draft-error');
+ f.native.gMsgCompose.compFields.draftId='draft://manual';f.status.draftSaved();
+ assert.equal(f.states.at(-1).state,'draft-saved');assert.equal(f.states.at(-1).draftURI,'draft://manual');f.status.close();
+});
+test('manual save during recovery avoids a duplicate save; closing cancels idle waiting',async()=>{
+ const f=sendFixture({result:'failure',busy:true});const sending=f.native.GenericSendMessage(f.modes.Now);await new Promise(setImmediate);f.native.gSaveOperationInProgress=true;f.fail();f.tick();await new Promise(setImmediate);
+ f.native.gMsgCompose.compFields.draftId='draft://manual';f.status.draftSaved();f.native.gSendOperationInProgress=false;f.native.gSaveOperationInProgress=false;f.tick();await sending;await new Promise(setImmediate);
+ assert.equal(f.saved,0);assert.equal(f.states.at(-1).state,'draft-saved');f.status.close();
+ const g=sendFixture({result:'failure',busy:true});const pending=g.native.GenericSendMessage(g.modes.Now);await new Promise(setImmediate);g.native.gSaveOperationInProgress=true;g.fail();g.tick();await new Promise(setImmediate);g.status.close();await pending;
+ assert.equal(g.timers.size,0);assert.equal(g.saved,0);
+});
+
+test('failed send exposes native server details separately from draft recovery errors',async()=>{
+ const f=sendFixture({result:'server-error',draftFails:true});await f.native.GenericSendMessage(f.modes.Now);
+ assert.equal(f.states.at(-1).error,'SMTP server refused the connection');
+ assert.equal(f.states.at(-1).draftError,'disk full');f.status.close();
+ assert.equal(scope.inlineSendFailure(0x80004005),'Thunderbird error 0x80004005');
+ assert.equal(scope.inlineSendFailure(undefined),'Thunderbird did not provide a failure reason.');
+ assert.equal(scope.inlineSendFailure(1,'server\nrefused'),'server refused');
+});
+
+test('an active native transport is not treated as failed when GenericSendMessage returns',async()=>{
+ const f=sendFixture({result:'failure',busy:true});await f.native.GenericSendMessage(f.modes.Now);
+ assert.deepEqual(f.states.map(s=>s.state),['sending']);assert.equal(f.saved,0);
+ assert.equal(f.native.gSendOperationInProgress,true);f.status.close();
 });

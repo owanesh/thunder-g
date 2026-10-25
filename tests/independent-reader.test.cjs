@@ -35,6 +35,7 @@ function readerFixture({photo=null,tagged=false,verifyIndependentDkim}={}) {
     const attrs=new Map(),classes=new Set();
     return {tag,children:[],events:{},style:{},hidden:false,classList:{add:key=>classes.add(key),remove:key=>classes.delete(key),contains:key=>classes.has(key)},
       append(...items){for(const item of items){item.parentNode=this;this.children.push(item)}},
+      insertBefore(item,before){item.parentNode=this;this.children.splice(this.children.indexOf(before),0,item)},
       replaceChildren(...items){this.children=[];this.append(...items)},remove(){this.removed=true;if(this.parentNode)this.parentNode.children=this.parentNode.children.filter(item=>item!==this)},
       setAttribute:(key,value)=>attrs.set(key,value),getAttribute:key=>attrs.get(key),removeAttribute:key=>attrs.delete(key),
       scrollIntoView(options){this.scrolled=options},
@@ -368,4 +369,88 @@ test('conversation zoom targets all message bodies, persists for newly expanded 
   for(const frame of f.browsers)assert.equal(frame.pane.fullZoom,1);
   assert.ok(applied.every(pane=>f.browsers.some(frame=>frame.pane===pane)),'only the inner message browsers receive zoom');
   f.reader.hide();assert.equal(f.reader.zoom('increaseSize'),false);f.reader.close();
+});
+
+function sentReplyFixture(f,key=2,id='reply',references=['a'],folder='sent') {
+  const header=f.prepare(message(key,id,folder));
+  header.numReferences=references.length;header.getStringReference=i=>references[i];
+  f.scope.Ci.nsMsgFolderFlags={SentMail:512};
+  f.scope.MailServices.accounts={allIdentities:[{fccFolderURI:'sent'}],allFolders:[header.folder]};
+  header.folder.isSpecialFolder=()=>false;
+  return header;
+}
+test('Sent notification appends and expands a reply in place, preserving existing native viewers',async()=>{
+  const f=readerFixture();await f.reader.open(f.anchor);f.loaded();
+  const first=f.cards.children[0],frame=f.browsers[0];
+  const reply=sentReplyFixture(f);
+  f.tagListener.msgAdded(reply);f.loaded();
+  assert.equal(f.cards.children.length,2);assert.equal(f.cards.children[0],first);
+  assert.equal(frame.removed,undefined,'existing viewer stays alive');
+  assert.equal(f.cards.children[1].getAttribute('data-expanded'),'');
+  assert.equal(first.getAttribute('data-latest'),undefined);
+  assert.equal(first.children[0].children[0].getAttribute('aria-disabled'),undefined);
+  assert.equal(f.reader.getMessages()[1],reply);
+  f.reader.print();assert.deepEqual(f.commands.at(-1),['cmd_print','mailbox://sent/2']);
+  f.tagListener.msgAdded(reply);
+  f.tagListener.msgAdded(sentReplyFixture(f,3,'reply'));
+  assert.equal(f.cards.children.length,2,'duplicate physical and logical Sent copies are ignored');
+  first.children[0].children[0].emit('click');
+  assert.equal(first.getAttribute('data-expanded'),undefined,'previous latest can now collapse');
+  f.reader.close();
+});
+test('drafts, unrelated sent messages and notifications after navigation do not alter the conversation',async()=>{
+  const f=readerFixture();await f.reader.open(f.anchor);
+  const draft=sentReplyFixture(f,2,'draft',['a'],'drafts');
+  f.scope.MailServices.accounts.allFolders=[];
+  f.tagListener.msgAdded(draft);assert.equal(f.cards.children.length,1);
+  f.tagListener.msgAdded(sentReplyFixture(f,3,'unrelated',['other-thread']));
+  assert.equal(f.cards.children.length,1);
+  f.reader.hide();f.tagListener.msgAdded(sentReplyFixture(f,4,'hidden'));
+  assert.equal(f.cards.children.length,0);
+  f.reader.close();f.tagListener.msgAdded(sentReplyFixture(f,5,'closed'));
+  assert.equal(f.cards.children.length,0);
+});
+test('a pending initial lookup cannot discard a newly arrived sent reply',async()=>{
+  const f=readerFixture();let complete;
+  f.scope.Services.prefs.getBoolPref=()=>true;
+  f.scope.ChromeUtils.importESModule=()=>({Gloda:{getMessageCollectionForHeader(header,listener){complete=listener;return {}}}});
+  const opening=f.reader.open(f.anchor);
+  const reply=sentReplyFixture(f);f.tagListener.msgAdded(reply);
+  complete.onQueryCompleted({items:[]});await opening;
+  assert.equal(f.reader.getMessages().length,2);assert.equal(f.reader.getMessages()[1],reply);
+  f.reader.close();
+});
+
+test('a delayed Sent copy is inserted in chronological order without replacing loaded cards',async()=>{
+  const f=readerFixture();await f.reader.open(f.anchor);f.loaded();
+  const original=f.cards.children[0],reply=sentReplyFixture(f);reply.dateInSeconds=0;
+  f.tagListener.msgAdded(reply);
+  assert.equal(f.cards.children.length,2);assert.equal(f.cards.children[1],original);
+  assert.equal(f.reader.getMessages()[0],reply);
+  assert.equal(original.getAttribute('data-latest'),'');
+  f.reader.close();
+});
+
+test('inline reply snapshot appears immediately, changes to Sent and reconciles with the real message',async()=>{
+ const f=readerFixture();await f.reader.open(f.anchor);f.loaded();let placement;
+ f.scope.inlineReplyEnabled=true;f.scope.inlineComposeControllers=new WeakMap([[f.win,{float(){},open(header,command,options){placement=options}}]]);
+ f.actions.children[1].emit('click');
+ const id={},state={id,state:'sending',from:'Me',to:'Other',body:'<script>literal</script>',attachments:['file.pdf']};
+ placement.onSendState(state);
+ assert.equal(f.cards.children.length,2);
+ const pending=f.cards.children[1];assert.equal(pending.children[2].textContent,'<script>literal</script>');
+ assert.equal(pending.children[0].children[1].textContent,'Sending…');
+ placement.onSendState({...state,state:'sent',messageId:'<reply>'});
+ assert.equal(pending.children[0].children[1].textContent,'Sent');
+ f.tagListener.msgAdded(sentReplyFixture(f));
+ assert.equal(f.cards.children.length,2);assert.equal(pending.removed,true);
+ assert.equal(f.reader.getMessages().length,2);f.reader.close();
+});
+test('send failure removes temporary card, and late feedback cannot populate another conversation',async()=>{
+ const f=readerFixture();await f.reader.open(f.anchor);f.loaded();let placement;
+ f.scope.inlineReplyEnabled=true;f.scope.inlineComposeControllers=new WeakMap([[f.win,{float(){},open(header,command,options){placement=options}}]]);
+ f.actions.children[0].emit('click');const state={id:{},state:'sending',body:'Reply'};
+ placement.onSendState(state);assert.equal(f.cards.children.length,2);
+ placement.onSendState({...state,state:'saving-draft'});assert.equal(f.cards.children.length,1);
+ f.reader.hide();placement.onSendState({...state,state:'sent'});assert.equal(f.cards.children.length,0);f.reader.close();
 });
