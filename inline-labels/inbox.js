@@ -89,6 +89,70 @@ function runRowAction(win, row, name, expected) {
   if (win.commandController.isCommandEnabled(name)) win.commandController.doCommand(name);
 }
 
+function visibleInboxIndices(tree,view) {
+  const viewport=tree.getBoundingClientRect(),heading=tree.querySelector('thead')?.getBoundingClientRect().height || 0;
+  const indices=[];
+  for(const row of tree.querySelectorAll('tr.table-layout, tr.card-layout')) {
+    const rect=row.getBoundingClientRect();
+    if(row.index>=0 && rect.bottom>viewport.top+heading && rect.top<viewport.bottom &&
+      !((view?.getFlagsAt(row.index) || 0)&0x20000000))indices.push(row.index);
+  }
+  return indices;
+}
+function installInboxIdleActions(win,reader=null) {
+  const doc=win.document,header=doc.getElementById('threadPaneHeaderBar');
+  const host=header?.querySelector?.('.list-header-bar-container-start');
+  if(!host)return {close(){}};
+  let closed=false,selectionFrame=null;
+  const bar=doc.createElement('div');bar.className='gm-inbox-idle-actions';bar.setAttribute('role','toolbar');bar.setAttribute('aria-label','Message list actions');
+  const select=doc.createElement('input');select.type='checkbox';select.title='Select all messages on this page';select.setAttribute('aria-label',select.title);
+  select.addEventListener('change',()=>{
+    const tree=doc.getElementById('threadTree');
+    if(tree?.hasAttribute('data-gm-paginated')){
+      // Native pagination owns page boundaries, including collapsed threads.
+      const nativeSelect=doc.getElementById('selectColButton');
+      if(!nativeSelect){select.checked=false;return;}
+      nativeSelect.click();
+    }else{
+      const indices=visibleInboxIndices(tree,win.gDBView),selected=new Set(tree.selectedIndices || []);
+      reader?.selectIndices(indices.every(index=>selected.has(index))?[]:indices);
+    }
+    if(selectionFrame!==null)win.cancelAnimationFrame(selectionFrame);
+    selectionFrame=win.requestAnimationFrame(()=>{
+      selectionFrame=null;if(closed)return;
+      const tree=doc.getElementById('threadTree');
+      reader?.selectIndices(Array.from(tree?.selectedIndices || []));select.checked=false;
+    });
+  });
+  function button(label,path,handler){
+    const node=doc.createElement('button');node.type='button';node.className='gm-inbox-action';node.title=label;node.setAttribute('aria-label',label);
+    const svg=doc.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('width','20');svg.setAttribute('height','20');svg.setAttribute('aria-hidden','true');
+    const shape=doc.createElementNS('http://www.w3.org/2000/svg','path');shape.setAttribute('d',path);shape.setAttribute('fill','none');shape.setAttribute('stroke','currentColor');shape.setAttribute('stroke-width','1.8');shape.setAttribute('stroke-linecap','round');svg.append(shape);node.append(svg);
+    if(handler)node.addEventListener('click',handler);return node;
+  }
+  const refresh=button('Refresh','M20 7v5h-5 M19 12a7 7 0 1 0-1 5',()=>{
+    const main=win.browsingContext?.topChromeWindow;
+    try{
+      if(typeof main?.MsgGetMessage!=='function')throw new Error('Mail refresh is unavailable.');
+      main.MsgGetMessage(win.gFolder?[win.gFolder]:undefined);
+      win.gFolder?.updateFolder?.(main.msgWindow);
+      refresh.title='Refresh';
+    }catch(error){refresh.title=error.message || 'Could not refresh mail.';}
+  });
+  const more=button('More options (not available yet)','M12 5v.01 M12 12v.01 M12 19v.01');more.disabled=true;
+  bar.append(select,refresh,more);host.prepend(bar);
+  const style=doc.createElement('style');style.textContent=`
+    #threadPaneFolderName,#threadPaneFolderCountContainer{display:none!important}
+    .gm-inbox-idle-actions{display:flex;align-items:center;gap:8px;min-height:36px}
+    .gm-inbox-idle-actions input{appearance:auto;inline-size:18px;block-size:18px;margin:0 10px 0 4px;accent-color:#1a73e8;cursor:pointer}
+    .gm-inbox-action{display:inline-flex;align-items:center;justify-content:center;inline-size:36px;block-size:36px;padding:8px;border:0;border-radius:50%;background:transparent;color:inherit;cursor:pointer}
+    .gm-inbox-action:hover:enabled{background:var(--treeitem-background-hover,#e9eef6)}
+    .gm-inbox-action:disabled{opacity:.5;cursor:default}
+    .gm-inbox-action:focus-visible{outline:2px solid #1a73e8;outline-offset:-2px}
+  `;doc.head.append(style);
+  return {close(){closed=true;if(selectionFrame!==null)win.cancelAnimationFrame(selectionFrame);bar.remove();style.remove();}};
+}
+
 function installComposeLabel(doc) {
   const button = doc.getElementById('folderPaneWriteMessage');
   if (!button?.getAttribute) return {close(){}};
@@ -97,8 +161,8 @@ function installComposeLabel(doc) {
   const text = button.textContent;
   button.removeAttribute('data-l10n-id');
   button.removeAttribute('data-l10n-args');
-  button.textContent = 'Write';
-  button.setAttribute('aria-label', 'Write a new message');
+  button.textContent = 'Compose';
+  button.setAttribute('aria-label', 'Compose a new message');
   return {close() {
     button.textContent = text;
     for (const [name, value] of saved) {
@@ -375,11 +439,12 @@ function installCollapsedThreadDefaults(win) {
   }};
 }
 
-function installInboxControls(win,{threadGuides=true}={}) {
+function installInboxControls(win,{threadGuides=true,reader=null}={}) {
   const doc = win.document;
   const tree = doc.getElementById('threadTree');
   if (!tree) return {close(){}};
   const compose = installComposeLabel(doc);
+  const idleActions=installInboxIdleActions(win,reader);
   const responsive = installResponsiveColumns(win);
   const viewCopy = installCompleteViewCopy(win);
   const newMessage = installInlineNewMessage(win);
@@ -551,7 +616,7 @@ function installInboxControls(win,{threadGuides=true}={}) {
     compose.close();
     responsive.close();
     viewCopy.close();
-    newMessage.close();
+    newMessage.close();idleActions.close();
     threadToggles.close();
     threadDefaults.close();
     if (rowClass && Number.isFinite(originalHeight) && rowClass.ROW_HEIGHT === originalHeight + 6) {

@@ -13,7 +13,7 @@
 
 A compact inbox, existing tags as colored chips before the subject, and a conversation reader with a Back button and message actions.
 
-Current version: **0.16.1**. Installable package: `thunder-g-0.16.1.xpi`. The companion accepts **Thunderbird 153–158.x**.
+Current version: **0.17.0**. Installable package: `thunder-g-0.17.0.xpi`. The companion accepts **Thunderbird 153–158.x**.
 
 Tested on macOS with **Thunderbird 158.0.1** and **Betterbird 153.5.0**
 (Betterbird testing reported by the maintainer). Renderer hooks were inspected

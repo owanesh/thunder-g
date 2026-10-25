@@ -378,19 +378,72 @@ function installEmbeddedAttachmentPicker(native,main,classes=Cc,interfaces=Ci) {
   native.AttachFile=attach;
   return {close(){closed=true;if(native.AttachFile===attach)native.AttachFile=original;}};
 }
+// A saved draft is discarded through Thunderbird's recoverable Trash path.
+// Never use RemoveDraft(), which can permanently delete/expunge the copy.
+function trashInlineDraft(native,services=MailServices,msgWindow=null) {
+  if(native.gSendOperationInProgress || native.gSaveOperationInProgress)return Promise.reject(new Error('Wait for the current send or save to finish.'));
+  const uri=native.gMsgCompose?.compFields.draftId;
+  if(!uri)return Promise.resolve();
+  return new Promise((resolve,reject)=>{
+    try {
+      const header=services.messageServiceFromURI(uri).messageURIToMsgHdr(uri);
+      if(!header?.folder)throw new Error('The saved draft could not be found.');
+      header.folder.deleteMessages([header],msgWindow,false,false,{
+        onStartCopy(){},onProgress(){},setMessageKey(){},getMessageId(){return null;},
+        onStopCopy(status){if(status===0)resolve();else reject(new Error('Could not move the draft to Trash.'));}
+      },true);
+    }catch(error){reject(error)}
+  });
+}
+// Native compose assumes window.content resolves its primary editor. In an
+// embedded chrome window that legacy lookup can be null during startup.
+function installEmbeddedComposeContent(native) {
+  const previous=Object.getOwnPropertyDescriptor(native,'content');
+  const get=()=>native.document.getElementById('messageEditor')?.contentWindow || null;
+  Object.defineProperty(native,'content',{configurable:true,enumerable:previous?.enumerable ?? true,get});
+  return {close(){
+    try{
+      if(Object.getOwnPropertyDescriptor(native,'content')?.get!==get)return;
+      if(previous)Object.defineProperty(native,'content',previous);else delete native.content;
+    }catch(_){/* The disposable compose window may already have been destroyed. */}
+  }};
+}
+// An editor object can exist before native body/signature initialization ends.
+// Observe the native completion event before exposing an editable composer.
+function watchInlineComposeBodyReady(native) {
+  let ready=false,compose=null,closed=false;
+  const listener={NotifyComposeFieldsReady(){},ComposeProcessDone(){},SaveInFolderDone(){},NotifyComposeBodyReady(){if(!closed)ready=true}};
+  function init(){
+    if(closed || compose)return;
+    compose=native.gMsgCompose;compose?.RegisterStateListener(listener);
+  }
+  native.addEventListener('compose-window-init',init,true);
+  return {get ready(){return ready},close(){if(closed)return;closed=true;native.removeEventListener('compose-window-init',init,true);compose?.UnregisterStateListener(listener);}};
+}
+function styleInlineComposeBody(native) {
+  const utils=native.document.getElementById?.('messageEditor')?.contentWindow?.windowUtils;
+  if(!utils)return {close(){}};
+  const css='body{margin:12px 20px;line-height:1.5;}'+(!native.gMsgCompose.composeHTML?'body,body>pre,pre.moz-signature{font-family:Arial,sans-serif!important;font-size:14px!important;line-height:1.5!important;}':'');
+  const uri='data:text/css;charset=utf-8,'+encodeURIComponent(css);
+  // Sheet loading is presentation-only. Inserting <style> into an editable
+  // document marks it modified and can interfere with native startup/autosave.
+  utils.loadSheetUsingURIString(uri,utils.USER_SHEET);
+  return {close(){try{utils.removeSheetUsingURIString(uri,utils.USER_SHEET)}catch(_){}}};
+}
 function createInlineCompose(win) {
   const doc=win.document;let browser=null,panel=null,originalHeader=null,originalCommand=null,ready=false,observer=null;
   let restoreChrome=null,loadingTimer=null,inlineContainer=null,scrollHost=null,presentation='inline',bar=null,title=null,floatButton=null,windowButton=null,transferBusy=false,attachmentPicker=null,draftStatus=null,floatingResize=null,sendStatus=null;
-  let sendNotice=null,noticeTimer=null;
+  let sendNotice=null,noticeTimer=null,scrim=null,minimized=false,minimizeButton=null,bodyReadyWatcher=null,bodySheet=null,composeContentBridge=null;
   const main=win.browsingContext.topChromeWindow;
   function stopObserver(){if(observer){Services.obs.removeObserver(observer,'chrome-document-global-created');observer=null;}}
   function dispose(){
+    bodyReadyWatcher?.close();bodyReadyWatcher=null;bodySheet?.close();bodySheet=null;
     sendStatus?.close();sendStatus=null;
     draftStatus?.close();draftStatus=null;floatingResize?.close();floatingResize=null;
     attachmentPicker?.close();attachmentPicker=null;
     stopObserver();if(loadingTimer!==null)win.clearTimeout(loadingTimer);loadingTimer=null;
     restoreChrome?.();restoreChrome=null;
-    browser?.remove();panel?.remove();browser=panel=originalHeader=originalCommand=null;ready=false;
+    browser?.remove();composeContentBridge?.close();composeContentBridge=null;panel?.remove();scrim?.remove();scrim=null;minimized=false;browser=panel=originalHeader=originalCommand=null;ready=false;
   }
   function requestClose(){
     if(!browser)return true;
@@ -411,6 +464,27 @@ function createInlineCompose(win) {
       dispose();
     }catch(error){title.textContent=error.message || 'Could not save the draft. Your reply remains open.';}
     finally{transferBusy=false;}
+  }
+  async function discard(){
+    if(!ready || transferBusy || !browser)return;
+    const native=browser.contentWindow;
+    if(native.gSendOperationInProgress || native.gSaveOperationInProgress){title.textContent='Wait for the current send or save to finish.';return;}
+    transferBusy=true;
+    // Pause autosave while the saved copy is moved; restore it if Trash fails.
+    if(native.gAutoSaveTimeout)native.clearTimeout(native.gAutoSaveTimeout);
+    try{await trashInlineDraft(native,MailServices,main.msgWindow);hideSendNotice();dispose();}
+    catch(error){title.textContent=error.message || 'Could not discard. Your message remains open.';
+      if(native.gAutoSaveInterval)native.gAutoSaveTimeout=native.setTimeout(native.AutoSave,native.gAutoSaveInterval);
+    }finally{transferBusy=false;}
+  }
+  function minimize(){
+    if(!panel)return;
+    if(minimized){minimized=false;panel.style.transform='';labelControl(minimizeButton,'minimize','Minimize');browser?.focus();return;}
+    float();minimized=true;
+    // Translate the intact panel below the viewport, retaining editor layout,
+    // signature, undo history and attachment state. Never display:none it.
+    panel.style.transform='translateY(calc(100% - 40px))';
+    labelControl(minimizeButton,'maximize','Restore composer');
   }
   function parentClose(event){if(browser && !requestClose())event.preventDefault();}
   main.addEventListener('close',parentClose,true);
@@ -449,10 +523,9 @@ function createInlineCompose(win) {
     const edge=rtl?Math.min(sidebar?.left ?? 0,splitter?.left ?? sidebar?.left ?? 0):Math.max(sidebar?.right || 0,splitter?.right || 0);
     const boundary=sidebar?.width>0?Math.max(0,rtl?(viewport?.right || win.innerWidth)-edge:edge-(viewport?.left || 0)):0;
     if(presentation==='full'){
-      panel.style.left=rtl?'0px':`${boundary}px`;
-      panel.style.right=rtl?`${boundary}px`:'0px';
+      panel.style.left='12px';panel.style.right='12px';
     }
-    panel.style.maxWidth=`max(0px,calc(100vw - ${boundary+(presentation==='floating'?32:0)}px))`;
+    panel.style.maxWidth=`max(0px,calc(100vw - ${presentation==='full'?24:boundary+(presentation==='floating'?32:0)}px))`;
     floatingResize?.update(presentation==='floating',{maxWidth:(viewport?.width || win.innerWidth || 1024)-boundary-32,maxHeight:(viewport?.height || win.innerHeight || 768)-24});
   }
   const sidebarResize=win.ResizeObserver?new win.ResizeObserver(fitComposeToContent):null;
@@ -460,9 +533,9 @@ function createInlineCompose(win) {
   win.addEventListener('resize',fitComposeToContent);win.addEventListener('scroll',positionSendNotice,true);
   function setPresentation(next){
     if(!panel)return;
-    presentation=next;panel.setAttribute('data-presentation',next);
+    presentation=next;minimized=false;panel.setAttribute('data-presentation',next);if(scrim)scrim.hidden=next!=='full';
     const common='display:flex;flex-direction:column;min-height:320px;box-sizing:border-box;isolation:isolate;contain:paint;background:light-dark(#ffffff,#18181b);border:1px solid var(--layout-border-0,#dadce0);border-radius:12px;overflow:hidden;';
-    panel.style.cssText=common+(next==='inline'?'position:relative;height:460px;margin:16px 0 20px 56px;box-shadow:none;':next==='full'?'position:fixed;z-index:1000;inset:0;width:auto;height:100%;min-height:0;border:0;border-radius:0;box-shadow:none;':'position:fixed;z-index:1000;inset:auto 16px 12px auto;width:min(720px,calc(100vw - 32px));height:min(620px,75vh);box-shadow:0 4px 22px #0003;');
+    panel.style.cssText=common+(next==='inline'?'position:relative;height:460px;margin:16px 0 20px 56px;box-shadow:none;':next==='full'?'position:fixed;z-index:1000;inset:12px;width:auto;height:calc(100% - 24px);min-height:0;border:0;border-radius:12px;box-shadow:0 8px 32px #0004;':'position:fixed;z-index:1000;inset:auto 16px 12px auto;width:min(600px,calc(100vw - 32px));height:min(640px,80vh);box-shadow:0 4px 22px #0003;');
     if(originalCommand==='cmd_newMessage') {
       labelControl(floatButton,next==='full'?'detach':'window',next==='full'?'Detach message':'Expand in this window');
       floatButton.hidden=false;
@@ -471,7 +544,10 @@ function createInlineCompose(win) {
       labelControl(floatButton,next==='inline'?'detach':'inline',next==='inline'?'Detach reply':'Return to conversation',label);
       floatButton.hidden=next!=='inline' && (!inlineContainer?.isConnected || scrollHost?.hidden);
     }
-    windowButton.hidden=next==='inline';
+    windowButton.hidden=next==='inline' || originalCommand==='cmd_newMessage';
+    windowButton.style.display=windowButton.hidden?'none':'inline-flex';
+    floatButton.style.display=floatButton.hidden?'none':'inline-flex';
+    if(minimizeButton){labelControl(minimizeButton,'minimize','Minimize');minimizeButton.style.order='-1';}
     fitComposeToContent();
   }
   function float(){
@@ -535,7 +611,7 @@ function createInlineCompose(win) {
       inline:'M3 5h18v14H3z M3 9h18 M6 12h6 M6 15h10',
       window:'M8 3h13v13 M3 8h13v13H3z',
       save:'M4 3h14l3 3v15H3V3z M7 3v6h10V3 M7 21v-8h10v8',
-      close:'M6 6l12 12 M18 6L6 18'
+      close:'M6 6l12 12 M18 6L6 18',minimize:'M5 17h14',maximize:'M5 9V5h4 M15 5h4v4 M19 15v4h-4 M9 19H5v-4'
     };
     control.textContent='';
     const svg=doc.createElementNS('http://www.w3.org/2000/svg','svg');
@@ -544,7 +620,8 @@ function createInlineCompose(win) {
     path.setAttribute('d',paths[kind]);path.setAttribute('fill','none');path.setAttribute('stroke','currentColor');path.setAttribute('stroke-width','1.6');path.setAttribute('stroke-linejoin','round');svg.append(path);
     const text=doc.createElement('span');text.textContent=label;control.append(svg,text);
     control.title=description;control.setAttribute('aria-label',description);
-    control.style.cssText='display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--layout-border-0,#dadce0);border-radius:8px;background:transparent;color:inherit;min-height:32px;padding:4px 8px;font:inherit;font-size:12px;cursor:pointer;';
+    text.style.display='none';
+    control.style.cssText='display:inline-flex;align-items:center;justify-content:center;flex:none;width:28px;height:28px;border:0;border-radius:4px;background:transparent;color:inherit;padding:5px;cursor:pointer;';
   }
   function button(label,handler){const node=doc.createElement('button');node.type='button';node.textContent=label;node.addEventListener('click',handler);return node;}
   return {
@@ -577,10 +654,11 @@ function createInlineCompose(win) {
       const isNew=command==='cmd_newMessage';
       const params=isNew?inlineNewMessageParams(placement.folder):inlineReplyParams(header,command);originalHeader=header;originalCommand=command;
       inlineContainer=placement.container || doc.documentElement;scrollHost=placement.scrollHost || null;
+      scrim=doc.createElement('div');scrim.className='gm-compose-scrim';scrim.hidden=true;scrim.style.cssText='position:fixed;inset:0;background:#0005;z-index:999;';doc.documentElement.append(scrim);
       panel=doc.createElement('section');panel.className='gm-inline-compose';panel.setAttribute('aria-label',isNew?'New message in this window':'Reply in this window');
-      bar=doc.createElement('div');bar.style.cssText='display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:8px 12px;flex:none;';
+      bar=doc.createElement('div');bar.style.cssText='display:flex;align-items:center;gap:2px;padding:6px 12px;min-height:40px;box-sizing:border-box;flex:none;background:light-dark(#f2f6fc,#292a2d);color:light-dark(#16345c,#e8eaed);';
       title=doc.createElement('strong');title.style.cssText='flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.9em;font-weight:500;';
-      title.textContent=isNew?'New message':`${command==='cmd_replyall'?'Reply all':'Reply'} · ${header.mime2DecodedSubject || '(No subject)'}`;
+      title.textContent=isNew?'New Message':`${command==='cmd_replyall'?'Reply all':'Reply'} · ${header.mime2DecodedSubject || '(No subject)'}`;
       const titleGroup=doc.createElement('div');titleGroup.style.cssText='display:flex;align-items:center;gap:10px;flex:1;min-width:100px;overflow:hidden;';
       const savedStatus=doc.createElement('span');savedStatus.className='gm-compose-draft-status';savedStatus.setAttribute('role','status');savedStatus.setAttribute('aria-live','polite');savedStatus.style.cssText='flex:none;font-size:12px;white-space:nowrap;';
       titleGroup.append(title,savedStatus);
@@ -588,12 +666,16 @@ function createInlineCompose(win) {
       floatButton=button('',()=>{if(presentation!=='floating')float();else returnInline();});
       windowButton=button('',separateWindow);labelControl(windowButton,'window','Separate window',isNew?'Open message in a separate window':'Open reply in a separate window');windowButton.disabled=true;
       const close=button('',saveAndClose);labelControl(close,'close','Close',isNew?'Close message':'Close reply');
-      bar.append(titleGroup,save,floatButton,windowButton,close);panel.append(bar);floatingResize=installFloatingComposeResize(win,panel);setPresentation(placement.container?'inline':'floating');
+      minimizeButton=button('',minimize);labelControl(minimizeButton,'minimize','Minimize');
+      bar.append(titleGroup,save,floatButton,windowButton,close,minimizeButton);
+      minimizeButton.style.order='-1';titleGroup.style.order='-2';close.style.order='2';panel.append(bar);floatingResize=installFloatingComposeResize(win,panel);setPresentation(placement.container?'inline':'floating');
       browser=doc.createXULElement('browser');browser.setAttribute('type','content');browser.setAttribute('maychangeremoteness','false');browser.setAttribute('disablehistory','true');browser.setAttribute('flex','1');browser.style.cssText='display:block;flex:1 1 0;min-height:0;min-width:0;width:100%;height:0;border:0;background:light-dark(#ffffff,#18181b);';
       const frame=browser;
       observer={observe(subject){
         if(subject.browsingContext!==frame.browsingContext)return;
         subject.arguments=[params];
+        composeContentBridge?.close();composeContentBridge=installEmbeddedComposeContent(subject);
+        bodyReadyWatcher?.close();bodyReadyWatcher=watchInlineComposeBodyReady(subject);
         subject.close=()=>{if(browser===frame)dispose();};
       }};
       Services.obs.addObserver(observer,'chrome-document-global-created');
@@ -618,13 +700,57 @@ function createInlineCompose(win) {
           #composeToolbar2 .toolbarbutton-text{display:none!important}
           #button-send .toolbarbutton-text{display:initial!important}
           #button-send{border-radius:20px!important;background:#0b57d0!important;color:white!important;padding:6px 18px!important}
-          #msgIdentity{max-width:380px!important}
+          #composeContentBox{box-shadow:none!important;grid-template-areas:"contacts contacts-splitter headers" "contacts contacts-splitter headers-splitter" "contacts contacts-splitter message" "contacts contacts-splitter attachment-splitter" "contacts contacts-splitter attachment-area" "contacts contacts-splitter format-toolbar"!important;grid-template-rows:min-content min-content minmax(0,1fr) min-content min-content min-content!important}
+          #headersSplitter{visibility:hidden!important;height:0!important}
+          #MsgHeadersToolbar{background:light-dark(#fff,#18181b)!important;padding:4px 16px!important}
+          #top-gradient-box,.address-row,#subject-box{min-height:34px!important;align-items:center!important}
+          .aw-firstColBox{width:0!important;min-width:0!important}
+          #identityLabel-box,.address-label-container{width:36px!important;min-width:36px!important;max-width:36px!important;margin:0!important;padding:0!important;justify-content:flex-start!important}
+          #MsgHeadersToolbar .input-container{border:0!important;outline:0!important;box-shadow:none!important}
+          #MsgHeadersToolbar .address-input{border:0!important;outline:0!important;box-shadow:none!important}
+          #recipientsContainer .address-row:focus-within{border-bottom-color:#1a73e8!important}
+          #identityLabel,.address-label-container label{margin:0!important;font-size:13px!important}
+          #msgIdentity{max-width:calc(100% - 60px)!important;flex:1!important;background:transparent!important;border:0!important;box-shadow:none!important}
+          .address-container,#msgSubjectContainer{background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+          #recipientsContainer .address-row,#subject-box{border-bottom:1px solid light-dark(#e8eaed,#3c4043)!important}
+          #subjectLabel-box{display:none!important}
+          #msgSubject{padding:8px 0!important;border:0!important;background:transparent!important;box-shadow:none!important;font-size:14px!important}
+          #FormatToolbox{background:transparent!important;border:0!important;padding:4px 16px!important}
+          #FormatToolbar{background:light-dark(#f2f6fc,#303134)!important;border:0!important;border-radius:20px!important;padding:4px 8px!important;margin:0!important;min-height:32px!important}
+          #composeToolbar2{display:flex!important;align-items:center!important;gap:2px!important;padding:8px 16px!important;min-height:48px!important}
+          #composeToolbar2 > *{flex:0 0 auto!important}
+          #composeToolbar2 > :is(spacer,toolbarspring){flex:1 1 auto!important;order:90!important}
+          #composeToolbar2 > :is(toolbarseparator,#button-save,#button-contacts,#button-address){display:none!important}
+          #button-send{order:0!important;min-height:36px!important;padding:6px 16px!important;margin-inline-end:8px!important}
+          #button-attach{order:1!important}
+          #composeToolbar2 > :not(#button-send):not(#button-attach){order:2}
+          #composeToolbar2 > #gm-discard-draft{order:99!important;margin-inline-start:auto!important;display:inline-flex!important;align-items:center;justify-content:center;width:30px;height:30px;border:0;border-radius:4px;background:transparent;color:light-dark(#5f6368,#bdc1c6);cursor:pointer}
+          #addressRowReply[data-gm-redundant]{display:none!important}
+          #extraAddressRowsArea{flex:0 0 auto!important;margin-inline-start:auto!important}
+          #gm-discard-draft:hover{background:light-dark(#e8eaed,#3c4043)!important}
           #MsgHeadersToolbar{border:0!important;padding:4px 8px!important}
         `;frame.contentDocument.documentElement.append(style);
+        const subjectInput=frame.contentDocument.getElementById('msgSubject');if(subjectInput)subjectInput.placeholder='Subject';
+        const extra=frame.contentDocument.getElementById('extraAddressRowsArea'),toRow=frame.contentDocument.getElementById('addressRowTo');
+        if(extra && toRow)toRow.append(extra);
+        const footer=frame.contentDocument.getElementById('composeToolbar2');
+        if(footer){
+          const trash=frame.contentDocument.createElement('button');trash.id='gm-discard-draft';trash.type='button';trash.title='Discard draft';trash.setAttribute('aria-label','Discard draft');
+          const icon=frame.contentDocument.createElementNS('http://www.w3.org/2000/svg','svg');icon.setAttribute('viewBox','0 0 24 24');icon.setAttribute('width','18');icon.setAttribute('height','18');icon.setAttribute('aria-hidden','true');
+          const path=frame.contentDocument.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d','M4 7h16 M9 7V4h6v3 M6 7l1 14h10l1-14 M10 10v8 M14 10v8');path.setAttribute('fill','none');path.setAttribute('stroke','currentColor');path.setAttribute('stroke-width','1.6');icon.append(path);trash.append(icon);trash.addEventListener('click',discard);footer.append(trash);
+        }
         const started=Date.now();
         const check=()=>{
           if(browser!==frame)return;
-          if(native.gMsgCompose && native.GetCurrentEditor?.()) {ready=true;save.disabled=false;windowButton.disabled=false;draftStatus=installComposeDraftStatus(native,savedStatus,win,Ci.nsIMsgCompDeliverMode,state=>{if(state==='saved')sendStatus?.draftSaved()});sendStatus=installInlineSendStatus(native,win,onSendState);if(loadingTimer!==null)win.clearTimeout(loadingTimer);loadingTimer=null;native.SetMsgBodyFrameFocus?.();return;}
+          if(bodyReadyWatcher?.ready && native.gMsgCompose && native.GetCurrentEditor?.()) {
+            bodyReadyWatcher.close();bodyReadyWatcher=null;
+            bodySheet=styleInlineComposeBody(native);
+            const replyTo=native.gMsgCompose.compFields.replyTo || '',identity=native.gCurrentIdentity?.email;
+            const replyRow=frame.contentDocument.getElementById('addressRowReply');
+            if(replyRow && identity){
+              try{const addresses=MailServices.headerParser.parseDecodedHeader(replyTo);replyRow.toggleAttribute('data-gm-redundant',addresses.length>0 && addresses.every(item=>item.email?.toLowerCase()===identity.toLowerCase()));}catch(_){}
+            }
+            ready=true;save.disabled=false;windowButton.disabled=false;draftStatus=installComposeDraftStatus(native,savedStatus,win,Ci.nsIMsgCompDeliverMode,state=>{if(state==='saved')sendStatus?.draftSaved()});sendStatus=installInlineSendStatus(native,win,onSendState);if(loadingTimer!==null)win.clearTimeout(loadingTimer);loadingTimer=null;native.SetMsgBodyFrameFocus?.();return;}
           if(Date.now()-started>20000){
             title.textContent='Editor could not finish starting. Close and use a classic reply.';restoreChrome?.();restoreChrome=null;return;
           }
@@ -637,7 +763,7 @@ function createInlineCompose(win) {
       if(placement.container)panel.scrollIntoView?.({block:'nearest',behavior:'instant'});
       frame.loadURI(Services.io.newURI('chrome://messenger/content/messengercompose/messengercompose.xhtml'),{triggeringPrincipal:Services.scriptSecurityManager.getSystemPrincipal()});
     },
-    float,returnInline,separateWindow,
+    float,returnInline,separateWindow,minimize,discard,
     get presentation(){return presentation;},
     close(){
       if(!requestClose())return false;

@@ -329,3 +329,27 @@ test('threaded views start collapsed, including async searches, and later manual
   win.gDBView=view();listener.onCreatedView();listener.onMessagesLoaded(true);assert.equal(collapses,count);
   controller.close();assert.equal(listener.onCreatedView,originalCreated);assert.equal(listener.onMessagesLoaded,originalLoaded);
 });
+
+test('idle toolbar delegates page selection, refreshes the current account and cleans up',()=>{
+ function node(){return {children:[],events:{},setAttribute(k,v){this[k]=v},append(...items){this.children.push(...items)},prepend(item){this.children.unshift(item)},addEventListener(name,fn){this.events[name]=fn},remove(){this.removed=true}}}
+ const host=node(),head=node(),tree={selectedIndices:[],hasAttribute:()=>true},selected=[],calls=[],frames=new Map();let id=0,nativeClicks=0;
+ const folder={updateFolder(window){calls.push(['update',window])}},msgWindow={};
+ const main={msgWindow,MsgGetMessage(folders){calls.push(['download',folders])}};
+ const nativeSelect={click(){nativeClicks++;tree.selectedIndices=[50,51,52]}};
+ const doc={head,getElementById:key=>({threadPaneHeaderBar:{querySelector:()=>host},threadTree:tree,selectColButton:nativeSelect})[key],createElement:node,createElementNS:node};
+ const win={document:doc,gFolder:folder,browsingContext:{topChromeWindow:main},requestAnimationFrame(fn){frames.set(++id,fn);return id},cancelAnimationFrame(key){frames.delete(key)}};
+ const controller=scope.installInboxIdleActions(win,{selectIndices(indices){selected.push(indices)}});
+ const bar=host.children[0],[checkbox,refresh,more]=bar.children;
+ checkbox.checked=true;checkbox.events.change();assert.equal(nativeClicks,1);
+ const paint=frames.values().next().value;frames.clear();paint();assert.deepEqual(Array.from(selected[0]),[50,51,52],'preserve native current-page selection');assert.equal(checkbox.checked,false);
+ refresh.events.click();assert.equal(calls[0][0],'download');assert.equal(calls[0][1][0],folder);assert.deepEqual(calls[1],['update',msgWindow]);
+ assert.equal(more.disabled,true);
+ checkbox.events.change();controller.close();assert.equal(frames.size,0);
+ assert.equal(bar.removed,true);assert.equal(head.children[0].removed,true);
+});
+
+test('unpaginated Select all scope includes only viewport rows and excludes dummy group headers',()=>{
+ const rows=[{index:0,top:-20,bottom:10},{index:1,top:10,bottom:30},{index:2,top:30,bottom:50},{index:3,top:50,bottom:80},{index:4,top:80,bottom:110}].map(row=>({...row,getBoundingClientRect:()=>row}));
+ const tree={getBoundingClientRect:()=>({top:0,bottom:80}),querySelector:()=>({getBoundingClientRect:()=>({height:20})}),querySelectorAll:()=>rows};
+ assert.deepEqual(Array.from(scope.visibleInboxIndices(tree,{getFlagsAt:index=>index===2?0x20000000:0})),[1,3]);
+});

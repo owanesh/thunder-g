@@ -38,10 +38,29 @@ function installNestedLabelSidebar(win,mailServices=MailServices,prefs=Services.
   const doc=win.document,tree=doc.getElementById('folderTree');
   if(!tree)return {close(){}};
   const menu=installSidebarLabelMenu(win,mailServices.tags,prefs);
-  const saved=new Map();let closed=false,timer=null;
+  const saved=new Map(),vocabulary=new Map(),createButtons=new Map();let closed=false,timer=null;
+  function rename(node,text,tooltip=false) {
+    if(!node)return;
+    const attributes=['data-l10n-id','data-l10n-args','title','aria-label','tooltiptext'];
+    if(!vocabulary.has(node))vocabulary.set(node,{text:node.textContent,tooltip,attributes:attributes.map(name=>[name,node.getAttribute(name)])});
+    node.removeAttribute('data-l10n-id');node.removeAttribute('data-l10n-args');
+    if(tooltip){node.setAttribute('title',text);node.setAttribute('tooltiptext',text);node.setAttribute('aria-label',text);}
+    else if(node.textContent!==text)node.textContent=text;
+  }
   function refresh() {
     timer=null;if(closed)return;
-    const list=win.folderPane?._modes?.tags?.containerList;
+    const mode=win.folderPane?._modes?.tags;
+    rename(mode?.containerHeader?.querySelector('.mode-name'),'Labels');
+    const createButton=mode?.container?.querySelector('.mode-button');
+    rename(createButton,'Create new label',true);
+    if(createButton && !createButtons.has(createButton)){
+      const createLabel=event=>{
+        const handled=!win.dispatchEvent(new win.CustomEvent('gm-create-sidebar-label',{cancelable:true,detail:{anchor:createButton}}));
+        if(handled){event.preventDefault();event.stopImmediatePropagation();}
+      };
+      createButton.addEventListener('click',createLabel,true);createButtons.set(createButton,createLabel);
+    }
+    const list=mode?.containerList;
     if(!list?.isConnected)return;
     const tags=mailServices.tags.getAllTags(),keys=new Set(tags.map(tag=>tag.key));
     for(const row of list.querySelectorAll('[data-tag-key]'))saved.set(row.dataset.tagKey,row);
@@ -72,6 +91,11 @@ function installNestedLabelSidebar(win,mailServices=MailServices,prefs=Services.
       const row=saved.get(tag.key);if(!row)continue;
       list.append(row);row.name=tag.tag;row.fullName=tag.tag;delete row.dataset.gmNestedLabel;
     }
-    saved.clear();
+    for(const [node,previous] of vocabulary){
+      if(!previous.tooltip)node.textContent=previous.text;
+      for(const [name,value] of previous.attributes){if(value===null)node.removeAttribute(name);else node.setAttribute(name,value);}
+    }
+    for(const [button,handler] of createButtons)button.removeEventListener('click',handler,true);
+    createButtons.clear();vocabulary.clear();saved.clear();
   }};
 }
