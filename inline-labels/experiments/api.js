@@ -137,7 +137,7 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
       pagedDocuments.set(doc,pages); pages.setSize(messagesPerPage);
       const zoom = installMailZoom(doc.defaultView,fontSize,action=>reader.zoom(action));
       const dates = installCompactDates(doc.defaultView);
-      const inbox = installInboxControls(doc.defaultView,{threadGuides});
+      const inbox = installInboxControls(doc.defaultView,{threadGuides,reader});
       const conversationBrowser = watchConversationBrowser(doc.defaultView, attach);
       documents.set(doc, { setThreadGuides(enabled){inbox.setThreadGuides(enabled);}, refresh() { labels.refresh(); dates.refresh(); }, close() {
         readers.delete(doc);

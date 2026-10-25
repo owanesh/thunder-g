@@ -47,16 +47,16 @@ test('inline replies pass exact header, native reply type, identity and default 
  assert.throws(()=>scope.inlineReplyParams(header,'cmd_forwardInline',{},Ci,Cc,{}));
 });
 test('inline compose preserves an open reply across navigation and guards dirty window/tab closure with native draft prompts',async()=>{
- let observer,frame,mayClose=false,paramsReceived;const events=new Map(),timers=new Map();
+ let observer,frame,mayClose=false,paramsReceived;const events=new Map(),timers=new Map(),nativeEvents=new Map(),stateListeners=new Set();
  function element(tag){return {tag,style:{},dataset:{},children:[],events:{},getBoundingClientRect:()=>({width:0,height:0}),setAttribute(){},append(...values){for(const value of values){value.parentNode=this;this.children.push(value)}},replaceChildren(...values){this.children=[];this.append(...values)},moveBefore(value){if(value.parentNode)value.parentNode.children=value.parentNode.children.filter(item=>item!==value);this.append(value)},scrollIntoView(){this.revealed=true},isConnected:true,remove(){this.removed=true},focus(){this.focused=true},addEventListener(name,fn){this.events[name]=fn},removeEventListener(name){delete this.events[name]}};}
  const appChrome={XULBrowserWindow:{original:true}},oldChrome=appChrome.XULBrowserWindow;
  const mode={tryCloseTab:()=>true},tab={mode},main={document:{getElementById:()=>({tabInfo:[tab]})},docShell:{treeOwner:{QueryInterface(){return {getInterface:()=>appChrome}}}},addEventListener(name,fn){events.set(name,fn)},removeEventListener(name){events.delete(name)}};
- const native={addEventListener(){},removeEventListener(){},document:{addEventListener(){},removeEventListener(){}},gMsgCompose:{compFields:{draftId:''},RegisterStateListener(){},UnregisterStateListener(){}},GetCurrentEditor:()=>({}),ComposeCanClose:()=>mayClose,SetMsgBodyFrameFocus(){}};
+ const native={addEventListener(name,fn){nativeEvents.set(name,fn)},removeEventListener(name){nativeEvents.delete(name)},document:{addEventListener(){},removeEventListener(){}},gMsgCompose:{compFields:{draftId:''},RegisterStateListener(fn){stateListeners.add(fn)},UnregisterStateListener(fn){stateListeners.delete(fn)}},GetCurrentEditor:()=>({}),ComposeCanClose:()=>mayClose,SetMsgBodyFrameFocus(){}};
  const sidebar={getBoundingClientRect:()=>({width:260,right:260,left:0})};
  const doc={getElementById:id=>id==='folderPane'?sidebar:null,documentElement:element('html'),createElement:element,createElementNS:(ns,tag)=>element(tag),createXULElement(){
   frame=element('browser');frame.browsingContext={};native.browsingContext=frame.browsingContext;
   frame.contentWindow=native;frame.contentDocument={getElementById:()=>null,documentURI:'chrome://messenger/content/messengercompose/messengercompose.xhtml',createElement:element,documentElement:element('html')};
-  frame.loadURI=()=>{observer.observe(native);paramsReceived=native.arguments[0];frame.events.load({target:frame.contentDocument})};return frame;
+  frame.loadURI=()=>{observer.observe(native);paramsReceived=native.arguments[0];nativeEvents.get('compose-window-init')?.();for(const listener of stateListeners)listener.NotifyComposeBodyReady?.();frame.events.load({target:frame.contentDocument})};return frame;
  }};
  const win={document:doc,browsingContext:{topChromeWindow:main},setTimeout(fn){timers.set(1,fn);return 1},clearTimeout(id){timers.delete(id)},addEventListener(name,fn){events.set('pane-'+name,fn)},removeEventListener(name){events.delete('pane-'+name)}};tab.chromeBrowser={contentWindow:win};
  const testScope=vm.createContext({
@@ -89,9 +89,9 @@ test('inline compose preserves an open reply across navigation and guards dirty 
  // Native compose closes itself only after send/save has completed; the host then releases it.
  native.close();assert.equal(composer.active,false);assert.equal(originalFrame.removed,true);
  composer.open(null,'cmd_newMessage');assert.equal(paramsReceived.type,0);assert.equal(composer.presentation,'floating');assert.equal(composer.target,null);composer.returnInline();assert.equal(composer.presentation,'full');
- const fullPanel=doc.documentElement.children.at(-1);assert.equal(fullPanel.style.left,'260px','full composer must leave the sidebar visible');
- sidebar.getBoundingClientRect=()=>({width:340,right:340,left:0});events.get('pane-resize')();assert.equal(fullPanel.style.left,'340px','sidebar resizing moves the composer boundary');
- composer.float();assert.equal(composer.presentation,'floating');const newFrame=frame;composer.returnInline();assert.equal(composer.presentation,'full');assert.equal(frame,newFrame);
+ const fullPanel=doc.documentElement.children.at(-1);assert.equal(fullPanel.style.left,'12px','expanded composer uses a modal inset');
+ sidebar.getBoundingClientRect=()=>({width:340,right:340,left:0});events.get('pane-resize')();assert.equal(fullPanel.style.left,'12px','expanded composer keeps its modal inset when the sidebar changes');
+ composer.float();assert.equal(composer.presentation,'floating');const newFrame=frame;composer.minimize();assert.equal(frame,newFrame);assert.equal(composer.active,true);composer.minimize();assert.equal(frame,newFrame);composer.returnInline();assert.equal(composer.presentation,'full');assert.equal(frame,newFrame);
  composer.open(header,'cmd_replySender');assert.equal(composer.command,'cmd_newMessage','Reply must not replace an open new message');let closeSaves=0;testScope.saveInlineReplyDraft=async()=>{closeSaves++;throw new Error('Draft folder unavailable')};
  const closeControl=doc.documentElement.children.at(-1).children[0].children[4];
  await closeControl.events.click();assert.equal(composer.active,true,'failed close-save preserves reply');
@@ -365,4 +365,36 @@ test('an active native transport is not treated as failed when GenericSendMessag
  const f=sendFixture({result:'failure',busy:true});await f.native.GenericSendMessage(f.modes.Now);
  assert.deepEqual(f.states.map(s=>s.state),['sending']);assert.equal(f.saved,0);
  assert.equal(f.native.gSendOperationInProgress,true);f.status.close();
+});
+
+test('discard moves a saved draft to recoverable Trash and preserves it on failure',async()=>{
+ const native={gMsgCompose:{compFields:{draftId:'draft://42'}}};let listener,args;
+ const header={folder:{deleteMessages(...values){args=values;listener=values[4]}}};
+ const service={messageServiceFromURI:uri=>({messageURIToMsgHdr:value=>{assert.equal(uri,value);return header}})};
+ const pending=scope.trashInlineDraft(native,service,{window:true});
+ assert.equal(args[2],false,'never permanently delete draft storage');assert.equal(args[3],false);assert.equal(args[5],true,'allow native undo');
+ listener.onStopCopy(0);await pending;
+ const failed=scope.trashInlineDraft(native,service);listener.onStopCopy(1);await assert.rejects(failed,/Trash/);
+ await scope.trashInlineDraft({gMsgCompose:{compFields:{draftId:''}}},{});
+ await assert.rejects(scope.trashInlineDraft({...native,gSendOperationInProgress:true},service),/finish/);
+});
+
+test('inline composer readiness waits for native signature/body completion and unregisters cleanly',()=>{
+ const events=new Map();let listener,removed;
+ const native={addEventListener(name,fn){events.set(name,fn)},removeEventListener(name){events.delete(name)},gMsgCompose:{RegisterStateListener(value){listener=value},UnregisterStateListener(value){removed=value}}};
+ const watcher=scope.watchInlineComposeBodyReady(native);assert.equal(watcher.ready,false);
+ events.get('compose-window-init')();listener.NotifyComposeFieldsReady();assert.equal(watcher.ready,false);
+ listener.NotifyComposeBodyReady();assert.equal(watcher.ready,true);watcher.close();assert.equal(removed,listener);assert.equal(events.size,0);
+});
+test('composer body styling uses a native sheet without editing document content',()=>{
+ const calls=[],utils={USER_SHEET:1,loadSheetUsingURIString(...args){calls.push(['load',...args])},removeSheetUsingURIString(...args){calls.push(['remove',...args])}};
+ const native={gMsgCompose:{composeHTML:false},document:{getElementById:()=>({contentWindow:{windowUtils:utils}})}};
+ const style=scope.styleInlineComposeBody(native);assert.equal(calls[0][0],'load');assert.equal(calls[0][2],1);style.close();assert.equal(calls[1][0],'remove');assert.equal(calls[0][1],calls[1][1]);
+});
+
+test('embedded compose content resolves the native editor window before signature initialization',()=>{
+ let editor=null;const native={content:null,document:{getElementById:id=>id==='messageEditor'?editor:null}};
+ const previous=Object.getOwnPropertyDescriptor(native,'content');const bridge=scope.installEmbeddedComposeContent(native);
+ assert.equal(native.content,null);const editorWindow={};editor={contentWindow:editorWindow};assert.equal(native.content,editorWindow);
+ bridge.close();assert.deepEqual(Object.getOwnPropertyDescriptor(native,'content'),previous);
 });

@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## 0.17.0
+
+- Fix intermittent missing signatures by resolving the embedded native composer’s content window before its editor initialization.
+
+- Wait for Thunderbird’s native body/signature completion before enabling the embedded composer; apply body styling without marking a new draft modified.
+
+- Replace the inbox folder title/count with Gmail-style page selection, Refresh, and a placeholder More button; keep native bulk actions and pagination.
+
+- Restyle the in-window composer with a compact Gmail-like title bar, modal expansion, editor-preserving minimize/restore, simpler recipient/subject rows, bottom formatting controls and a recoverable Discard draft action.
+
+- Open the existing New label panel from the Labels sidebar button without requiring or tagging selected messages.
+
+- Use Compose and Labels in the sidebar, with “Create new label” as the label-list options tooltip.
+
 ## 0.16.1
 
 - Make conversation sender names and email addresses selectable without toggling cards; show a “via” domain when the message provides a distinct Sender header.

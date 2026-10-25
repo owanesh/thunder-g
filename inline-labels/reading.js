@@ -397,13 +397,15 @@ function installReadingMode(win) {
     create.disabled=!newName.value.trim() || (nest.checked && !parent.value);
     parent.disabled=!nest.checked;
   }
-  function showNewLabel(anchor){
+  let applyNewLabel=true;
+  function showNewLabel(anchor,apply=true){
+    applyNewLabel=apply;
     newName.value='';nest.checked=false;parent.replaceChildren();error.hidden=true;
     const placeholder=doc.createElement('option');placeholder.value='';placeholder.textContent='Choose a parent label';parent.append(placeholder);
     for(const entry of nestedLabelRows(MailServices.tags.getAllTags())){
       const option=doc.createElement('option');option.value=entry.path;option.textContent=entry.path;parent.append(option);
     }
-    validateNewLabel();createPopup.openPopup(labelsButton,'after_start',0,0,false,false);
+    validateNewLabel();createPopup.openPopup(apply?labelsButton:anchor,'after_start',0,0,false,false);
   }
   newName.addEventListener('input',validateNewLabel);nest.addEventListener('change',validateNewLabel);parent.addEventListener('change',validateNewLabel);
   cancel.addEventListener('click',()=>createPopup.hidePopup());
@@ -411,14 +413,16 @@ function installReadingMode(win) {
   form.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();createPopup.hidePopup();}});
   form.addEventListener('submit',event=>{
     event.preventDefault();
-    if(!sameSelection()){error.hidden=false;error.textContent='Message selection changed. Close this panel and try again.';return;}
+    if(applyNewLabel && !sameSelection()){error.hidden=false;error.textContent='Message selection changed. Close this panel and try again.';return;}
     try {
       const path=nestedLabelName(newName.value,nest.checked?parent.value:'',MailServices.tags.getAllTags());
       MailServices.tags.addTag(path,'','');
-      applyPickerLabel(MailServices.tags.getKeyForTag(path),true);
+      if(applyNewLabel)applyPickerLabel(MailServices.tags.getKeyForTag(path),true);
       createPopup.hidePopup();
     }catch(failure){error.hidden=false;error.textContent=failure.message || 'Could not create or apply this label.';}
   });
+  function createSidebarLabel(event){event.preventDefault();showNewLabel(event.detail.anchor,false);}
+  win.addEventListener('gm-create-sidebar-label',createSidebarLabel);
   const labelsButton = action('Labels… (L)', 'M3 4h9l9 8-9 8H3z M7 10v4', showLabels);
   search.addEventListener('input', renderTags);
   tagPopup.addEventListener('popupshown', () => { pickerOpen = true; search.focus(); });
@@ -718,6 +722,7 @@ function installReadingMode(win) {
     folderTree.removeEventListener('select', folderChange, true);
     back.removeEventListener('click', backClick);
     win.removeEventListener('gm-open-label-view',labelViewOpened);
+    win.removeEventListener('gm-create-sidebar-label',createSidebarLabel);
     for (const heading of headingTargets) heading.removeEventListener('click', headingClick);
     for (const document of keyDocuments) document.removeEventListener("keydown", labelKey, true);
     win.removeEventListener("load", documentLoaded, true);
