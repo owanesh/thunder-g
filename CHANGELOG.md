@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.16.1
+
+- Make conversation sender names and email addresses selectable without toggling cards; show a “via” domain when the message provides a distinct Sender header.
+
+- Allow selecting and copying the subject in the conversation reader.
+
 ## 0.16.0
 
 - Keep the native editor rendered during inline sending to prevent initialization failures. Wait for native transport callbacks, recover terminal startup errors, and make the composer Close action save a draft before closing.
