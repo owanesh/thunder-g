@@ -347,6 +347,44 @@ function installResponsiveColumns(win) {
 
 // Copy view includes the visible column layout, using Thunderbird's own folder
 // propagation (including its From/Recipient swap for outgoing folders).
+// Folder layouts are independent: Drafts/Sent may never have had selection
+// enabled. Keep native checkboxes available before native templates are built.
+function installSelectionColumn(win) {
+  const pane=win.threadPane,original=pane?.updateColumns;
+  if(typeof original!=='function')return {close(){}};
+  const saved=new WeakMap();
+  function enable() {
+    const columns=pane.columns;
+    if(!Array.isArray(columns))return;
+    const index=columns.findIndex(column=>column.id==='selectCol');
+    if(index<0)return;
+    const column=columns[index];
+    if(!saved.has(columns))saved.set(columns,{column,index,hidden:column.hidden});
+    column.hidden=false;
+    if(index>0){columns.splice(index,1);columns.unshift(column);return true;}
+    return false;
+  }
+  function updateColumns(...args) {
+    const moved=enable();
+    // Moving the checkbox column requires a full header rebuild.
+    return original.call(this,moved?false:args[0],...args.slice(1));
+  }
+  pane.updateColumns=updateColumns;
+  updateColumns.call(pane);
+  win.document.getElementById('threadTree')?.reset?.();
+  return {close(){
+    if(pane.updateColumns!==updateColumns)return;
+    pane.updateColumns=original;
+    const columns=pane.columns,state=saved.get(columns);
+    if(state){
+      const index=columns.indexOf(state.column);
+      if(index>=0){columns.splice(index,1);columns.splice(state.index,0,state.column);state.column.hidden=state.hidden;}
+      original.call(pane);
+      win.document.getElementById('threadTree')?.reset?.();
+    }
+  }};
+}
+
 function installCompleteViewCopy(win) {
   const pane=win.threadPane, original=pane?._applyView;
   if(typeof original!=='function' || typeof pane._applyColumns!=='function')return {close(){}};
@@ -444,6 +482,7 @@ function installInboxControls(win,{threadGuides=true,reader=null}={}) {
   const tree = doc.getElementById('threadTree');
   if (!tree) return {close(){}};
   const compose = installComposeLabel(doc);
+  const selectionColumn=installSelectionColumn(win);
   const idleActions=installInboxIdleActions(win,reader);
   const responsive = installResponsiveColumns(win);
   const viewCopy = installCompleteViewCopy(win);
@@ -616,7 +655,7 @@ function installInboxControls(win,{threadGuides=true,reader=null}={}) {
     compose.close();
     responsive.close();
     viewCopy.close();
-    newMessage.close();idleActions.close();
+    newMessage.close();idleActions.close();selectionColumn.close();
     threadToggles.close();
     threadDefaults.close();
     if (rowClass && Number.isFinite(originalHeight) && rowClass.ROW_HEIGHT === originalHeight + 6) {

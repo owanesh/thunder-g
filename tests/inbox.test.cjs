@@ -353,3 +353,20 @@ test('unpaginated Select all scope includes only viewport rows and excludes dumm
  const tree={getBoundingClientRect:()=>({top:0,bottom:80}),querySelector:()=>({getBoundingClientRect:()=>({height:20})}),querySelectorAll:()=>rows};
  assert.deepEqual(Array.from(scope.visibleInboxIndices(tree,{getFlagsAt:index=>index===2?0x20000000:0})),[1,3]);
 });
+
+test('native selection column is enabled first for every folder layout and restored on disable',()=>{
+  const calls=[],tree={reset(){calls.push('reset')}};
+  const inbox=[{id:'subjectCol',hidden:false},{id:'selectCol',hidden:false}];
+  const drafts=[{id:'flaggedCol',hidden:false},{id:'selectCol',hidden:true},{id:'subjectCol',hidden:false}];
+  const original=function(simple){calls.push(simple);assert.equal(this,pane)};
+  const pane={columns:inbox,updateColumns:original};
+  const controller=scope.installSelectionColumn({threadPane:pane,document:{getElementById:()=>tree}});
+  assert.equal(inbox[0].id,'selectCol');assert.equal(inbox[0].hidden,false);
+  pane.columns=drafts;pane.updateColumns(true);
+  assert.equal(drafts[0].id,'selectCol');assert.equal(drafts[0].hidden,false);
+  assert.equal(drafts[1].id,'flaggedCol');assert.equal(drafts[2].id,'subjectCol');
+  pane.updateColumns(true);assert.equal(drafts.length,3,'no duplicate cells on repeated updates');
+  assert.deepEqual(calls.slice(0,4),[false,'reset',false,true],'only column movement requires a full native rebuild');
+  controller.close();
+  assert.equal(pane.updateColumns,original);assert.equal(drafts[1].id,'selectCol');assert.equal(drafts[1].hidden,true);
+});
