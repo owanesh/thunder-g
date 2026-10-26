@@ -2,6 +2,20 @@ const HIDDEN_MESSAGE_LABELS_PREF='extensions.thunderg.hiddenMessageLabels';
 function hiddenMessageLabelKeys(prefs) {
   try {const value=JSON.parse(prefs?.getStringPref(HIDDEN_MESSAGE_LABELS_PREF,'[]') || '[]');return new Set(Array.isArray(value)?value.filter(key=>typeof key==='string'):[]);}catch(_){return new Set();}
 }
+const SIDEBAR_LABEL_VISIBILITY_PREF='extensions.thunderg.sidebarLabelVisibility';
+function sidebarLabelModes(prefs) {
+  try{
+    const value=JSON.parse(prefs?.getStringPref(SIDEBAR_LABEL_VISIBILITY_PREF,'{}') || '{}');
+    if(!value || Array.isArray(value) || typeof value!=='object')return new Map();
+    return new Map(Object.entries(value).filter(([key,mode])=>key && ['hide','unread'].includes(mode)));
+  }catch(_){return new Map();}
+}
+function setSidebarLabelMode(prefs,key,mode) {
+  if(!['show','hide','unread'].includes(mode))throw new Error('Unknown label visibility.');
+  const modes=sidebarLabelModes(prefs);
+  if(mode==='show')modes.delete(key);else modes.set(key,mode);
+  prefs.setStringPref(SIDEBAR_LABEL_VISIBILITY_PREF,JSON.stringify(Object.fromEntries(modes)));
+}
 function labelRenamePlan(tags,key,path) {
   const original=tags.find(tag=>tag.key===key);if(!original)throw new Error('This label no longer exists.');
   path=path.trim();if(!path || path.split('/').some(part=>!part.trim()))throw new Error('Enter a name without empty path segments.');
@@ -49,7 +63,13 @@ function installSidebarLabelMenu(win,service,prefs) {
   function separator(){content.append(doc.createElement('hr'));}
   function home(){
     const item=tag();content.replaceChildren();panel.setAttribute('aria-label',`Options for ${item.tag}`);
-    button('Label color  ›',colors);separator();text('In message list');
+    button('Label color  ›',colors);separator();text('In label list');
+    const mode=sidebarLabelModes(prefs).get(currentKey) || 'show';
+    for(const [title,value] of [['Show','show'],['Show if unread','unread'],['Hide','hide']]){
+      const node=button(`${mode===value?'✓  ':'    '}${title}`,()=>{tag();setSidebarLabelMode(prefs,currentKey,value);panel.hidePopup();});
+      node.setAttribute('aria-label',`${title} in label list`);node.setAttribute('role','menuitemradio');node.setAttribute('aria-checked',String(mode===value));
+    }
+    separator();text('In message list');
     const hidden=hiddenMessageLabelKeys(prefs).has(currentKey);
     for(const [title,hide] of [['Show',false],['Hide',true]]){
       const node=button(`${hidden===hide?'✓  ':'    '}${title}`,()=>{tag();const keys=hiddenMessageLabelKeys(prefs);if(hide)keys.add(currentKey);else keys.delete(currentKey);prefs.setStringPref(HIDDEN_MESSAGE_LABELS_PREF,JSON.stringify([...keys]));panel.hidePopup();});
@@ -98,7 +118,7 @@ function installSidebarLabelMenu(win,service,prefs) {
   panel.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();panel.hidePopup();}});
   panel.addEventListener('popuphidden',()=>{for(const node of buttons)node.setAttribute('aria-expanded','false');});
   panel.addEventListener('popupshown',()=>content.querySelector('button')?.focus());
-  return {decorate(row,item){
+  return {prune(){for(const node of buttons)if(node.isConnected===false){node.remove();buttons.delete(node);}},decorate(row,item){
     const existing=row.querySelector(':scope > .container > .gm-label-more');if(existing){existing.setAttribute('aria-label',`Options for ${item.tag}`);return;}
     const more=doc.createElement('button');more.type='button';more.className='gm-label-more';more.textContent='⋮';more.setAttribute('aria-label',`Options for ${item.tag}`);more.setAttribute('aria-haspopup','true');more.setAttribute('aria-expanded','false');
     more.addEventListener('mousedown',event=>event.stopPropagation());

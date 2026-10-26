@@ -32,3 +32,16 @@ test('sidebar passes the native tags service rather than its MailServices contai
  const controller=local.installNestedLabelSidebar(win,{tags:tagsService},prefs);
  assert.equal(received,tagsService);controller.close();
 });
+
+test('sidebar visibility persists exact stable keys independently of message chip visibility',()=>{
+ const values=new Map([['extensions.thunderg.hiddenMessageLabels','["p"]']]);
+ const prefs={getStringPref:(key,fallback)=>values.get(key)??fallback,setStringPref:(key,value)=>values.set(key,value)};
+ scope.setSidebarLabelMode(prefs,'p','hide');scope.setSidebarLabelMode(prefs,'c','unread');
+ assert.deepEqual(Array.from(scope.sidebarLabelModes(prefs),entry=>Array.from(entry)),[['p','hide'],['c','unread']]);
+ scope.setSidebarLabelMode(prefs,'p','show');assert.deepEqual(Array.from(scope.sidebarLabelModes(prefs),entry=>Array.from(entry)),[['c','unread']]);
+ assert.equal(values.get('extensions.thunderg.hiddenMessageLabels'),'["p"]');
+ assert.throws(()=>scope.setSidebarLabelMode(prefs,'p','invalid'),/visibility/);
+ assert.equal(scope.sidebarLabelModes({getStringPref:()=>'{bad'}).size,0);
+ assert.equal(scope.sidebarLabelModes({getStringPref:()=>'[]'}).size,0);
+ assert.deepEqual(Array.from(scope.sidebarLabelModes({getStringPref:()=>'\u007b"a":"hide","b":"unread","c":"bad"\u007d'}),entry=>Array.from(entry)),[['a','hide'],['b','unread']]);
+});

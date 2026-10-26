@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add persistent Show, Show if unread and Hide choices for sidebar labels, with More/Less disclosure, parent-path and selected-label protection, native unread notifications and cached hierarchy updates. Message-list label visibility remains independent.
+
 ## 0.17.0
 
 - Fix intermittent missing signatures by resolving the embedded native composer’s content window before its editor initialization.
