@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Match immediate sent-message previews to conversation cards and load the saved message in the same card without forcing a scroll or leaving a blank body during loading.
+
 ## 0.19.0
 
 - Open global search results as a styled list by default; add a setting to restore Thunderbird’s timeline and faceted results.

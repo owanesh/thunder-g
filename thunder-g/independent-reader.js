@@ -260,6 +260,22 @@ function installIndependentContextMenu(win, resolve) {
   return {close(){if(win.openContextMenu===openContextMenu)win.openContextMenu=original;}};
 }
 
+// Keep the conversation viewport stable across a local card update. Measure at
+// update time, so scrolling performed while a Sent copy loads is respected.
+function preserveReaderPosition(host,card,update) {
+  const scroll=host.scrollTop || 0,top=card.getBoundingClientRect?.().top;
+  update();
+  const after=card.getBoundingClientRect?.().top;
+  host.scrollTop=Number.isFinite(top) && Number.isFinite(after)?(host.scrollTop || 0)+after-top:scroll;
+}
+function pendingReplyText(value) {
+  const text=String(value || '').replace(/\r\n/g,'\n');
+  const signature=text.search(/\n-- ?\n/);
+  const main=signature<0?text:text.slice(0,signature),sig=signature<0?'':text.slice(signature+1);
+  const quote=main.search(/(?:^|\n)(?:On [^\n]+wrote:\n(?=>)|>)/);
+  return {body:quote<0?main:main.slice(0,quote),quote:quote<0?'':main.slice(quote).trimStart(),signature:sig};
+}
+
 function installIndependentReader(win) {
   const doc=win.document,layout=doc.getElementById('paneLayout');
   let closed=false,ticket=0,query=null,revealFrame=null,resolving=false;
@@ -322,6 +338,10 @@ function installIndependentReader(win) {
     .preview { display:block; margin:2px 0 0; font-size:.9em; font-weight:400; opacity:.75; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
     .actions { display:flex; flex-wrap:wrap; gap:.5em; margin:16px 0 4px var(--message-inset); }
     .actions button,.fallback { display:inline-flex; align-items:center; justify-content:center; gap:9px; min-block-size:36px; min-inline-size:104px; font:inherit;color:inherit; background:transparent; border:1px solid var(--layout-border-0,#dadce0); border-radius:1.5em; padding:6px 18px; cursor:pointer; }
+    .gm-pending-recipients { background:var(--layout-background-1,#f8f9fa); border-bottom:1px solid var(--layout-border-0,#dadce0); padding:12px 10px; margin-bottom:12px; font-size:.9em; }
+    .gm-pending-text { margin:0 10px 12px; white-space:pre-wrap; overflow-wrap:anywhere; font:1em/1.35 monospace; }
+    .gm-pending-signature { opacity:.65; }
+    article { position:relative; }
     .body { display:flex; min-height:0; flex-direction:column; margin-inline-start:var(--message-inset); }
     .quote-toggle { align-self:flex-start; min-inline-size:22px; block-size:16px;
       padding:0 5px; margin:4px 0 8px; border:0; border-radius:3px;
@@ -387,13 +407,30 @@ function installIndependentReader(win) {
     let entry=pendingReplies.get(state.id);
     if(!entry) {
       const card=doc.createElement('article');card.className='gm-pending-reply';card.setAttribute('data-expanded','');
-      const heading=text('div','card-header',''),sender=text('strong','name',state.from || 'Me'),notice=text('span','status','');
-      notice.setAttribute('role','status');heading.append(sender,notice);
-      const recipients=text('div','address',state.to),body=text('pre','body',state.body);
-      body.style.cssText='white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;';
-      card.append(heading,recipients,body);
-      if(state.attachments?.length)card.append(text('div','address',state.attachments.join(' · ')));
-      cards.append(card);entry={card,notice};pendingReplies.set(state.id,entry);
+      let name=state.from || 'Me',address='';
+      try{const from=MailServices.headerParser.parseDecodedHeader(name)[0];name=from?.name || from?.email || name;address=from?.email || '';}catch(_){}
+      const heading=text('div','card-header',''),toggle=text('div','toggle','');
+      const initials=name.trim().split(/\s+/).slice(0,2).map(part=>part[0]).join('').toLocaleUpperCase();
+      const avatar=text('span','avatar',initials),sender=text('span','sender',''),photo=independentAvatar(address);
+      if(photo){const image=doc.createElement('img');image.alt='';image.setAttribute('src',photo);image.addEventListener('error',()=>avatar.replaceChildren(doc.createTextNode(initials)),{once:true});avatar.replaceChildren(image);}
+      sender.append(text('span','name',name),text('span','address',address));toggle.append(avatar,sender);
+      const meta=text('div','message-meta',''),date=new Date(state.date || Date.now());
+      const time=text('time','',date.toLocaleString(undefined,{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}));
+      time.dateTime=date.toISOString();time.title=date.toLocaleString();
+      const notice=text('span','dkim-status','');notice.setAttribute('role','status');meta.append(time,notice);heading.append(toggle,meta);
+      const body=text('div','body gm-pending-body',''),recipients=text('div','gm-pending-recipients','');
+      recipients.append(text('strong','','To '),text('span','',state.to || ''));
+      if(state.cc)recipients.append(text('span','',` · Cc ${state.cc}`));
+      const parts=pendingReplyText(state.body),message=text('pre','gm-pending-text',parts.body),signature=text('pre','gm-pending-text gm-pending-signature',parts.signature);
+      body.append(recipients,message);if(parts.signature)body.append(signature);
+      if(parts.quote){
+        const quoted=text('pre','gm-pending-text',parts.quote);quoted.hidden=true;
+        const reveal=text('button','quote-toggle','…');reveal.type='button';reveal.setAttribute('aria-label','Show quoted text');reveal.setAttribute('aria-expanded','false');
+        reveal.addEventListener('click',()=>{quoted.hidden=!quoted.hidden;entry.quoteExpanded=!quoted.hidden;reveal.setAttribute('aria-expanded',String(!quoted.hidden));reveal.setAttribute('aria-label',quoted.hidden?'Show quoted text':'Hide quoted text');});
+        body.append(quoted,reveal);
+      }
+      if(state.attachments?.length)body.append(text('div','address',state.attachments.join(' · ')));
+      card.append(heading,body);cards.append(card);entry={card,notice,body};pendingReplies.set(state.id,entry);
       card.scrollIntoView({block:'nearest',inline:'nearest'});
     }
     entry.messageId=state.messageId;entry.notice.textContent=state.state==='sent'?'Sent':'Sending…';
@@ -446,7 +483,14 @@ function installIndependentReader(win) {
     // sent message. Replies match References; forwards match this composer’s ID.
     if(!independentSentFolders().some(folder=>folder.URI===header.folder.URI))return;
     const sentId=normalizeSendId(header.messageId);
-    const ownSend=sentId && [...pendingReplies.values()].some(entry=>normalizeSendId(entry.messageId)===sentId);
+    const pendingMatch=sentId && [...pendingReplies].find(([,entry])=>normalizeSendId(entry.messageId)===sentId);
+    const ownSend=!!pendingMatch;
+    // Copy notifications can precede the transport callback supplying the ID.
+    // Keep the preview until an exact match is possible instead of drawing twice.
+    if(sentId && pendingReplies.size && !ownSend && [...pendingReplies.values()].some(entry=>!entry.messageId)){
+      if(pendingSentCopies.size>=20)pendingSentCopies.delete(pendingSentCopies.keys().next().value);
+      pendingSentCopies.set(sentId,header);return;
+    }
     const related=ownSend?[...currentHeaders,header]:independentRelatedSent(currentHeaders,[{header,ids:independentReferenceIds(header)}]);
     if(!related.includes(header) && pendingReplies.size && sentId){
       if(pendingSentCopies.size>=20)pendingSentCopies.delete(pendingSentCopies.keys().next().value);
@@ -462,10 +506,15 @@ function installIndependentReader(win) {
     toggle?.removeAttribute('aria-disabled');if(toggle)toggle.title='';
     currentHeaders=next;actionHeader=next.at(-1);
     const following=messageCards.get(next[next.indexOf(header)+1]);
-    const card=buildCard(header,true,ticket,following);
+    const hydration=pendingMatch?.[1];
+    if(pendingMatch)pendingReplies.delete(pendingMatch[0]);
+    let card;
+    if(hydration)preserveReaderPosition(host,hydration.card,()=>{card=buildCard(header,true,ticket,following,hydration)});
+    else card=buildCard(header,true,ticket,following);
     updateActions();refreshTags();reconcilePendingReplies();
     status.textContent=`${next.length} messages`;status.hidden=false;
     if(revealFrame!==null)win.cancelAnimationFrame(revealFrame);
+    if(hydration)return;
     const token=ticket;
     revealFrame=win.requestAnimationFrame(()=>{
       revealFrame=null;
@@ -476,8 +525,9 @@ function installIndependentReader(win) {
   win.addEventListener?.('focus',refreshTags);
   function clearCards(){pendingSentCopies.clear();pendingReplies.clear();if(revealFrame!==null)win.cancelAnimationFrame(revealFrame);revealFrame=null;for(const cleanup of cleanups)cleanup();cleanups.clear();cards.replaceChildren();tagRenderers.clear();securityRenderers.clear();messageDocs.clear();messageCards.clear();titleTags.replaceChildren();frames.clear();currentHeaders=[];actionHeader=null;activeHeader=null;activeCard=null;updateActions()}
   function text(tag,className,value){const node=doc.createElement(tag);node.className=className;node.textContent=value;return node}
-  function buildCard(header,expand,token,before=null) {
-    const article=doc.createElement('article');
+  function buildCard(header,expand,token,before=null,hydration=null) {
+    const article=hydration?.card || doc.createElement('article');
+    if(hydration){article.replaceChildren();article.className='';}
     messageCards.set(header,article);
     const cardHeader=doc.createElement('div');cardHeader.className='card-header';
     const latest=header===actionHeader;
@@ -552,6 +602,9 @@ function installIndependentReader(win) {
     }
     tagRenderers.add(renderTags);renderTags();
     const body=doc.createElement('div');body.className='body';body.hidden=true;article.append(body);
+    let pendingBody=hydration?.body || null;
+    if(pendingBody){article.append(pendingBody);body.style.position='absolute';body.style.visibility='hidden';body.style.inlineSize='100%';}
+    function revealSavedBody(){if(!pendingBody)return;preserveReaderPosition(host,article,()=>{pendingBody.remove();pendingBody=null;body.style.position='';body.style.visibility='';body.style.inlineSize='';});}
     let browser=null,timeout=null,zoom=null,bodyResize=null,contentChanges=null,contentLoad=null,resizeFrame=null,ready=false,toggleQuotes=null,restoreCommands=null,focusCleanup=null,scrollCleanup=null;
     const quoteButton=text('button','quote-toggle','…');quoteButton.type='button';quoteButton.hidden=true;
     quoteButton.setAttribute('aria-label','Show quoted text');quoteButton.setAttribute('aria-expanded','false');
@@ -598,7 +651,7 @@ function installIndependentReader(win) {
           browser.docShell.allowDNSPrefetch=false;
           zoom=installMailZoom(browser.contentWindow,ChromeUtils.importESModule('resource:///modules/UIFontSize.sys.mjs').UIFontSize,zoomConversation);
           browser.contentWindow.displayMessage(header.folder.getUriForMsg(header));
-        }catch(_){release();error.hidden=false}
+        }catch(_){release();revealSavedBody();error.hidden=false}
       },true);
       browser.addEventListener('MsgLoaded',()=>{
         if(closed || token!==ticket || browser!==frame)return;
@@ -675,7 +728,8 @@ function installIndependentReader(win) {
             // Content rectangles use the message document's CSS pixels;
             // the enclosing browser height uses the unzoomed chrome's pixels.
             const height=Math.ceil(contentHeight*(pane.fullZoom || 1)+chrome);
-            if(Math.abs(frame.clientHeight-height)>1)frame.style.blockSize=height+'px';
+            if(pendingBody)preserveReaderPosition(host,article,()=>{frame.style.blockSize=height+'px';revealSavedBody();});
+            else if(Math.abs(frame.clientHeight-height)>1)frame.style.blockSize=height+'px';
           };
           const scheduleResize=()=>{if(resizeFrame===null)resizeFrame=win.requestAnimationFrame(resizeBody)};
           zoomResizers.set(frame,scheduleResize);
@@ -697,6 +751,7 @@ function installIndependentReader(win) {
               quoteButton.title=folded?'Hide quoted text':'Show quoted text';scheduleResize();
             };
           }
+          if(hydration?.quoteExpanded && toggleQuotes)toggleQuotes();
           bodyResize?.disconnect();
           bodyResize=new win.ResizeObserver(scheduleResize);
           bodyResize.observe(content.body);bodyResize.observe(pane);
@@ -705,11 +760,11 @@ function installIndependentReader(win) {
           content.addEventListener('load',scheduleResize,true);
           contentLoad=()=>content.removeEventListener('load',scheduleResize,true);
           scheduleResize();
-        }
+        }else revealSavedBody();
       },true);
       browser.setAttribute('src','about:message');
       body.replaceChildren(error,browser,quoteButton);
-      timeout=win.setTimeout(()=>{if(!ready){release();error.hidden=false}},15000);
+      timeout=win.setTimeout(()=>{if(!ready){release();revealSavedBody();error.hidden=false}},15000);
     }
     article.addEventListener('pointerdown',()=>activateMessage(header));
     article.addEventListener('focusin',()=>activateMessage(header));
@@ -726,7 +781,7 @@ function installIndependentReader(win) {
         body.hidden=true;preview.hidden=false;article.removeAttribute('data-expanded');toggle.setAttribute('aria-expanded','false');
       }
     });
-    cleanups.add(release);if(before)cards.insertBefore(article,before);else cards.append(article);if(expand)expandCard();
+    cleanups.add(release);if(!hydration){if(before)cards.insertBefore(article,before);else cards.append(article);}if(expand)expandCard();
     return article;
   }
   function render(headers,anchor,token){

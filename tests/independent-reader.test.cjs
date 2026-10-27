@@ -440,12 +440,12 @@ test('inline reply snapshot appears immediately, changes to Sent and reconciles 
  const id={},state={id,state:'sending',from:'Me',to:'Other',body:'<script>literal</script>',attachments:['file.pdf']};
  placement.onSendState(state);
  assert.equal(f.cards.children.length,2);
- const pending=f.cards.children[1];assert.equal(pending.children[2].textContent,'<script>literal</script>');
- assert.equal(pending.children[0].children[1].textContent,'Sending…');
+ const pending=f.cards.children[1];assert.equal(pending.children[1].children[1].textContent,'<script>literal</script>');
+ assert.equal(pending.children[0].children[1].children[1].textContent,'Sending…');
  placement.onSendState({...state,state:'sent',messageId:'<reply>'});
- assert.equal(pending.children[0].children[1].textContent,'Sent');
+ assert.equal(pending.children[0].children[1].children[1].textContent,'Sent');
  f.tagListener.msgAdded(sentReplyFixture(f));
- assert.equal(f.cards.children.length,2);assert.equal(pending.removed,true);
+ assert.equal(f.cards.children.length,2);assert.equal(f.cards.children[1],pending);assert.equal(pending.removed,undefined);
  assert.equal(f.reader.getMessages().length,2);f.reader.close();
 });
 test('send failure removes temporary card, and late feedback cannot populate another conversation',async()=>{
@@ -478,12 +478,12 @@ for(const copyFirst of [false,true])test(`inline forward appears immediately and
  f.actions.children[2].emit('click');assert.equal(command,'cmd_forwardInline');
  const state={id:{},state:'sending',from:'Me',to:'Recipient',body:'Forwarded body',attachments:['original.pdf']};
  placement.onSendState(state);assert.equal(f.cards.children.length,2);
- const pending=f.cards.children[1];assert.equal(pending.children[0].children[1].textContent,'Sending…');
+ const pending=f.cards.children[1];assert.equal(pending.children[0].children[1].children[1].textContent,'Sending…');
  const forwarded=sentReplyFixture(f,2,'forwarded',[]);
  if(copyFirst){f.tagListener.msgAdded(forwarded);assert.equal(f.reader.getMessages().length,1);}
  placement.onSendState({...state,state:'sent',messageId:'<forwarded>'});
  if(!copyFirst)f.tagListener.msgAdded(forwarded);
- assert.equal(f.cards.children.length,2);assert.equal(pending.removed,true);
+ assert.equal(f.cards.children.length,2);assert.equal(f.cards.children[1],pending);assert.equal(pending.removed,undefined);
  assert.equal(f.reader.getMessages()[1],forwarded);
  f.tagListener.msgAdded(forwarded);assert.equal(f.cards.children.length,2);
  f.reader.close();
@@ -562,4 +562,38 @@ test('auto-sized message viewport removes residual body scrolling and restores i
  assert.equal(content.scrollingElement.scrollTop,0,'an already displaced message body returns to its beginning');
  assert.equal(values.has('overflow-x'),false,'horizontal scrolling stays native');
  close();assert.equal(values.get('overflow-y'),'auto');assert.equal(priorities.get('overflow-y'),'');
+});
+
+test('pending replies share the final envelope layout, retain the same card and preserve user scroll during saved-message loading',async()=>{
+ const f=readerFixture();await f.reader.open(f.anchor);f.loaded();let placement;
+ f.scope.inlineReplyEnabled=true;f.scope.inlineComposeControllers=new WeakMap([[f.win,{float(){},open(_header,_command,options){placement=options}}]]);
+ f.actions.children[0].emit('click');
+ const state={id:{},state:'sending',from:'Sender',to:'Recipient',body:'Hello\n\nOn Tuesday wrote:\n> old text\n\n--\nMy signature',date:1700000000000};
+ placement.onSendState(state);
+ const pending=f.cards.children[1],preview=pending.children[1],heading=pending.children[0];
+ assert.equal(heading.className,'card-header');assert.equal(heading.children[0].className,'toggle');
+ assert.equal(heading.children[0].children[0].className,'avatar');assert.equal(heading.children[0].children[1].className,'sender');
+ assert.equal(heading.children[1].children[0].tag,'time');assert.equal(preview.children[0].className,'gm-pending-recipients');
+ const host=f.layout.children[0];host.scrollTop=480;
+ placement.onSendState({...state,state:'sent',messageId:'reply'});
+ f.tagListener.msgAdded(sentReplyFixture(f));
+ assert.equal(f.cards.children[1],pending,'article DOM identity remains stable');
+ assert.ok(pending.children.includes(preview),'text preview stays until the native viewer is ready');
+ assert.equal(host.scrollTop,480);pending.scrolled=null;
+ host.scrollTop=620;f.loaded();
+ assert.equal(f.cards.children[1],pending);assert.equal(host.scrollTop,620,'a user scroll during loading is respected');
+ assert.equal(preview.removed,true);assert.equal(pending.scrolled,null,'Sent-copy hydration does not force scrolling');
+ assert.equal(f.browsers.at(-1).removed,undefined);f.reader.close();
+});
+test('pending reply plaintext folds quoted text and separates signatures without interpreting HTML',()=>{
+ const scope=context();
+ const result=scope.pendingReplyText('<b>literal</b>\r\n\r\nOn Tuesday wrote:\r\n> earlier\r\n\r\n--\r\nSignature');
+ assert.equal(result.body,'<b>literal</b>\n');assert.equal(result.quote,'On Tuesday wrote:\n> earlier\n');assert.equal(result.signature,'--\nSignature');
+ assert.equal(scope.pendingReplyText('Simple text').body,'Simple text');
+});
+test('position preservation compensates layout anchoring without overwriting subsequent user scrolling',()=>{
+ const scope=context(),host={scrollTop:300};let top=120;
+ const card={getBoundingClientRect:()=>({top})};
+ scope.preserveReaderPosition(host,card,()=>{top=80;host.scrollTop=340});assert.equal(host.scrollTop,300);
+ host.scrollTop=500;scope.preserveReaderPosition(host,card,()=>{});assert.equal(host.scrollTop,500);
 });
