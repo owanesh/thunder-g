@@ -30,7 +30,7 @@ test('single click opens the current-tab reader, back restores the list, and dou
   function element() {
     const events = {};
     const item = {events, classList:{add(){},remove(){}}, style:{},
-      setAttribute(){}, append(){}, remove(){}, focus(){}, hidePopup(){},
+      setAttribute(){}, append(){}, replaceChildren(){}, remove(){}, focus(){}, hidePopup(){},
       addEventListener(name,fn){events[name]=fn}, removeEventListener(){}};
     elements.push(item); return item;
   }
@@ -72,9 +72,9 @@ test('single click opens the current-tab reader, back restores the list, and dou
   frameQueue.shift()();
   assert.equal(layout.messagePaneVisible,false,'a thread-arrow click cancels a queued reader open');
 
-  tree.events.click({button:0,target:{closest:selector=>selector==='tr.table-layout'?row:null}});
+  tree.events.click({button:0,target:{closest:selector=>selector==='tr.card-layout'?row:null}});
   frameQueue.shift()();
-  assert.equal(layout.messagePaneVisible,true,'click opens conversation');
+  assert.equal(layout.messagePaneVisible,true,'clicking a card row outside its subject opens the native reader');
   assert.equal(refreshes,1,'first single click explicitly displays the selected message');
   for(const action of ['increaseSize','reduceSize','resetSize'])assert.equal(controller.zoom(action),true);
   assert.deepEqual(zoomCalls,[['enlarge',messagePane],['reduce',messagePane],['reset',messagePane]],'the native reader zooms its message browser, never the chrome');
@@ -157,7 +157,7 @@ test('checkbox selection shows bulk toolbar and archives native selection withou
   function element(){
     const events={};
     const item={events,children:[],style:{},classList:{add(){},remove(){}},setAttribute(){},
-      append(...items){this.children.push(...items)},prepend(item){this.children.unshift(item)},
+      append(...items){this.children.push(...items)},replaceChildren(...items){this.children=items},prepend(item){this.children.unshift(item)},
       remove(){},focus(){},addEventListener(name,fn){(events[name]??=[]).push(fn)},removeEventListener(){}};
     nodes.push(item);return item;
   }

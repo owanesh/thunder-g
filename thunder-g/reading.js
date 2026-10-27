@@ -126,7 +126,9 @@ function installReadingMode(win) {
     .gm-reading-toolbar[hidden], .gm-reading-toolbar [hidden] { display:none !important; }
     .gm-reading-back {
       display:inline-flex; align-items:center; justify-content:center;
-      box-sizing:border-box; inline-size:36px; block-size:36px; min-inline-size:36px;
+      appearance:none; box-sizing:border-box;
+      inline-size:36px !important; min-inline-size:36px !important; max-inline-size:36px !important;
+      block-size:36px !important; min-block-size:36px !important; max-block-size:36px !important;
       margin:0; font:inherit; color:inherit; border:0; border-radius:50%;
       background:transparent; padding:8px; cursor:pointer; flex:0 0 36px;
     }
@@ -225,15 +227,23 @@ function installReadingMode(win) {
       ? {name:'cmd_markAsRead', label:'Mark as read'}
       : {name:'cmd_markAsUnread', label:'Mark as unread'};
   }
+  // Google Material Icons: mark_email_unread (outlined), Apache-2.0.
+  // See icons/LICENSE-material-icons.txt.
+  const unreadIconPath='M22,8.98V18c0,1.1-0.9,2-2,2H4c-1.1,0-2-0.9-2-2L2.01,6C2.01,4.9,2.9,4,4,4h10.1C14.04,4.32,14,4.66,14,5s0.04,0.68,0.1,1 H4l8,5l3.67-2.29c0.47,0.43,1.02,0.76,1.63,0.98L12,13L4,8v10h16V9.9C20.74,9.75,21.42,9.42,22,8.98z M16,5c0,1.66,1.34,3,3,3 s3-1.34,3-3s-1.34-3-3-3S16,3.34,16,5z';
   function syncReadAction() {
     const {label} = readAction();
     readButton.title = label;
     readButton.setAttribute('aria-label', label);
+    const unread=label==='Mark as unread';
+    const svg=icon(unread ? unreadIconPath : 'M4 6h16v14H4z M4 7l8 6 8-6');
+    if(unread){svg.setAttribute('fill','currentColor');svg.setAttribute('stroke','none');}
+    readButton.replaceChildren(svg);
   }
-  const readButton = action('Mark as unread', 'M3 6h18v14H3z M3 7l9 7 9-7 M16 3h5',
+  const readButton = action('Mark as unread', unreadIconPath,
     // Reading can change flags after opening (including delayed auto-read).
     // Resolve the operation at click time, not from the initial button label.
     () => command(readAction().name, true));
+  syncReadAction();
   const snoozeButton = action('Snooze / Follow-Up…', 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18 M12 6v6l4 3', () => {
     const { ExtensionParent } = ChromeUtils.importESModule('resource://gre/modules/ExtensionParent.sys.mjs');
     const extension = ExtensionParent.GlobalManager.extensionMap.get('mailmindr@arndissler.net');
@@ -665,7 +675,7 @@ function installReadingMode(win) {
       return;
     }
     if (!isReadingClick(event)) return;
-    const row = event.target.closest('tr.table-layout');
+    const row = event.target.closest('tr.table-layout') || event.target.closest('tr.card-layout');
     if (!row || !tree.contains(row)) return;
     if (pending !== null) win.cancelAnimationFrame(pending);
     const view = win.gDBView, index = row.index, ticket = ++openTicket;
@@ -683,7 +693,7 @@ function installReadingMode(win) {
     });
   }
   function doubleClick(event) {
-    if (!isReadingClick(event) || !event.target.closest('tr.table-layout')) return;
+    if (!isReadingClick(event) || !(event.target.closest('tr.table-layout') || event.target.closest('tr.card-layout'))) return;
     // The first click already opened the in-tab reader; avoid a second tab.
     event.preventDefault();
     event.stopImmediatePropagation();
