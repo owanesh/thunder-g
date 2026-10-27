@@ -469,3 +469,20 @@ test('selecting sender text does not toggle a conversation card',()=>{
  assert.equal(!!scope.independentSenderSelected({isCollapsed:true,anchorNode:inside},sender),false);
  assert.equal(!!scope.independentSenderSelected({isCollapsed:false,anchorNode:outside,focusNode:outside},sender),false);
 });
+
+for(const copyFirst of [false,true])test(`inline forward appears immediately and reconciles without References (copy first: ${copyFirst})`,async()=>{
+ const f=readerFixture();await f.reader.open(f.anchor);f.loaded();let placement,command;
+ f.scope.inlineReplyEnabled=true;f.scope.inlineComposeControllers=new WeakMap([[f.win,{float(){},open(header,action,options){command=action;placement=options}}]]);
+ f.actions.children[2].emit('click');assert.equal(command,'cmd_forwardInline');
+ const state={id:{},state:'sending',from:'Me',to:'Recipient',body:'Forwarded body',attachments:['original.pdf']};
+ placement.onSendState(state);assert.equal(f.cards.children.length,2);
+ const pending=f.cards.children[1];assert.equal(pending.children[0].children[1].textContent,'Sending…');
+ const forwarded=sentReplyFixture(f,2,'forwarded',[]);
+ if(copyFirst){f.tagListener.msgAdded(forwarded);assert.equal(f.reader.getMessages().length,1);}
+ placement.onSendState({...state,state:'sent',messageId:'<forwarded>'});
+ if(!copyFirst)f.tagListener.msgAdded(forwarded);
+ assert.equal(f.cards.children.length,2);assert.equal(pending.removed,true);
+ assert.equal(f.reader.getMessages()[1],forwarded);
+ f.tagListener.msgAdded(forwarded);assert.equal(f.cards.children.length,2);
+ f.reader.close();
+});

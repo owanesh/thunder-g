@@ -319,7 +319,7 @@ function installIndependentReader(win) {
     return {window:browser.ownerDocument.defaultView,activate:()=>activateMessage(header)};
   });
   const actions=doc.createElement('div');actions.className='actions';actions.setAttribute('role','group');actions.setAttribute('aria-label','Reply to conversation');
-  const buttons=[],pendingReplies=new Map();
+  const buttons=[],pendingReplies=new Map(),pendingSentCopies=new Map();
   const normalizeSendId=value=>String(value || '').trim().replace(/^<|>$/g,'');
   function reconcilePendingReplies() {
     for(const [id,entry] of pendingReplies) {
@@ -331,7 +331,7 @@ function installIndependentReader(win) {
   function sendFeedback(state,token) {
     if(closed || host.hidden || token!==ticket)return;
     if(['saving-draft','draft-saved','draft-error'].includes(state.state)) {
-      pendingReplies.get(state.id)?.card.remove();pendingReplies.delete(state.id);return;
+      pendingReplies.get(state.id)?.card.remove();pendingReplies.delete(state.id);if(!pendingReplies.size)pendingSentCopies.clear();return;
     }
     let entry=pendingReplies.get(state.id);
     if(!entry) {
@@ -346,10 +346,13 @@ function installIndependentReader(win) {
       card.scrollIntoView({block:'nearest',inline:'nearest'});
     }
     entry.messageId=state.messageId;entry.notice.textContent=state.state==='sent'?'Sent':'Sending…';
+    // A forward may have no References header. Match only the exact Message-ID
+    // from this composer, including when the Sent copy arrived before feedback.
+    for(const header of [...pendingSentCopies.values()])tagListener.msgAdded(header);
     reconcilePendingReplies();
   }
   function runCommand(command) {
-    if(typeof inlineReplyEnabled!=='undefined' && inlineReplyEnabled && ['cmd_replySender','cmd_replyall'].includes(command)) {
+    if(typeof inlineReplyEnabled!=='undefined' && inlineReplyEnabled && ['cmd_replySender','cmd_replyall','cmd_forwardInline'].includes(command)) {
       let composer=inlineComposeControllers.get(win);
       if(!composer){composer=createInlineCompose(win);inlineComposeControllers.set(win,composer);}
       const token=ticket;
@@ -389,9 +392,15 @@ function installIndependentReader(win) {
     sentCache.invalidate();
     if(closed || host.hidden || !currentHeaders.length || !header?.folder)return;
     // Draft saves also emit msgAdded. Only actual Sent copies can become a
-    // sent reply, and References must connect them to this open conversation.
+    // sent message. Replies match References; forwards match this composer’s ID.
     if(!independentSentFolders().some(folder=>folder.URI===header.folder.URI))return;
-    const related=independentRelatedSent(currentHeaders,[{header,ids:independentReferenceIds(header)}]);
+    const sentId=normalizeSendId(header.messageId);
+    const ownSend=sentId && [...pendingReplies.values()].some(entry=>normalizeSendId(entry.messageId)===sentId);
+    const related=ownSend?[...currentHeaders,header]:independentRelatedSent(currentHeaders,[{header,ids:independentReferenceIds(header)}]);
+    if(!related.includes(header) && pendingReplies.size && sentId){
+      if(pendingSentCopies.size>=20)pendingSentCopies.delete(pendingSentCopies.keys().next().value);
+      pendingSentCopies.set(sentId,header);
+    }else pendingSentCopies.delete(sentId);
     const next=independentMessages(related,currentHeaders[0]);
     if(next.length===currentHeaders.length){reconcilePendingReplies();return;}
     // Insert only the new card: existing viewers, scroll state and any other
@@ -414,7 +423,7 @@ function installIndependentReader(win) {
   };
   if(MailServices.mfn)MailServices.mfn.addListener(tagListener,notifications);
   win.addEventListener?.('focus',refreshTags);
-  function clearCards(){pendingReplies.clear();if(revealFrame!==null)win.cancelAnimationFrame(revealFrame);revealFrame=null;for(const cleanup of cleanups)cleanup();cleanups.clear();cards.replaceChildren();tagRenderers.clear();securityRenderers.clear();messageDocs.clear();messageCards.clear();titleTags.replaceChildren();frames.clear();currentHeaders=[];actionHeader=null;activeHeader=null;activeCard=null;updateActions()}
+  function clearCards(){pendingSentCopies.clear();pendingReplies.clear();if(revealFrame!==null)win.cancelAnimationFrame(revealFrame);revealFrame=null;for(const cleanup of cleanups)cleanup();cleanups.clear();cards.replaceChildren();tagRenderers.clear();securityRenderers.clear();messageDocs.clear();messageCards.clear();titleTags.replaceChildren();frames.clear();currentHeaders=[];actionHeader=null;activeHeader=null;activeCard=null;updateActions()}
   function text(tag,className,value){const node=doc.createElement(tag);node.className=className;node.textContent=value;return node}
   function buildCard(header,expand,token,before=null) {
     const article=doc.createElement('article');

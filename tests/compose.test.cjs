@@ -36,15 +36,15 @@ test('invalid intervals cannot create zero-delay autosave loops and closed contr
   controller.close();controller.set(true,2);assert.equal(prefs.getIntPref('mail.compose.autosaveinterval'),5);
 });
 test('inline replies pass exact header, native reply type, identity and default account format to native composer',()=>{
- const types={ReplyToSender:1,ReplyAll:2},Ci={nsIMsgCompType:types,nsIMsgCompFormat:{Default:0}};
+ const types={ReplyToSender:1,ReplyAll:2,ForwardInline:3},Ci={nsIMsgCompType:types,nsIMsgCompFormat:{Default:0}};
  const identity={key:'account-signature-and-drafts'};const fields={};
  const Cc={'@mozilla.org/messengercompose/composeparams;1':{createInstance:()=>({})},'@mozilla.org/messengercompose/composefields;1':{createInstance:()=>fields}};
  const header={folder:{getUriForMsg:value=>{assert.equal(value,header);return 'imap-message://Sent#42'}}};
- for(const [command,type] of [['cmd_replySender',1],['cmd_replyall',2]]){
+ for(const [command,type] of [['cmd_replySender',1],['cmd_replyall',2],['cmd_forwardInline',3]]){
   const params=scope.inlineReplyParams(header,command,{},Ci,Cc,{getIdentityForHeader(value,kind){assert.equal(value,header);assert.equal(kind,type);return [identity]}});
   assert.equal(params.type,type);assert.equal(params.identity,identity);assert.equal(params.originalMsgURI,'imap-message://Sent#42');assert.equal(params.composeFields,fields);assert.equal(params.format,0);
  }
- assert.throws(()=>scope.inlineReplyParams(header,'cmd_forwardInline',{},Ci,Cc,{}));
+ assert.throws(()=>scope.inlineReplyParams(header,'cmd_unsupported',{},Ci,Cc,{}));
 });
 test('inline compose preserves an open reply across navigation and guards dirty window/tab closure with native draft prompts',async()=>{
  let observer,frame,mayClose=false,paramsReceived;const events=new Map(),timers=new Map(),nativeEvents=new Map(),stateListeners=new Set();

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Forward inline from conversations with immediate message cards and the existing Sending/Sent notification; reconcile the Sent copy by exact Message-ID even without reply References.
+
 - Keep native row-selection checkboxes visible at the start of every folder layout, including Drafts and Sent.
 
 - Add persistent Show, Show if unread and Hide choices for sidebar labels, with More/Less disclosure, parent-path and selected-label protection, native unread notifications and cached hierarchy updates. Message-list label visibility remains independent.
