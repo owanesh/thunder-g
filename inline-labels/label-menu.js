@@ -32,8 +32,64 @@ function renameNativeLabel(tags,key,path,service) {
   catch(error){for(const item of done.reverse())service.setTagForKey(item.key,item.before);throw error;}
   return plan;
 }
+// Plan all moves before writing. Selected descendants travel with their selected
+// ancestor once; stable tag keys keep every existing message assignment intact.
+function bulkLabelMovePlan(tags,keys,parentKey) {
+  const selected=new Set(keys),items=tags.filter(tag=>selected.has(tag.key));
+  if(!items.length || items.length!==selected.size)throw new Error('A selected label no longer exists.');
+  if(parentKey===undefined)return [];
+  const parent=parentKey===null?null:tags.find(tag=>tag.key===parentKey);
+  if(parentKey!==null && !parent)throw new Error('The parent label no longer exists.');
+  const roots=items.filter(item=>!items.some(other=>other!==item && item.tag.startsWith(other.tag+'/')));
+  if(parent && roots.some(root=>parent.tag===root.tag || parent.tag.startsWith(root.tag+'/')))
+    throw new Error('A label cannot be nested under itself or its descendants.');
+  const plan=[];
+  for(const root of roots){
+    const path=(parent?parent.tag+'/':'')+root.tag.split('/').at(-1);
+    for(const tag of tags)if(tag.key===root.key || tag.tag.startsWith(root.tag+'/'))
+      plan.push({key:tag.key,before:tag.tag,after:path+tag.tag.slice(root.tag.length)});
+  }
+  const moved=new Set(plan.map(item=>item.key));
+  const names=new Set(tags.filter(tag=>!moved.has(tag.key)).map(tag=>tag.tag.normalize('NFKC').toLocaleLowerCase()));
+  for(const item of plan){const name=item.after.normalize('NFKC').toLocaleLowerCase();if(names.has(name))throw new Error('A label with that path already exists.');names.add(name);}
+  return plan.filter(item=>item.before!==item.after);
+}
+function applyBulkLabelChanges(service,prefs,keys,changes) {
+  const tags=service.getAllTags(),selected=new Set(keys),items=tags.filter(tag=>selected.has(tag.key));
+  const plan=bulkLabelMovePlan(tags,keys,changes.parentKey);
+  if(changes.color!==undefined && changes.color!=='' && !/^#[0-9a-f]{6}$/i.test(changes.color))throw new Error('Choose a valid label color.');
+  if(changes.sidebar!==undefined && !['show','unread','hide'].includes(changes.sidebar))throw new Error('Unknown label visibility.');
+  const undo=[];
+  function write(action,rollback){undo.push(rollback);action();}
+  try{
+    for(const item of plan)write(()=>service.setTagForKey(item.key,item.after),()=>service.setTagForKey(item.key,item.before));
+    if(changes.color!==undefined)for(const item of items)
+      write(()=>service.setColorForKey(item.key,changes.color),()=>service.setColorForKey(item.key,item.color || ''));
+    if(changes.sidebar!==undefined){
+      const before=prefs.getStringPref(SIDEBAR_LABEL_VISIBILITY_PREF,'{}'),modes=sidebarLabelModes(prefs);
+      for(const key of selected){if(changes.sidebar==='show')modes.delete(key);else modes.set(key,changes.sidebar);}
+      write(()=>prefs.setStringPref(SIDEBAR_LABEL_VISIBILITY_PREF,JSON.stringify(Object.fromEntries(modes))),()=>prefs.setStringPref(SIDEBAR_LABEL_VISIBILITY_PREF,before));
+    }
+    if(changes.messageHidden!==undefined){
+      const before=prefs.getStringPref(HIDDEN_MESSAGE_LABELS_PREF,'[]'),hidden=hiddenMessageLabelKeys(prefs);
+      for(const key of selected){if(changes.messageHidden)hidden.add(key);else hidden.delete(key);}
+      write(()=>prefs.setStringPref(HIDDEN_MESSAGE_LABELS_PREF,JSON.stringify([...hidden])),()=>prefs.setStringPref(HIDDEN_MESSAGE_LABELS_PREF,before));
+    }
+  }catch(error){
+    let failed=false;for(const rollback of undo.reverse())try{rollback()}catch(_){failed=true;}
+    if(failed)throw new Error(`${error.message} Some changes could not be restored; check the selected labels.`);
+    throw error;
+  }
+  return plan;
+}
+function selectedSidebarLabelKeys(tree,row) {
+  const selected=Array.from(tree?.selection?.values?.() || []);
+  if(!selected.includes(row))return [row.dataset.tagKey];
+  return [...new Set(selected.map(item=>item.dataset?.tagKey).filter(Boolean))];
+}
+
 function installSidebarLabelMenu(win,service,prefs) {
-  const doc=win.document,buttons=new Set();let currentKey=null;
+  const doc=win.document,buttons=new Set();let currentKey=null,currentKeys=[];
   const panel=doc.createXULElement('panel');panel.className='gm-sidebar-label-popup';panel.setAttribute('aria-label','Label options');
   const content=doc.createElement('div');content.className='gm-sidebar-label-menu';panel.append(content);doc.documentElement.append(panel);
   const style=doc.createElement('style');style.textContent=`
@@ -42,7 +98,7 @@ function installSidebarLabelMenu(win,service,prefs) {
     [data-tag-key] > .container .gm-label-more { opacity:0; box-sizing:border-box; flex:0 0 28px !important; min-width:28px !important; max-width:28px !important; min-inline-size:28px !important; max-inline-size:28px !important; margin-block:0; margin-inline:6px 0; padding:0; width:28px; height:28px; border:0; border-radius:50%; color:inherit; background:transparent; font-size:22px; cursor:pointer; }
     [data-tag-key] > .container:hover .gm-label-more,[data-tag-key] > .container:focus-within .gm-label-more,.gm-label-more[aria-expanded=true] { opacity:1; }
     [data-tag-key] > .container .gm-label-more:hover { background:var(--layout-background-2,#e8eaed); }
-    .gm-sidebar-label-menu { min-width:240px; max-width:min(440px,80vw); padding:8px 0; color:var(--layout-color-0,#202124); background:var(--layout-background-0,#fff); }
+    .gm-sidebar-label-menu { min-width:240px; max-width:min(440px,80vw); max-height:80vh; overflow:auto; padding:8px 0; color:var(--layout-color-0,#202124); background:var(--layout-background-0,#fff); }
     .gm-sidebar-label-menu > button { display:block; box-sizing:border-box; width:100%; text-align:start; border:0; border-radius:0; padding:10px 22px; background:transparent; color:inherit; font:inherit; cursor:pointer; }
     .gm-sidebar-label-menu > button:hover,.gm-sidebar-label-menu > button:focus-visible { background:var(--layout-background-2,#f1f3f4); }
     .gm-sidebar-label-menu hr { border:0; border-top:1px solid var(--layout-border-0,#dadce0); margin:8px 0; }
@@ -57,32 +113,39 @@ function installSidebarLabelMenu(win,service,prefs) {
     .gm-sidebar-label-menu form button { margin-inline-end:8px; padding:6px 12px; font:inherit; }
   `;doc.head.append(style);
   function tag(){const item=service.getAllTags().find(t=>t.key===currentKey);if(!item)throw new Error('This label no longer exists.');return item;}
+  function targets(){
+    const all=service.getAllTags(),items=currentKeys.map(key=>all.find(item=>item.key===key));
+    if(items.some(item=>!item))throw new Error('A selected label no longer exists.');
+    return items;
+  }
+  function apply(changes){applyBulkLabelChanges(service,prefs,currentKeys,changes);panel.hidePopup();}
   function text(value){const node=doc.createElement('p');node.textContent=value;content.append(node);return node;}
   function failure(error){const node=text(error.message || 'The label could not be updated.');node.setAttribute('role','alert');}
   function button(label,action){const node=doc.createElement('button');node.type='button';node.textContent=label;node.addEventListener('click',()=>{try{action();}catch(error){failure(error);}});content.append(node);return node;}
   function separator(){content.append(doc.createElement('hr'));}
   function home(){
-    const item=tag();content.replaceChildren();panel.setAttribute('aria-label',`Options for ${item.tag}`);
+    const item=tag(),items=targets(),bulk=items.length>1;content.replaceChildren();panel.setAttribute('aria-label',bulk?`Options for ${items.length} selected labels`:`Options for ${item.tag}`);
+    if(bulk)text(`${items.length} selected labels`);
     button('Label color  ›',colors);separator();text('In label list');
-    const mode=sidebarLabelModes(prefs).get(currentKey) || 'show';
+    const modes=sidebarLabelModes(prefs),mode=items.every(item=>(modes.get(item.key) || 'show')===(modes.get(currentKey) || 'show'))?(modes.get(currentKey) || 'show'):null;
     for(const [title,value] of [['Show','show'],['Show if unread','unread'],['Hide','hide']]){
-      const node=button(`${mode===value?'✓  ':'    '}${title}`,()=>{tag();setSidebarLabelMode(prefs,currentKey,value);panel.hidePopup();});
+      const node=button(`${mode===value?'✓  ':'    '}${title}`,()=>apply({sidebar:value}));
       node.setAttribute('aria-label',`${title} in label list`);node.setAttribute('role','menuitemradio');node.setAttribute('aria-checked',String(mode===value));
     }
     separator();text('In message list');
-    const hidden=hiddenMessageLabelKeys(prefs).has(currentKey);
+    const hiddenKeys=hiddenMessageLabelKeys(prefs),hidden=items.every(item=>hiddenKeys.has(item.key)===hiddenKeys.has(currentKey))?hiddenKeys.has(currentKey):null;
     for(const [title,hide] of [['Show',false],['Hide',true]]){
-      const node=button(`${hidden===hide?'✓  ':'    '}${title}`,()=>{tag();const keys=hiddenMessageLabelKeys(prefs);if(hide)keys.add(currentKey);else keys.delete(currentKey);prefs.setStringPref(HIDDEN_MESSAGE_LABELS_PREF,JSON.stringify([...keys]));panel.hidePopup();});
+      const node=button(`${hidden===hide?'✓  ':'    '}${title}`,()=>apply({messageHidden:hide}));
       node.setAttribute('aria-label',title);node.setAttribute('role','menuitemradio');node.setAttribute('aria-checked',String(hidden===hide));
     }
-    separator();button('Edit',()=>editor(false));button('Remove label',()=>{
+    separator();button(bulk?'Edit selected labels…':'Edit',()=>bulk?bulkEditor():editor(false));if(bulk)return;button('Remove label',()=>{
       const item=tag();
       if(!Services.prompt.confirm(win.top,'Remove label',`Remove “${item.tag}”? Emails and sublabels will be kept.`))return;
       service.deleteKey(currentKey);panel.hidePopup();
     });button('Add sublabel',()=>editor(true));
   }
   function colors(){
-    tag();content.replaceChildren();const back=button('‹ Back',home);back.className='gm-color-back';text('Label color');
+    const items=targets();content.replaceChildren();const back=button('‹ Back',home);back.className='gm-color-back';text('Label color');
     const grid=doc.createElement('div');grid.className='gm-label-colors';content.append(grid);
     grid.setAttribute('role','group');grid.setAttribute('aria-label','Label colors');
     for(const color of ['#cccccc','#6d9eeb','#76a5af','#8e7cc3','#c27ba0','#cc0000',
@@ -94,14 +157,52 @@ function installSidebarLabelMenu(win,service,prefs) {
       const node=doc.createElement('button');node.type='button';node.textContent='a';
       node.style.backgroundColor=preview.background;node.style.color=preview.foreground;
       node.title=`Label color ${color}`;node.setAttribute('aria-label',`Set label color ${color}`);
-      node.setAttribute('aria-pressed',String((tag().color || '').toLowerCase()===color));
-      node.addEventListener('click',()=>{try{tag();service.setColorForKey(currentKey,color);panel.hidePopup();}catch(error){failure(error);}});grid.append(node);
+      node.setAttribute('aria-pressed',String(items.every(item=>(item.color || '').toLowerCase()===color)));
+      node.addEventListener('click',()=>{try{apply({color});}catch(error){failure(error);}});grid.append(node);
     }
     const custom=doc.createElement('input');custom.type='color';custom.hidden=true;custom.value=/^#[0-9a-f]{6}$/i.test(tag().color)?tag().color:'#5f6368';custom.setAttribute('aria-label','Custom label color');
-    custom.addEventListener('change',()=>{try{tag();service.setColorForKey(currentKey,custom.value);panel.hidePopup();}catch(error){failure(error);}});
+    custom.addEventListener('change',()=>{try{apply({color:custom.value});}catch(error){failure(error);}});
     content.append(custom);button('Add custom color',()=>custom.click());
-    button('Remove color',()=>{tag();service.setColorForKey(currentKey,'');panel.hidePopup();});
+    button('Remove color',()=>apply({color:''}));
   }
+  function bulkEditor(){
+    const tags=service.getAllTags(),items=targets();content.replaceChildren();button('‹ Back',home);
+    text(`Edit ${items.length} labels`);text('Unchanged fields keep each label’s current value. Moving a parent also moves its descendants; color and visibility affect only selected labels.');
+    const form=doc.createElement('form');content.append(form);
+    function select(label,options){
+      const wrap=doc.createElement('label');wrap.textContent=label;wrap.style.display='block';
+      const node=doc.createElement('select');node.setAttribute('aria-label',label);node.style.cssText='display:block;width:100%;margin:6px 0 12px;font:inherit;color:inherit;background:var(--layout-background-0,#fff);';
+      for(const [value,title] of options){const option=doc.createElement('option');option.value=value;option.textContent=title;node.append(option);}
+      wrap.append(node);form.append(wrap);return node;
+    }
+    const parents=tags.filter(parent=>!items.some(item=>parent.key===item.key || parent.tag.startsWith(item.tag+'/')));
+    const parent=select('Parent label',[['keep','Keep current parents'],['root','No parent (top level)'],...parents.map((tag,index)=>[String(index),tag.tag])]);
+    const colorMode=select('Label color',[['keep','Keep current colors'],['set','Set the same color'],['remove','Remove color']]);
+    const color=doc.createElement('input');color.type='color';color.value=/^#[0-9a-f]{6}$/i.test(items[0].color)?items[0].color:'#5f6368';color.setAttribute('aria-label','Bulk label color');color.hidden=true;form.append(color);
+    colorMode.addEventListener('change',()=>{color.hidden=colorMode.value!=='set';});
+    const sidebar=select('In label list',[['keep','Keep current visibility'],['show','Show'],['unread','Show if unread'],['hide','Hide']]);
+    const message=select('In message list',[['keep','Keep current visibility'],['show','Show'],['hide','Hide']]);
+    const preview=doc.createElement('p');preview.setAttribute('aria-live','polite');form.append(preview);
+    const cancel=doc.createElement('button');cancel.type='button';cancel.textContent='Cancel';cancel.addEventListener('click',()=>panel.hidePopup());
+    const save=doc.createElement('button');save.type='submit';save.textContent='Apply to selected labels';form.append(cancel,save);
+    function changes(){return {
+      parentKey:parent.value==='keep'?undefined:parent.value==='root'?null:parents[Number(parent.value)]?.key,
+      color:colorMode.value==='keep'?undefined:colorMode.value==='remove'?'':color.value,
+      sidebar:sidebar.value==='keep'?undefined:sidebar.value,
+      messageHidden:message.value==='keep'?undefined:message.value==='hide'
+    };}
+    function review(){
+      try{
+        const plan=bulkLabelMovePlan(service.getAllTags(),currentKeys,changes().parentKey);
+        preview.textContent=plan.length?plan.map(item=>`${item.before} → ${item.after}`).join('\n'):'Label paths will stay unchanged.';
+        preview.style.cssText='white-space:pre-wrap;max-height:140px;overflow:auto;margin-inline:0;';save.disabled=Object.values(changes()).every(value=>value===undefined);
+      }catch(error){preview.textContent=error.message;save.disabled=true;}
+    }
+    form.addEventListener('change',review);review();
+    form.addEventListener('submit',event=>{event.preventDefault();try{applyBulkLabelChanges(service,prefs,currentKeys,changes());panel.hidePopup();}catch(error){failure(error);}});
+    parent.focus();
+  }
+
   function editor(child){
     const item=tag();content.replaceChildren();button('‹  Back',home);text(child?'New sublabel':'Edit label');
     text(child?`Nest label under: ${item.tag}`:'Changing this path also updates its sublabels.');
@@ -123,7 +224,7 @@ function installSidebarLabelMenu(win,service,prefs) {
     const more=doc.createElement('button');more.type='button';more.className='gm-label-more';more.textContent='⋮';more.setAttribute('aria-label',`Options for ${item.tag}`);more.setAttribute('aria-haspopup','true');more.setAttribute('aria-expanded','false');
     more.addEventListener('mousedown',event=>event.stopPropagation());
     more.addEventListener('keydown',event=>{if(['Enter',' ','ArrowDown'].includes(event.key)){event.preventDefault();event.stopPropagation();more.click();}});
-    more.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();currentKey=row.dataset.tagKey;try{home();more.setAttribute('aria-expanded','true');panel.openPopup(more,'after_start',0,0,false,false);}catch(error){console.error(error);}});
+    more.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();currentKey=row.dataset.tagKey;currentKeys=selectedSidebarLabelKeys(doc.getElementById('folderTree'),row);try{home();more.setAttribute('aria-expanded','true');panel.openPopup(more,'after_start',0,0,false,false);}catch(error){console.error(error);}});
     row.querySelector(':scope > .container').append(more);buttons.add(more);
   },close(){panel.hidePopup();panel.remove();style.remove();for(const more of buttons)more.remove();buttons.clear();}};
 }

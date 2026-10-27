@@ -45,3 +45,51 @@ test('sidebar visibility persists exact stable keys independently of message chi
  assert.equal(scope.sidebarLabelModes({getStringPref:()=>'[]'}).size,0);
  assert.deepEqual(Array.from(scope.sidebarLabelModes({getStringPref:()=>'\u007b"a":"hide","b":"unread","c":"bad"\u007d'}),entry=>Array.from(entry)),[['a','hide'],['b','unread']]);
 });
+
+test('bulk move retains selected subtrees once, preserving keys and unrelated labels',()=>{
+ const plan=scope.bulkLabelMovePlan(tags,['p','c','x'],'o');
+ assert.deepEqual(Array.from(plan,item=>[item.key,item.after]),[['p','Other/Work'],['c','Other/Work/PhD'],['g','Other/Work/PhD/Project'],['x','Other/Workshops']]);
+ assert.deepEqual(Array.from(scope.bulkLabelMovePlan(tags,['c'],null),item=>item.after),['PhD','PhD/Project']);
+ assert.equal(scope.bulkLabelMovePlan(tags,['p'],undefined).length,0);
+ assert.throws(()=>scope.bulkLabelMovePlan(tags,['p'],'g'),/itself/);
+ assert.throws(()=>scope.bulkLabelMovePlan(tags,['p','missing'],null),/no longer exists/);
+ assert.throws(()=>scope.bulkLabelMovePlan(tags,['p'],'missing'),/no longer exists/);
+ assert.throws(()=>scope.bulkLabelMovePlan([...tags,{key:'z',tag:'Other/work'}],['p'],'o'),/already exists/);
+ assert.throws(()=>scope.bulkLabelMovePlan([{key:'a',tag:'A/X'},{key:'b',tag:'B/X'}],['a','b'],null),/already exists/);
+});
+function bulkFixture(fail=()=>false){
+ const values=new Map([['extensions.thunderg.hiddenMessageLabels','["o"]']]);
+ const names=new Map(tags.map(tag=>[tag.key,tag.tag])),colors=new Map(tags.map(tag=>[tag.key,'#123456']));
+ const prefs={getStringPref:(key,fallback)=>values.get(key)??fallback,setStringPref(key,value){if(fail('pref',key,value))throw Error('write failed');values.set(key,value)}};
+ const service={getAllTags:()=>tags.map(tag=>({...tag,tag:names.get(tag.key),color:colors.get(tag.key)})),setTagForKey(key,value){if(fail('name',key,value))throw Error('write failed');names.set(key,value)},setColorForKey(key,value){if(fail('color',key,value))throw Error('write failed');colors.set(key,value)}};
+ return {values,names,colors,prefs,service};
+}
+test('bulk changes only selected colors/visibility and keep message keys while moving descendants',()=>{
+ const f=bulkFixture();scope.applyBulkLabelChanges(f.service,f.prefs,['p','x'],{parentKey:'o',color:'#aabbcc',sidebar:'unread',messageHidden:true});
+ assert.equal(f.names.get('g'),'Other/Work/PhD/Project');
+ assert.equal(f.colors.get('p'),'#aabbcc');assert.equal(f.colors.get('x'),'#aabbcc');assert.equal(f.colors.get('g'),'#123456');
+ assert.deepEqual(JSON.parse(f.values.get('extensions.thunderg.hiddenMessageLabels')),['o','p','x']);
+ assert.deepEqual(JSON.parse(f.values.get('extensions.thunderg.sidebarLabelVisibility')),{p:'unread',x:'unread'});
+ scope.applyBulkLabelChanges(f.service,f.prefs,['p','x'],{sidebar:'show',messageHidden:false});
+ assert.equal(f.values.get('extensions.thunderg.sidebarLabelVisibility'),'{}');
+ assert.deepEqual(JSON.parse(f.values.get('extensions.thunderg.hiddenMessageLabels')),['o']);
+});
+test('bulk validates every path before writing and rolls back names, colors and preferences on failure',()=>{
+ for(const failure of ['name','color','pref']){
+  let failed=false;
+  const f=bulkFixture((kind,key,value)=>{if(!failed && kind===failure && (failure==='pref'?key==='extensions.thunderg.hiddenMessageLabels':key==='x')){failed=true;return true}return false});
+  assert.throws(()=>scope.applyBulkLabelChanges(f.service,f.prefs,['p','x'],{parentKey:'o',color:'#abcdef',sidebar:'hide',messageHidden:true}),/write failed/);
+  assert.deepEqual([...f.names],tags.map(tag=>[tag.key,tag.tag]));
+  assert.ok([...f.colors.values()].every(value=>value==='#123456'));
+  assert.deepEqual(JSON.parse(f.prefs.getStringPref('extensions.thunderg.sidebarLabelVisibility','{}')),{});
+  assert.equal(f.values.get('extensions.thunderg.hiddenMessageLabels'),'["o"]');
+ }
+ const f=bulkFixture();assert.throws(()=>scope.applyBulkLabelChanges(f.service,f.prefs,['p'],{parentKey:'g',color:'#abcdef'}),/itself/);
+ assert.deepEqual([...f.names],tags.map(tag=>[tag.key,tag.tag]));
+});
+test('bulk selection uses native selected label rows only, and unselected menus remain single-label',()=>{
+ const a={dataset:{tagKey:'p'}},b={dataset:{tagKey:'x'}},folder={dataset:{}};
+ const tree={selection:new Set([a,b,folder])};
+ assert.deepEqual(Array.from(scope.selectedSidebarLabelKeys(tree,a)),['p','x']);
+ assert.deepEqual(Array.from(scope.selectedSidebarLabelKeys(tree,{dataset:{tagKey:'o'}})),['o']);
+});

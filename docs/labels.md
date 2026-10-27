@@ -32,3 +32,9 @@ Open a label’s three-dot menu and use **In label list**: **Show**, **Show if u
 A visible child keeps its parent path accessible. The currently selected label also stays visible until you navigate elsewhere, even if its unread count reaches zero. Choices are stored by stable native tag key, so renaming a label preserves its setting. These choices are independent of **In message list**, which controls chips beside email subjects.
 
 Unread visibility uses Thunderbird’s existing native counts and change notifications. It does not scan mail or poll the server; label hierarchy updates are cached and notification bursts are batched.
+
+## Edit multiple labels
+
+Select several labels in the sidebar using Shift or Command/Ctrl, then open **⋮** on one of the selected labels. **Edit selected labels…** lets you choose a shared parent, color, sidebar visibility and message-list visibility. Fields default to **Keep current** so mixed values are preserved. The menu’s color and visibility actions also apply to the selected labels.
+
+The editor previews all changed label paths before Apply. Selected parent/child pairs move together once, including descendants; color and visibility change only explicitly selected labels. Native tag keys and message assignments stay intact. Duplicate paths and moves into a selected subtree are rejected before writing; failed writes attempt to restore earlier values. Opening a menu on an unselected label edits only that label.

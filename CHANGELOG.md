@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Edit selected sidebar labels together: shared parent with path preview, color and visibility, preserving tag keys and assignments with collision checks and rollback on errors.
+
 - Forward inline from conversations with immediate message cards and the existing Sending/Sent notification; reconcile the Sent copy by exact Message-ID even without reply References.
 
 - Keep native row-selection checkboxes visible at the start of every folder layout, including Drafts and Sent.
