@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Keep Refresh and the neighboring toolbar action hover backgrounds circular by overriding native minimum button dimensions.
+
 - Align the select-all toolbar checkbox with the message-row checkboxes.
 
 - Match immediate sent-message previews to conversation cards and load the saved message in the same card without forcing a scroll or leaving a blank body during loading.

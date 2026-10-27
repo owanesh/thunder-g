@@ -148,7 +148,7 @@ function installInboxIdleActions(win,reader=null) {
     #threadPaneHeaderBar > .list-header-bar-container-start{padding-inline-start:0!important}
     .gm-inbox-idle-actions{display:flex;align-items:center;gap:8px;min-height:36px}
     .gm-inbox-idle-actions input{appearance:auto;inline-size:18px;block-size:18px;margin:0;margin-inline-end:10px;accent-color:#1a73e8;cursor:pointer}
-    .gm-inbox-action{display:inline-flex;align-items:center;justify-content:center;inline-size:36px;block-size:36px;padding:8px;border:0;border-radius:50%;background:transparent;color:inherit;cursor:pointer}
+    .gm-inbox-action{appearance:none;box-sizing:border-box;display:inline-flex;flex:0 0 36px;align-items:center;justify-content:center;inline-size:36px;min-inline-size:36px;max-inline-size:36px;block-size:36px;min-block-size:36px;max-block-size:36px;margin:0;padding:8px;border:0;border-radius:50%;background:transparent;color:inherit;cursor:pointer}
     .gm-inbox-action:hover:enabled{background:var(--treeitem-background-hover,#e9eef6)}
     .gm-inbox-action:disabled{opacity:.5;cursor:default}
     .gm-inbox-action:focus-visible{outline:2px solid #1a73e8;outline-offset:-2px}
