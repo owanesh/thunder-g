@@ -19,7 +19,7 @@ test('BIMI organizational fallback respects explicit opt-out and DNS failures',a
  }
 });
 test('BIMI discovery is gated by aligned successful DKIM rather than the display name',()=>{
- const s=vm.createContext({});vm.runInContext(fs.readFileSync('inline-labels/independent-reader.js','utf8'),s);
+ const s=vm.createContext({});vm.runInContext(fs.readFileSync('thunder-g/independent-reader.js','utf8'),s);
  const base=domain=>domain.split('.').slice(-2).join('.');
  assert.equal(s.independentBimiDomain('sender@mail.brand.example',{dkim:[{result:'SUCCESS',sdid:'brand.example'}]},base),'mail.brand.example');
  for(const result of [null,{dkim:[{result:'PERMFAIL',sdid:'brand.example'}]},{dkim:[{result:'SUCCESS',sdid:'attacker.example'}]}])assert.equal(s.independentBimiDomain('sender@brand.example',result,base),null);

@@ -1,5 +1,5 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
-const scope=vm.createContext({});vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/label-menu.js'),'utf8'),scope);
+const scope=vm.createContext({});vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/label-menu.js'),'utf8'),scope);
 const tags=[{key:'p',tag:'Work'},{key:'c',tag:'Work/PhD'},{key:'g',tag:'Work/PhD/Project'},{key:'x',tag:'Workshops'},{key:'o',tag:'Other'}];
 test('editing a label plans the entire subtree without changing native keys or unrelated prefixes',()=>{
  const plan=scope.labelRenamePlan(tags,'p','Lab');
@@ -26,7 +26,7 @@ test('message-list visibility stores exact keys and tolerates absent/corrupt pre
 test('sidebar passes the native tags service rather than its MailServices container',()=>{
  let received;const tagsService={getAllTags:()=>[]};
  const local=vm.createContext({installSidebarLabelMenu(_win,service){received=service;return {close(){}}}});
- vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/nested-labels.js'),'utf8'),local);
+ vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/nested-labels.js'),'utf8'),local);
  const prefs={addObserver(){},removeObserver(){}};
  const win={document:{getElementById:()=>({})},MutationObserver:class{observe(){} disconnect(){}},setTimeout(){return 1},clearTimeout(){}};
  const controller=local.installNestedLabelSidebar(win,{tags:tagsService},prefs);

@@ -2,7 +2,7 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const vm=require('node:vm'),fs=require('node:fs'),path=require('node:path');
 const scope=vm.createContext({});
-vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/compose.js'),'utf8'),scope);
+vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/compose.js'),'utf8'),scope);
 function preferences(initial={}) {
   const values=new Map(Object.entries(initial));
   const defaults={'mail.compose.autosave':true,'mail.compose.autosaveinterval':5};
@@ -64,7 +64,7 @@ test('inline compose preserves an open reply across navigation and guards dirty 
   Cc:{'@mozilla.org/messengercompose/composeparams;1':{createInstance:()=>({})},'@mozilla.org/messengercompose/composefields;1':{createInstance:()=>({})}},
   MailServices:{},ChromeUtils:{importESModule:()=>({MailUtils:{getIdentityForHeader:()=>[{key:'chosen-account'}]}})},
   Services:{obs:{addObserver(value){observer=value},removeObserver(){}},io:{newURI:value=>value},scriptSecurityManager:{getSystemPrincipal:()=>({})}}
- });vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/compose.js'),'utf8'),testScope);
+ });vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/compose.js'),'utf8'),testScope);
  let feedback;testScope.installInlineSendStatus=(native,clock,onState)=>{feedback=onState;return {close(){}}};
  const composer=testScope.createInlineCompose(win),header={mime2DecodedSubject:'Original',folder:{getUriForMsg:()=> 'imap-message://Sent#42'}};
  const inline=element('conversation'),scrollHost={hidden:false};
@@ -101,7 +101,7 @@ test('inline compose preserves an open reply across navigation and guards dirty 
 });
 test('separate-window transfer waits for native draft completion and retains failures',async()=>{
  const draftScope=vm.createContext({Ci:{nsIMsgCompDeliverMode:{SaveAsDraft:4}}});
- vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/compose.js'),'utf8'),draftScope);
+ vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/compose.js'),'utf8'),draftScope);
  for(const success of [true,false]){
   let listener,unregistered=false,started=false;
   const compose={compFields:{draftId:''},RegisterStateListener(value){listener=value},UnregisterStateListener(value){assert.equal(value,listener);unregistered=true}};
@@ -248,7 +248,7 @@ test('floating size survives new composers and restart without saving each drag 
  f.corner.emit('keydown',event({key:'ArrowUp'}));f.corner.emit('blur');assert.equal(writes.length,3,'leaving the grip completes a keyboard gesture');
  f.corner.emit('keydown',event({key:'ArrowRight'}));f.hook.close();assert.equal(writes.length,4,'closing before keyup retains the latest choice');
 
- const restarted=vm.createContext({});vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/compose.js'),'utf8'),restarted);
+ const restarted=vm.createContext({});vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/compose.js'),'utf8'),restarted);
  f=floatingFixture(prefs,'rtl',restarted);f.hook.update(true,limits);
  assert.equal(f.panel.style.width,'756px');assert.equal(f.panel.style.height,'666px','a fresh extension context restores the stored preference');
  f.corner.emit('keydown',event({key:'ArrowLeft'}));f.corner.emit('keyup',event({key:'ArrowLeft'}));

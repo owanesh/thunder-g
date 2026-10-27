@@ -17,7 +17,7 @@ def version_tuple(value):
 
 
 def plan_release(root, version):
-    manifest_path = root / 'inline-labels/manifest.json'
+    manifest_path = root / 'thunder-g/manifest.json'
     manifest = json.loads(manifest_path.read_text())
     old = manifest['version']
     if version_tuple(version) <= version_tuple(old):
@@ -32,15 +32,8 @@ def plan_release(root, version):
     notes = match.group(1).strip()
     log = log[:match.start()] + '## Unreleased\n\n## ' + version + '\n\n' + notes + '\n\n' + log[match.end():]
     manifest['version'] = version
-    readme_path = root / 'README.md'
-    readme = readme_path.read_text()
-    expected = 'Current version: **' + old + '**'
-    if expected not in readme:
-        raise ValueError('README current version does not match the manifest.')
-    readme = readme.replace(expected, 'Current version: **' + version + '**')
-    readme = readme.replace('thunder-g-' + old + '.xpi', 'thunder-g-' + version + '.xpi')
-    readme = readme.replace('`v' + old + '`', '`v' + version + '`')
-    return {manifest_path: json.dumps(manifest, indent=2) + '\n', log_path: log, readme_path: readme}
+    return {manifest_path: json.dumps(manifest, indent=2) + '\n', log_path: log}
+
 
 
 def main():
@@ -56,7 +49,7 @@ def main():
         if any(path.exists() for path in outputs[:-1]):
             raise ValueError('Target release artifacts already exist; move them before preparing this release.')
         if args.dry_run:
-            print('Would update manifest and README, move Unreleased notes to ' + args.version +
+            print('Would update manifest, move Unreleased notes to ' + args.version +
                   ', run tests, and create XPI/source ZIP, SHA-256 checksums and updates.json. No files changed.')
             return
         subprocess.run(['node', '--test', *map(str, sorted((ROOT / 'tests').glob('*.test.cjs')))], check=True)

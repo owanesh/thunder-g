@@ -4,7 +4,7 @@ const vm=require('node:vm');
 const fs=require('node:fs');
 const path=require('node:path');
 const scope=vm.createContext({console});
-vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/dates.js'),'utf8'),scope);
+vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/dates.js'),'utf8'),scope);
 test('local calendar dates: time today, month/day this year, year for older mail',()=>{
   const now=new Date(2026,9,21,0,5);
   const today=scope.compactMessageDate(new Date(2026,9,21,0,1).getTime(),now,'en-US');
@@ -19,7 +19,7 @@ test('formatting hundreds of row dates reuses a bounded set of locale formatters
   const measured=vm.createContext({Intl:{DateTimeFormat:class extends Intl.DateTimeFormat {
     constructor(...args){super(...args);constructions++;}
   }}});
-  vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/dates.js'),'utf8'),measured);
+  vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/dates.js'),'utf8'),measured);
   const now=new Date(2026,9,22,12),cache=new Map();
   for(let i=0;i<500;i++)measured.compactMessageDate(now.getTime()-i*86400000,now,'en-US',cache);
   assert.equal(constructions,4,'time, current-year date, older date and tooltip are reused across all rows');

@@ -56,10 +56,10 @@ Save, Discard and Cancel choices. Forward keeps its separate window.
 Requires a successful aligned DKIM check through the [local DKIM integration](../integrations/README.md).
 An ordinary DKIM Verifier installation does not provide this integration.
 
-**Enabling this downloads remote images; the logo host can see your IP address.**
-Only the advertised logo is downloaded, without an external logo lookup service.
-Logos and missing results are cached for one hour during the session. Turning
-this off stops new downloads and restores the usual avatars.
+> [!NOTE]
+> **Enabling this downloads remote images; the logo host can see your IP address.**
+> Only the advertised logo is downloaded, without an external logo lookup service.
+> Logos and missing results are cached for one hour during the session. **Turning this off stops new downloads and restores the usual avatars.**
 
 ## Labels
 

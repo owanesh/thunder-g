@@ -3,7 +3,7 @@ from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
 import json
 
 root = Path(__file__).resolve().parent
-source = root / 'inline-labels'
+source = root / 'thunder-g'
 version = json.loads((source / 'manifest.json').read_text())['version']
 output = root / f'thunder-g-{version}.xpi'
 with ZipFile(output, 'w', ZIP_DEFLATED) as archive:

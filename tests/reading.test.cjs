@@ -4,9 +4,9 @@ const vm = require('node:vm');
 const fs = require('node:fs');
 const path = require('node:path');
 const scope = vm.createContext({});
-vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/pagination.js'),'utf8'),scope);
-vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/nested-labels.js'),'utf8'),scope);
-vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/reading.js'),'utf8'),scope);
+vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/pagination.js'),'utf8'),scope);
+vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/nested-labels.js'),'utf8'),scope);
+vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/reading.js'),'utf8'),scope);
 test('only unmodified left clicks on message text open reading mode',()=>{
   const event = {button:0,target:{closest:()=>null}};
   assert.equal(scope.isReadingClick(event),true);
