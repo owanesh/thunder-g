@@ -310,12 +310,14 @@ function installIndependentReader(win) {
     time { font-size:.85em; white-space:nowrap; opacity:.8; padding-block-start:2px; }
     .tags { display:flex; flex-wrap:wrap; gap:.35em; margin:4px 0 4px var(--message-inset); }
     .tags:empty { display:none; }
-    .tag { display:inline-flex; align-items:center; gap:.3em; max-inline-size:100%;
-      font-size:.85em; line-height:1.4; border-radius:.35em; padding:.1em .3em .1em .5em; }
-    .tag-label { overflow-wrap:anywhere; }
-    .tag-remove { display:inline-flex; align-items:center; justify-content:center; flex:none;
-      inline-size:1.5em; block-size:1.5em; padding:0; border:0; border-radius:50%;
-      font:inherit; font-size:1.1em; line-height:1; background:transparent; color:inherit; cursor:pointer; }
+    .tag { display:inline-flex; align-items:center; gap:4px; max-inline-size:100%;
+      box-sizing:border-box; font:400 .85em/1.25 Arial,sans-serif;
+      border-radius:.35em; padding:2px 6px; }
+    .tag-label { display:inline-flex; align-items:center; min-block-size:1.25em; overflow-wrap:anywhere; }
+    .tag-remove { appearance:none; display:inline-flex; align-items:center; justify-content:center; flex:none;
+      box-sizing:border-box; inline-size:1.25em; block-size:1.25em;
+      min-inline-size:0; min-block-size:0; margin:0; padding:0; border:0; border-radius:50%;
+      font:inherit; line-height:1.25; background:transparent; color:inherit; cursor:pointer; }
     .tag-remove:hover { background:light-dark(#0002,#fff2); }
     .preview { display:block; margin:2px 0 0; font-size:.9em; font-weight:400; opacity:.75; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
     .actions { display:flex; flex-wrap:wrap; gap:.5em; margin:16px 0 4px var(--message-inset); }

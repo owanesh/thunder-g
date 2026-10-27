@@ -30,7 +30,7 @@ test('single click opens the current-tab reader, back restores the list, and dou
   function element() {
     const events = {};
     const item = {events, classList:{add(){},remove(){}}, style:{},
-      setAttribute(){}, append(){}, remove(){}, focus(){}, hidePopup(){},
+      setAttribute(){}, append(){}, replaceChildren(){}, remove(){}, focus(){}, hidePopup(){},
       addEventListener(name,fn){events[name]=fn}, removeEventListener(){}};
     elements.push(item); return item;
   }
@@ -157,7 +157,7 @@ test('checkbox selection shows bulk toolbar and archives native selection withou
   function element(){
     const events={};
     const item={events,children:[],style:{},classList:{add(){},remove(){}},setAttribute(){},
-      append(...items){this.children.push(...items)},prepend(item){this.children.unshift(item)},
+      append(...items){this.children.push(...items)},replaceChildren(...items){this.children=items},prepend(item){this.children.unshift(item)},
       remove(){},focus(){},addEventListener(name,fn){(events[name]??=[]).push(fn)},removeEventListener(){}};
     nodes.push(item);return item;
   }
