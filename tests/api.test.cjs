@@ -124,3 +124,19 @@ test('column headers default hidden, restore explicit choice and respond only to
     assert.deepEqual(calls,[saved===true,true,false,false]);
   }
 });
+
+test('mail tab watcher scans existing and newly opened search browsers and cleans listeners',()=>{
+ const scope=vm.createContext({console});const source=fs.readFileSync(path.join(__dirname,'../inline-labels/experiments/api.js'),'utf8');
+ vm.runInContext(source.slice(source.indexOf('function watchMailTabs'),source.indexOf('var inlineLabels = class')),scope);
+ const scans=[],listeners=new Map();let monitor,removed;
+ const browser={contentDocument:{name:'existing search'},addEventListener(name,fn){listeners.set(this,fn)},removeEventListener(){listeners.delete(this)}};
+ const tabmail={tabInfo:[{chromeBrowser:browser}],registerTabMonitor(value){monitor=value},unregisterTabMonitor(value){removed=value}};
+ const watcher=scope.watchMailTabs({document:{getElementById:()=>tabmail}},doc=>scans.push(doc));
+ assert.equal(scans.length,1);
+ const next={addEventListener(name,fn){listeners.set(this,fn)},removeEventListener(){listeners.delete(this)}};
+ const tab={chromeBrowser:next};monitor.onTabOpened(tab);
+ const doc={nodeType:9,name:'new search'};listeners.get(next)({target:doc});assert.equal(scans.at(-1),doc);
+ next.contentDocument=doc;monitor.onTabSwitched(tab);assert.equal(scans.at(-1),doc);assert.equal(listeners.size,2);
+ monitor.onTabClosing(tab);assert.equal(listeners.size,1);
+ watcher.close();assert.equal(removed,monitor);assert.equal(listeners.size,0);
+});

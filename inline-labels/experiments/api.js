@@ -31,6 +31,25 @@ function waitForMailPane(doc, onReady) {
   return {close};
 }
 
+// New synthetic search tabs do not reliably bubble their document load through
+// the main window. Watch each chrome browser as well as native tab lifecycle.
+function watchMailTabs(win,scan) {
+  const tabmail=win.document.getElementById('tabmail'),browsers=new Map();
+  if(!tabmail?.registerTabMonitor)return {close(){}};
+  function watch(tab){
+    const browser=tab?.chromeBrowser || tab?.browser;if(!browser)return;
+    if(!browsers.has(browser)){
+      const load=event=>{if(event.target?.nodeType===9)scan(event.target);};
+      browser.addEventListener('load',load,true);browsers.set(browser,load);
+    }
+    try{if(browser.contentDocument)scan(browser.contentDocument);}catch(error){console.error('Thunder-G: could not inspect mail tab.',error);}
+  }
+  function forget(tab){const browser=tab?.chromeBrowser || tab?.browser,load=browsers.get(browser);if(load){browser.removeEventListener('load',load,true);browsers.delete(browser);}}
+  const monitor={onTabOpened:watch,onTabRestored:watch,onTabSwitched:watch,onTabClosing:forget,onTabTitleChanged(){},onTabPersist(){return null}};
+  tabmail.registerTabMonitor(monitor);for(const tab of tabmail.tabInfo || [])watch(tab);
+  return {close(){tabmail.unregisterTabMonitor(monitor);for(const [browser,load]of browsers)browser.removeEventListener('load',load,true);browsers.clear();}};
+}
+
 var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
   getAPI(context) {
     const dkimRequests = new Map();let dkimSequence=0,dkimFire=null;
@@ -66,7 +85,7 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
     let gmailImporter = null;
     const documents = new Map();
     const pendingDocuments = new Map();
-    const windows = new Map();
+    const windows = new Map(),tabWatchers=new Map();
     const conversationDocuments = new Map();
     const id = context.extension.id;
     const skinWindows = new Map();
@@ -168,6 +187,7 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
       windows.set(win, listener);
       applyTodayPane(win);
       scan(win.document);
+      if(!tabWatchers.has(win))tabWatchers.set(win,watchMailTabs(win,scan));
     };
     const refresh = () => {
       for (const [doc, controller] of documents) {
@@ -203,6 +223,7 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
       for (const zoom of zoomWindows.values()) zoom.close(); zoomWindows.clear();
       for (const win of skinWindows.keys()) unloadSkin(win);
       for (const win of todayWindows) removeTodayPaneStyle(win);
+      for(const watcher of tabWatchers.values())watcher.close();tabWatchers.clear();
       documents.clear(); windows.clear();
     }});
     return { inlineLabels: {
@@ -266,6 +287,7 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
         chromeURLs: ["chrome://messenger/content/messenger.xhtml"],
         onLoadWindow: loadWindow,
         onUnloadWindow(win) {
+          tabWatchers.get(win)?.close();tabWatchers.delete(win);
           zoomWindows.get(win)?.close(); zoomWindows.delete(win);
           removeTodayPaneStyle(win);
           unloadSkin(win);

@@ -370,3 +370,14 @@ test('native selection column is enabled first for every folder layout and resto
   controller.close();
   assert.equal(pane.updateColumns,original);assert.equal(drafts[1].id,'selectCol');assert.equal(drafts[1].hidden,true);
 });
+
+test('synthetic search results use Gmail columns without changing regular folder layouts',()=>{
+ const columns=['subjectCol','correspondentCol','dateCol','locationCol','selectCol','senderCol','attachmentCol','flaggedCol','threadCol'].map((id,index)=>({id,hidden:!['subjectCol','correspondentCol','dateCol','locationCol'].includes(id),ordinal:index+1}));
+ const snapshot=columns.map(column=>({...column})),calls=[];
+ const original=function(simple){calls.push(simple)};const pane={columns,updateColumns:original};
+ const win={threadPane:pane,gViewWrapper:{isSynthetic:true},document:{getElementById:()=>({reset(){}})}};
+ const controller=scope.installSearchColumns(win);
+ assert.deepEqual(columns.filter(column=>!column.hidden).map(column=>column.id),['selectCol','threadCol','flaggedCol','senderCol','subjectCol','attachmentCol','dateCol']);
+ controller.close();assert.equal(pane.updateColumns,original);assert.deepEqual(columns,snapshot);
+ win.gViewWrapper.isSynthetic=false;const regular=scope.installSearchColumns(win);assert.deepEqual(columns,snapshot);regular.close();
+});

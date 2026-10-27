@@ -385,6 +385,30 @@ function installSelectionColumn(win) {
   }};
 }
 
+// Search lists have their own native defaults instead of a folder's saved
+// layout. Apply the same Gmail column arrangement without persisting it.
+function installSearchColumns(win) {
+  const pane=win.threadPane,original=pane?.updateColumns,saved=new WeakMap();
+  if(typeof original!=='function')return {close(){}};
+  function update(...args){
+    const columns=pane.columns;
+    if(win.gViewWrapper?.isSynthetic && Array.isArray(columns)){
+      if(!saved.has(columns))saved.set(columns,columns.map(column=>({column,hidden:column.hidden,ordinal:column.ordinal})));
+      const order=['selectCol','threadCol','flaggedCol','senderCol','subjectCol','attachmentCol','dateCol'];
+      for(const column of columns)column.hidden=!order.includes(column.id);
+      columns.sort((a,b)=>(order.includes(a.id)?order.indexOf(a.id):order.length)-(order.includes(b.id)?order.indexOf(b.id):order.length));
+      columns.forEach((column,index)=>{column.ordinal=index+1});
+      return original.call(this,false,...args.slice(1));
+    }
+    return original.apply(this,args);
+  }
+  pane.updateColumns=update;update.call(pane);win.document.getElementById('threadTree')?.reset?.();
+  return {close(){
+    if(pane.updateColumns!==update)return;pane.updateColumns=original;
+    const snapshot=saved.get(pane.columns);if(snapshot){pane.columns.splice(0,pane.columns.length,...snapshot.map(item=>item.column));for(const item of snapshot){item.column.hidden=item.hidden;item.column.ordinal=item.ordinal;}original.call(pane);win.document.getElementById('threadTree')?.reset?.();}
+  }};
+}
+
 function installCompleteViewCopy(win) {
   const pane=win.threadPane, original=pane?._applyView;
   if(typeof original!=='function' || typeof pane._applyColumns!=='function')return {close(){}};
@@ -483,6 +507,7 @@ function installInboxControls(win,{threadGuides=true,reader=null}={}) {
   if (!tree) return {close(){}};
   const compose = installComposeLabel(doc);
   const selectionColumn=installSelectionColumn(win);
+  const searchColumns=installSearchColumns(win);
   const idleActions=installInboxIdleActions(win,reader);
   const responsive = installResponsiveColumns(win);
   const viewCopy = installCompleteViewCopy(win);
@@ -655,7 +680,7 @@ function installInboxControls(win,{threadGuides=true,reader=null}={}) {
     compose.close();
     responsive.close();
     viewCopy.close();
-    newMessage.close();idleActions.close();selectionColumn.close();
+    newMessage.close();idleActions.close();searchColumns.close();selectionColumn.close();
     threadToggles.close();
     threadDefaults.close();
     if (rowClass && Number.isFinite(originalHeight) && rowClass.ROW_HEIGHT === originalHeight + 6) {
