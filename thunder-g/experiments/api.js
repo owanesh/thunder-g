@@ -125,6 +125,10 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
     let started = false;
     let closed = false;
     const attach = doc => {
+      if (!closed && doc?.documentURI === "chrome://messenger/content/multimessageview.xhtml") {
+        if (!conversationDocuments.has(doc)) conversationDocuments.set(doc,installNativeSummaryStyle(doc.defaultView,MailServices));
+        return;
+      }
       if (!closed && doc?.documentURI === 'chrome://conversations/content/experiment-api/stub.html') {
         loadSkin(doc.defaultView, 'data:text/css;charset=utf-8,' + encodeURIComponent(GMAIL_CONVERSATIONS_CSS));
         if (!conversationDocuments.has(doc)) conversationDocuments.set(doc, installConversationStyle(doc.defaultView, GMAIL_CONVERSATIONS_CSS, messageId => {

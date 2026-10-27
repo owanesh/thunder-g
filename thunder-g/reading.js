@@ -665,7 +665,7 @@ function installReadingMode(win) {
       return;
     }
     if (!isReadingClick(event)) return;
-    const row = event.target.closest('tr.table-layout');
+    const row = event.target.closest('tr.table-layout') || event.target.closest('tr.card-layout');
     if (!row || !tree.contains(row)) return;
     if (pending !== null) win.cancelAnimationFrame(pending);
     const view = win.gDBView, index = row.index, ticket = ++openTicket;
@@ -683,7 +683,7 @@ function installReadingMode(win) {
     });
   }
   function doubleClick(event) {
-    if (!isReadingClick(event) || !event.target.closest('tr.table-layout')) return;
+    if (!isReadingClick(event) || !(event.target.closest('tr.table-layout') || event.target.closest('tr.card-layout'))) return;
     // The first click already opened the in-tab reader; avoid a second tab.
     event.preventDefault();
     event.stopImmediatePropagation();

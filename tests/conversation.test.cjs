@@ -96,3 +96,29 @@ test('expanded message renders its own chips below recipients, updates and clean
   assert.equal(header.children.length,0,'removing the tag removes the message chip');
   controller.close();assert.equal(classes.size,0);
 });
+
+test('native summary opens an exact message from its snippet or row and keeps controls independent',()=>{
+ let handler,observe,selected=0,disconnected=false,selection={isCollapsed:true};
+ const props=new Map(),attrs=new Map([['style','color:white;background-color:#ff0000']]);
+ const tag={dataset:{tag:'Important'},style:{getPropertyValue:key=>props.get(key)||'',setProperty:(key,value)=>props.set(key,value)},
+  getAttribute:key=>attrs.get(key)??null,setAttribute:(key,value)=>attrs.set(key,value),removeAttribute:key=>attrs.delete(key)};
+ const style={remove(){this.removed=true}};
+ const link={click(){selected++}};
+ const row={querySelector:()=>link};
+ const doc={head:{append(){}},createElement:()=>style,querySelectorAll:()=>[tag],
+  addEventListener(name,fn){handler=fn},removeEventListener(name,fn){assert.equal(fn,handler)}};
+ const win={document:doc,getSelection:()=>selection,MutationObserver:class{
+  constructor(fn){observe=fn}observe(){}disconnect(){disconnected=true}}};
+ const controller=scope.installNativeSummaryStyle(win,{tags:{getAllTags:()=>[{tag:'Important',color:'#ff0000'}]}});
+ assert.equal(props.get('--gm-summary-tag-bg'),scope.chipColors('#ff0000').background);
+ function event(control=false,extra={}){return {button:0,target:{closest:selector=>selector==='#messageList > li'?row:control?{}:null},preventDefault(){this.prevented=true},...extra};}
+ const snippet=event();handler(snippet);assert.equal(selected,1);assert.equal(snippet.prevented,true);
+ handler(event());assert.equal(selected,2,'blank row space follows the same native message link');
+ handler(event(true));assert.equal(selected,2,'native links, tags and controls do not fire a second click');
+ for(const extra of [{ctrlKey:true},{metaKey:true},{shiftKey:true},{altKey:true},{button:2}])handler(event(false,extra));
+ selection={isCollapsed:false};handler(event());assert.equal(selected,2,'selecting snippet text does not open mail');
+ observe();assert.equal(props.size,2,'refresh keeps the same two palette properties');
+ controller.close();assert.equal(disconnected,true);assert.equal(style.removed,true);
+ assert.equal(attrs.get('style'),'color:white;background-color:#ff0000','disabling restores native tag styling');
+ handler(event());assert.equal(selected,2);
+});

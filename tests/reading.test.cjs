@@ -72,9 +72,9 @@ test('single click opens the current-tab reader, back restores the list, and dou
   frameQueue.shift()();
   assert.equal(layout.messagePaneVisible,false,'a thread-arrow click cancels a queued reader open');
 
-  tree.events.click({button:0,target:{closest:selector=>selector==='tr.table-layout'?row:null}});
+  tree.events.click({button:0,target:{closest:selector=>selector==='tr.card-layout'?row:null}});
   frameQueue.shift()();
-  assert.equal(layout.messagePaneVisible,true,'click opens conversation');
+  assert.equal(layout.messagePaneVisible,true,'clicking a card row outside its subject opens the native reader');
   assert.equal(refreshes,1,'first single click explicitly displays the selected message');
   for(const action of ['increaseSize','reduceSize','resetSize'])assert.equal(controller.zoom(action),true);
   assert.deepEqual(zoomCalls,[['enlarge',messagePane],['reduce',messagePane],['reset',messagePane]],'the native reader zooms its message browser, never the chrome');

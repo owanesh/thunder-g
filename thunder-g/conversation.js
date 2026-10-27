@@ -245,3 +245,52 @@ function watchConversationBrowser(win, onDocument) {
     browser = null;
   }};
 }
+
+
+// Thunderbird's own thread summary is used when the independent reader is off.
+// Keep its message selection callback; extend only its hit area and tag styling.
+function installNativeSummaryStyle(win, mail = MailServices) {
+  const doc=win.document,originals=new Map();let closed=false;
+  const style=doc.createElement('style');
+  style.textContent=`
+    #messageList > li { cursor:pointer; }
+    #messageList .tags { display:inline-flex; align-items:center; gap:4px; }
+    #messageList .tag { display:inline-flex; align-items:center; justify-content:center;
+      box-sizing:border-box; font:400 12px/1.5 Arial,sans-serif; border-radius:4px;
+      padding:1px 5px; vertical-align:middle;
+      background-color:var(--gm-summary-tag-bg) !important;
+      color:var(--gm-summary-tag-fg) !important; }
+  `;
+  doc.head.append(style);
+  function refresh() {
+    if(closed)return;
+    for(const [node,value] of originals)if(node.isConnected===false){originals.delete(node);}
+    const tags=mail.tags.getAllTags();
+    for(const node of doc.querySelectorAll('#messageList .tag')) {
+      if(!originals.has(node))originals.set(node,node.getAttribute('style'));
+      const tag=tags.find(tag=>tag.tag===node.dataset.tag);
+      const colors=chipColors(tag?.color);
+      if(node.style.getPropertyValue('--gm-summary-tag-bg')!==colors.background)
+        node.style.setProperty('--gm-summary-tag-bg',colors.background);
+      if(node.style.getPropertyValue('--gm-summary-tag-fg')!==colors.foreground)
+        node.style.setProperty('--gm-summary-tag-fg',colors.foreground);
+    }
+  }
+  function click(event) {
+    if(closed || event.button!==0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey ||
+       win.getSelection?.()?.isCollapsed===false ||
+       event.target.closest('button,input,a,.link,.tag,.star,[role="button"]'))return;
+    const row=event.target.closest('#messageList > li');
+    const link=row?.querySelector('.subject.link.primary, .author.link.primary');
+    if(!link)return;
+    event.preventDefault();link.click();
+  }
+  doc.addEventListener('click',click);
+  const observer=new win.MutationObserver(refresh);
+  observer.observe(doc,{childList:true,subtree:true});refresh();
+  return {refresh,close(){
+    if(closed)return;closed=true;observer.disconnect();doc.removeEventListener('click',click);style.remove();
+    for(const [node,value] of originals){if(value===null)node.removeAttribute('style');else node.setAttribute('style',value);}
+    originals.clear();
+  }};
+}
