@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.19.0
+
 - Open global search results as a styled list by default; add a setting to restore Thunderbird’s timeline and faceted results.
 
 ## 0.18.0
