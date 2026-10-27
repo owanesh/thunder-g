@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Align the select-all toolbar checkbox with the message-row checkboxes.
+
 - Match immediate sent-message previews to conversation cards and load the saved message in the same card without forcing a scroll or leaving a blank body during loading.
 
 ## 0.19.0

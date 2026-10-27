@@ -143,8 +143,11 @@ function installInboxIdleActions(win,reader=null) {
   bar.append(select,refresh,more);host.prepend(bar);
   const style=doc.createElement('style');style.textContent=`
     #threadPaneFolderName,#threadPaneFolderCountContainer{display:none!important}
+    /* Match the native selection cell's leading edge, including RTL. */
+    #threadPaneHeaderBar{padding-inline-start:0!important}
+    #threadPaneHeaderBar > .list-header-bar-container-start{padding-inline-start:0!important}
     .gm-inbox-idle-actions{display:flex;align-items:center;gap:8px;min-height:36px}
-    .gm-inbox-idle-actions input{appearance:auto;inline-size:18px;block-size:18px;margin:0 10px 0 4px;accent-color:#1a73e8;cursor:pointer}
+    .gm-inbox-idle-actions input{appearance:auto;inline-size:18px;block-size:18px;margin:0;margin-inline-end:10px;accent-color:#1a73e8;cursor:pointer}
     .gm-inbox-action{display:inline-flex;align-items:center;justify-content:center;inline-size:36px;block-size:36px;padding:8px;border:0;border-radius:50%;background:transparent;color:inherit;cursor:pointer}
     .gm-inbox-action:hover:enabled{background:var(--treeitem-background-hover,#e9eef6)}
     .gm-inbox-action:disabled{opacity:.5;cursor:default}
