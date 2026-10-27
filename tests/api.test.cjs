@@ -18,8 +18,9 @@ test('native keyword notifications refresh open conversations and unsubscribe on
   vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/experiments/api.js'),'utf8'),scope);
   const api=new scope.inlineLabels().getAPI({extension:{id:'test'},callOnClose(value){cleanup=value}});
   await api.inlineLabels.start();
-  const sheets=new Set();
-  const win={windowUtils:{loadSheetUsingURIString(uri){sheets.add(uri)},removeSheetUsingURIString(uri){sheets.delete(uri)}},addEventListener(){},removeEventListener(){}};
+  const sheets=new Set(),events=new Map();
+  const win={windowUtils:{loadSheetUsingURIString(uri){sheets.add(uri)},removeSheetUsingURIString(uri){sheets.delete(uri)}},addEventListener(name,fn){events.set(name,fn)},removeEventListener(name){events.delete(name)}};
+  win.top=win;
   let todayPaneWrites=0;
   const pane={setVisible(){todayPaneWrites++}};
   win.TodayPane={updateDisplay(){todayPaneWrites++},updateSplitterState(){todayPaneWrites++}};
@@ -28,6 +29,10 @@ test('native keyword notifications refresh open conversations and unsubscribe on
   windows.onLoadWindow(win);
   assert.equal(todayPaneWrites,0,"attaching the skin preserves the native Today Pane preference");
   const originalSheets=sheets.size;
+  events.get("activate")();events.get("activate")();
+  assert.equal(sheets.size,originalSheets,"repeated activation does not duplicate styles");
+  windows.onUnloadWindow(win);assert.equal(events.size,0);assert.equal(sheets.size,0);
+  windows.onLoadWindow(win);assert.equal(sheets.size,originalSheets,"a reopened window receives the skin again");
   await api.inlineLabels.setHideTodayPane(true);
   assert.equal(sheets.size,originalSheets+1,'option adds a separate reversible stylesheet');
   await api.inlineLabels.setHideTodayPane(true);
@@ -39,7 +44,7 @@ test('native keyword notifications refresh open conversations and unsubscribe on
   listener.msgPropertyChanged({},'keywords','ta','');assert.equal(refreshed,1);
   listener.msgPropertyChanged({},'label',1,0);assert.equal(refreshed,2);
   listener.msgPropertyChanged({},'junkscore','0','100');assert.equal(refreshed,2);
-  cleanup.close();assert.equal(todayPaneWrites,0,"disabling the skin does not change calendar settings");assert.equal(removed,listener);assert.equal(disposed,1);assert.equal(sheets.size,0,"disable unloads all styles, including the Today Pane option");
+  cleanup.close();assert.equal(todayPaneWrites,0,"disabling the skin does not change calendar settings");assert.equal(removed,listener);assert.equal(disposed,2);assert.equal(sheets.size,0,"disable unloads all styles, including the Today Pane option");
   listener.msgPropertyChanged({},'keywords','ta','');assert.equal(refreshed,2);
 });
 
@@ -139,4 +144,19 @@ test('mail tab watcher scans existing and newly opened search browsers and clean
  next.contentDocument=doc;monitor.onTabSwitched(tab);assert.equal(scans.at(-1),doc);assert.equal(listeners.size,2);
  monitor.onTabClosing(tab);assert.equal(listeners.size,1);
  watcher.close();assert.equal(removed,monitor);assert.equal(listeners.size,0);
+});
+
+test('timed-out mail panes release pending state and can attach on a later activation',()=>{
+ const scope=vm.createContext({console:{warn(){}},ChromeUtils:{importESModule:()=>({ExtensionCommon:{ExtensionAPI:class{}}})}});
+ vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/experiments/api.js'),'utf8'),scope);
+ const tasks=new Map();let sequence=0,closed=0,attached=0;
+ const win={setTimeout(fn){tasks.set(++sequence,fn);return sequence},clearTimeout(id){tasks.delete(id)},addEventListener(){},removeEventListener(){}};
+ const doc={defaultView:win,readyState:'loading',getElementById:()=>({})};
+ const step=()=>{const [id,fn]=tasks.entries().next().value;tasks.delete(id);fn()};
+ scope.waitForMailPane(doc,()=>attached++,()=>closed++);
+ for(let i=0;i<100;i++)step();
+ assert.equal(tasks.size,0);assert.equal(closed,1);assert.equal(attached,0);
+ doc.readyState='complete';win.threadPane={};
+ const pending=scope.waitForMailPane(doc,()=>attached++,()=>closed++);step();
+ assert.equal(attached,1);assert.equal(closed,2);pending.close();assert.equal(closed,2,'cleanup is idempotent');
 });
