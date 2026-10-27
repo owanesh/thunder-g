@@ -12,15 +12,21 @@ A mixed checkbox means only some messages have the label; wait for conversation 
 
 ## Nested labels
 
-Enable Thunderbird’s **Tags** folder-pane mode to see the label tree. [View > Folder > Tags]
+Native tags named with `/` paths are displayed as expandable nested labels in the Tags sidebar and in the `L` label picker. For example, `Work`, `Work/PhD` and `Work/PhD/Project` form a three-level tree. Enable the native Tags folder-pane mode to see this sidebar. Existing tag keys and message assignments are preserved, and message chips show the full path. Searching the picker finds children even inside collapsed branches.
 
-Names such as `Work/Project` create nesting; use **Create new → Nest label under** in the picker to choose a parent.
-Parent and child assignments are independent, and synchronization depends on your mail provider and other clients.
+Select messages, press `L`, choose **Create new**, enter a name, enable **Nest label under**, and choose an existing parent. Creating a label applies it to the current selection or resolved conversation, including sent replies. Parent and child assignments are independent.
 
-## Sidebar menu
-<img src="resources/microelements/label_options.svg" align="right" alt="Label option">
+The hierarchy is derived from native tag names, not a separate skin database. Other clients see the full path when they support those same native tags; this feature does not add tag synchronization to a server/client that lacks it. Paths whose intermediate parents do not exist remain under the closest existing ancestor. Create those parent tags to show the missing levels. Native Manage Labels can edit individual full paths; renaming a parent does not automatically rename its descendants.
 
-Hover or focus a label and open [ **⋮** ] to change its color, hide its list chips, edit it, remove it or add a sublabel.
+## Sidebar label menu
+
+Hover a label in the Tags sidebar and click its three-dot button (also available on keyboard focus). The menu provides preset/custom label colors, Show/Hide in message-list rows, Edit, Remove label and Add sublabel.
+
+Show/Hide is a local skin preference: hiding a chip preserves its native assignment and sidebar/picker entry. Editing a full path renames the label and its descendants while preserving their keys; conflicting paths are rejected before changes. Remove label asks for confirmation and keeps emails and sublabels. Add sublabel creates an unassigned native tag beneath the chosen parent, without applying it to the currently selected emails. Colors and names use Thunderbird's native tag service; other clients' behavior still depends on their tag synchronization support.
+
+## Click a label to find matching mail
+
+Click a label chip in the message list or conversation view to open its native Thunderbird tag view across folders. The tooltip identifies the label, and Enter/Space also activates a focused chip. This uses the exact tag key, including nested labels, and does not require global search indexing or Gmail query syntax. Existing quick-filter constraints are cleared for the results while preserving the sticky-filter preference. The conversation reader closes to reveal the matching list. The separate × button still removes the tag from that message; it does not open the tag view.
 
 Hiding chips keeps assignments; removing a label keeps emails and sublabels.
 **Edit** renames descendants too, unlike Thunderbird’s native tag editor; **Add sublabel** creates a label without assigning it to selected mail.

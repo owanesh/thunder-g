@@ -1,5 +1,5 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs'),path=require('node:path');
-const scope=vm.createContext({console});vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/label-navigation.js'),'utf8'),scope);
+const scope=vm.createContext({console});vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/label-navigation.js'),'utf8'),scope);
 test('chip navigation resolves exact native keys, reveals tag mode and clears reader/filter state',()=>{
  const tags=[{key:'exact',tag:'confs/mw26'},{key:'different',tag:'confs-mw26'}],calls=[];
  const values={sticky:true,text:{text:'unrelated'},unread:true};

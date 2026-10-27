@@ -14,7 +14,7 @@ test('settings confirmations expire, newer feedback replaces timers, and errors 
     setTimeout(fn,delay){timers.set(++sequence,{fn,delay});return sequence},
     clearTimeout:id=>timers.delete(id)
   });
-  vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/options.js'),'utf8'),scope);
+  vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/options.js'),'utf8'),scope);
   const status=element('status');
   function expire(){const [id,timer]=timers.entries().next().value;timers.delete(id);timer.fn();}
   scope.reportStatus('Saved.');

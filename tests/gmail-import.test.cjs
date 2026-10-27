@@ -1,5 +1,5 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs'),path=require('node:path');
-const code=fs.readFileSync(path.join(__dirname,'../inline-labels/gmail-import.js'),'utf8');
+const code=fs.readFileSync(path.join(__dirname,'../thunder-g/gmail-import.js'),'utf8');
 const scope=vm.createContext({});vm.runInContext(code,scope);
 const plain=x=>JSON.parse(JSON.stringify(x));
 const remote=[{id:'INBOX',name:'INBOX',type:'system'},{id:'a',name:'Work',type:'user'},{id:'b',name:'Work/Projects',type:'user'},{id:'c',name:'Conferences/Middleware',type:'user'}];
@@ -117,7 +117,7 @@ test('native OAuth adapter requests only identity/label scope with PKCE and forg
 test('privileged API returns usable setup errors instead of exposing exceptions or losing their message',async()=>{
  const module={setTimeout,clearTimeout,ExtensionCommon:{ExtensionAPI:class{},EventManager:class{api(){return {}}}},ExtensionParent:{},ExtensionSupport:{},MailServices:{tags:{getAllTags:()=>[]}},UIFontSize:{}};
  const local=vm.createContext({ChromeUtils:{importESModule:()=>module},Services:{},GMAIL_SKIN_CSS:'',GMAIL_CONVERSATIONS_CSS:''});
- vm.runInContext(code,local);vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/experiments/api.js'),'utf8'),local);
+ vm.runInContext(code,local);vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/experiments/api.js'),'utf8'),local);
  const api=new local.inlineLabels().getAPI({extension:{id:'test'},callOnClose(){}}).inlineLabels;
  const before=JSON.parse(await api.gmailLabelImport('status','{}'));assert.equal(before.ok,true);assert.equal(before.result.connected,false);
  const failure=JSON.parse(await api.gmailLabelImport('connect','{}'));assert.equal(failure.ok,false);assert.match(failure.error,/Configure an optional Google Desktop/);

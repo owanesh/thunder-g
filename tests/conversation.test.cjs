@@ -2,9 +2,9 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const vm=require('node:vm'),fs=require('node:fs'),path=require('node:path');
 const scope=vm.createContext({});
-vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/label-navigation.js'),'utf8'),scope);
-vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/labels.js'),'utf8'),scope);
-vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/conversation.js'),'utf8'),scope);
+vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/label-navigation.js'),'utf8'),scope);
+vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/labels.js'),'utf8'),scope);
+vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/conversation.js'),'utf8'),scope);
 test('conversation styles reach nested open components, track additions, and clean up without touching mail iframes',async()=>{
   function root(){return {hosts:[],styles:[],queries:0,querySelectorAll(selector){this.queries++;assert.ok(!selector.includes('iframe'));return this.hosts},
     append(style){style.parent=this;this.styles.push(style)}}}

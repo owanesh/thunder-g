@@ -13,7 +13,7 @@ class ReleaseAssetsTests(unittest.TestCase):
     def fixture(self,root):
         manifest={'version':'0.12.1','browser_specific_settings':{'gecko':{
             'id':release.ADDON_ID,'update_url':release.UPDATE_URL,'strict_min_version':'153.0','strict_max_version':'158.*'}}}
-        (root/'inline-labels').mkdir();(root/'inline-labels/manifest.json').write_text(json.dumps(manifest))
+        (root/'thunder-g').mkdir();(root/'thunder-g/manifest.json').write_text(json.dumps(manifest))
         xpi=root/'thunder-g-0.12.1.xpi'
         with ZipFile(xpi,'w') as z:z.writestr('manifest.json',json.dumps(manifest))
         return manifest,xpi
@@ -43,7 +43,7 @@ class ReleaseAssetsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             root=Path(folder);manifest,_=self.fixture(root)
             manifest['browser_specific_settings']['gecko']['update_url']='https://example.org/updates.json'
-            (root/'inline-labels/manifest.json').write_text(json.dumps(manifest))
+            (root/'thunder-g/manifest.json').write_text(json.dumps(manifest))
             with self.assertRaisesRegex(ValueError,'identity or update URL'):release.generate(root,'v0.12.1')
 
 if __name__=='__main__':unittest.main()

@@ -1,9 +1,16 @@
 # Updates and maintenance
 
+## Removing an XPI installation
+
+If you installed the XPI through Thunderbird, open **Add-ons Manager → Thunder-G
+→ Remove** and restart if prompted. You can disable it first to compare behavior.
+Native tags and mail actions remain; removal does not undo message changes.
+For a Python-managed installation, use the rollback instructions below instead.
+
 ## Automatic updates
 
 After installing the first update-enabled release, enable **Allow automatic updates** in Thunder-G’s Add-ons Manager details, or use **Check for Updates**.
-Only compatible stable releases are offered; the first configured release must be published before the feed is available.
+Keep the current extension installed for routine updates. Only compatible stable releases are offered; the first configured release must be published before the feed is available.
 
 ## Migrating an older installer-managed profile
 
@@ -27,13 +34,18 @@ Rebuild any local DKIM compatibility patch for the new ID.
 For installer-managed installations, quit Thunderbird and run `python3 install.py "/path/to/profile" --uninstall` to restore the saved installation.
 Edited managed files block rollback; mail actions are not undone.
 
+You can arrange columns manually with Thunderbird’s column picker. For the
+optional scripted layout, open the intended ordinary folder and paste the entire
+`scripts/apply-gmail-columns.js` into **Tools → Developer Tools → Error Console**.
+It changes that folder’s visibility/order and shared sender/subject widths.
+
 Optional column scripts run in Thunderbird’s Error Console: `scripts/apply-gmail-columns.js` saves one folder snapshot and `scripts/restore-columns.js` restores it.
 Keep the original folder open when restoring, and preserve `gmail-skin-columns.json` before applying another layout.
 Column snapshots are separate from installer rollback.
 
 ## Publishing a release
 
-1. Add changelog notes under **Unreleased**, then run `python3 publish.py 0.14.0 --dry-run` to preview or omit `--dry-run` to prepare the version and assets.
+1. Add changelog notes under **Unreleased**. Choose a new `MAJOR.MINOR.PATCH` version greater than `thunder-g/manifest.json`’s current version, then run `python3 publish.py <next-version> --dry-run`, replacing `<next-version>` with that number (without angle brackets). Review the plan, then omit `--dry-run` to prepare the version and assets. The target version must not already have a changelog entry or local release artifacts.
 2. Review and merge, push the matching tag, then publish a stable release in `vschiavoni/thunderbird-gmail-skin`.
 3. Check that **Publish extension update assets** succeeds and the [update feed](https://github.com/vschiavoni/thunderbird-gmail-skin/releases/latest/download/updates.json) is available before announcing the release.
 

@@ -44,7 +44,7 @@ def install(profile):
     if (profile / LEGACY_ADDON).exists():
         raise RuntimeError('Uninstall the previous inline-labels extension before installing Thunder-G under its new ID.')
     subprocess.run([sys.executable, str(ROOT / 'build.py')], check=True)
-    version = json.loads((ROOT / 'inline-labels/manifest.json').read_text())['version']
+    version = json.loads((ROOT / 'thunder-g/manifest.json').read_text())['version']
     target = profile / ADDON
     state.mkdir()
     record = {'version': version, 'mode': 'extension-only', 'preference': None,
@@ -87,7 +87,7 @@ def upgrade(profile):
         if record['before'][name] and not (state / 'before' / name).is_file():
             raise RuntimeError('Missing original file for migration: ' + name)
     subprocess.run([sys.executable, str(ROOT / 'build.py')], check=True)
-    version = json.loads((ROOT / 'inline-labels/manifest.json').read_text())['version']
+    version = json.loads((ROOT / 'thunder-g/manifest.json').read_text())['version']
     backup = profile / (STATE + '-upgrade-' + datetime.now().strftime('%Y%m%d-%H%M%S-%f'))
     affected = styles + [ADDON, 'prefs.js']
     existed = {name: (profile / name).exists() for name in affected}

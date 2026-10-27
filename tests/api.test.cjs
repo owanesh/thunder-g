@@ -14,8 +14,8 @@ test('native keyword notifications refresh open conversations and unsubscribe on
     createComposeAutosave:()=>({set(enabled,minutes){assert.equal(enabled,true);assert.equal(minutes,1)},close(){}}),
     installMailZoom:()=>({close(){}}),
     installConversationStyle:()=>({refresh(){refreshed++},close(){disposed++}})});
-  vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/label-menu.js'),'utf8'),scope);
-  vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/experiments/api.js'),'utf8'),scope);
+  vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/label-menu.js'),'utf8'),scope);
+  vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/experiments/api.js'),'utf8'),scope);
   const api=new scope.inlineLabels().getAPI({extension:{id:'test'},callOnClose(value){cleanup=value}});
   await api.inlineLabels.start();
   const sheets=new Set();
@@ -45,8 +45,8 @@ test('native keyword notifications refresh open conversations and unsubscribe on
 
 test('startup waits for a complete mail pane and cancels retries when its window closes',()=>{
   const scope=vm.createContext({ChromeUtils:{importESModule:()=>({ExtensionCommon:{ExtensionAPI:class{}}})}});
-  vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/label-menu.js'),'utf8'),scope);
-  vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/experiments/api.js'),'utf8'),scope);
+  vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/label-menu.js'),'utf8'),scope);
+  vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/experiments/api.js'),'utf8'),scope);
   const tasks=new Map();let sequence=0,unload,attached=0;
   const win={setTimeout(fn){tasks.set(++sequence,fn);return sequence},clearTimeout(id){tasks.delete(id)},
     addEventListener(name,fn){unload=fn},removeEventListener(){}};
@@ -65,7 +65,7 @@ test('optional settings failures do not prevent permanent companion startup',asy
     const scope=vm.createContext({console:{warn(){},error(){}},browser:{
       storage:{local:{async get(){if(fail)throw Error('unavailable');return {hideTodayPane:true}}},onChanged:{addListener(){}}},
       inlineLabels:{onDkimRequest:{addListener(){}},async setIndependentReader(value){assert.equal(value,false)},async setBimiEnabled(value){assert.equal(value,false)},async setInlineReplyEnabled(value){assert.equal(value,false)},async setInlineNewMessageEnabled(value){assert.equal(value,false)},async setComposeAutosave(enabled,minutes){assert.equal(enabled,true);assert.equal(minutes,1)},async setMessagesPerPage(){},async setHideTodayPane(value){calls.push(value)},async start(){calls.push('started')}}}});
-    await vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/background.js'),'utf8'),scope);
+    await vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/background.js'),'utf8'),scope);
     assert.deepEqual(calls,[!fail,'started']);
   }
 });
@@ -75,7 +75,7 @@ test('independent reader is opt-in, restored at startup and propagated on prefer
   const scope=vm.createContext({console,browser:{
     storage:{local:{async get(){return {independentReader:true,hideTodayPane:false,composeAutosave:true,composeAutosaveMinutes:1,messagesPerPage:0}}},onChanged:{addListener(fn){changed=fn}}},
     inlineLabels:{onDkimRequest:{addListener(){}},async setIndependentReader(value){calls.push(value)},async setHideTodayPane(){},async setComposeAutosave(){},async setMessagesPerPage(){},async start(){calls.push('started')}}}});
-  await vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/background.js'),'utf8'),scope);
+  await vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/background.js'),'utf8'),scope);
   assert.deepEqual(calls,[true,'started']);
   changed({independentReader:{newValue:false}},'local');assert.deepEqual(calls,[true,'started',false]);
   changed({independentReader:{newValue:true}},'sync');assert.equal(calls.length,3);
@@ -87,7 +87,7 @@ test('optional compose and BIMI preferences load once and retain explicit opt-in
     storage:{local:{async get(){reads++;return {bimiEnabled:true,inlineReplyEnabled:true,inlineNewMessageEnabled:true}}},onChanged:{addListener(){}}},
     inlineLabels:{onDkimRequest:{addListener(){}},async setHideTodayPane(){},async setComposeAutosave(){},async setMessagesPerPage(){},async setIndependentReader(){},
       async setBimiEnabled(value){calls.push(['bimi',value])},async setInlineReplyEnabled(value){calls.push(['reply',value])},async setInlineNewMessageEnabled(value){calls.push(['new',value])},async start(){calls.push('started')}}}});
-  await vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/background.js'),'utf8'),scope);
+  await vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/background.js'),'utf8'),scope);
   assert.equal(reads,1,'a later optional storage read cannot interrupt startup');
   assert.deepEqual(calls,[['bimi',true],['reply',true],['new',true],'started']);
 });
@@ -98,7 +98,7 @@ test('thread guide preference defaults on, preserves opt-out and updates live fr
   let changed;const calls=[];
   const scope=vm.createContext({console,browser:{storage:{local:{async get(defaults){return {...defaults,...(initial===undefined?{}:{threadGuides:initial})}}},onChanged:{addListener(fn){changed=fn}}},
   inlineLabels:{onDkimRequest:{addListener(){}},async setThreadGuides(value){calls.push(value)},async setHideTodayPane(){},async setComposeAutosave(){},async setMessagesPerPage(){},async setIndependentReader(){},async start(){}}}});
-  await vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/background.js'),'utf8'),scope);
+  await vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/background.js'),'utf8'),scope);
   assert.deepEqual(calls,[initial!==false]);
   changed({threadGuides:{newValue:false}},'local');changed({threadGuides:{newValue:true}},'local');
   assert.deepEqual(calls,[initial!==false,false,true]);
@@ -114,7 +114,7 @@ test('column headers default hidden, restore explicit choice and respond only to
       onDkimRequest:{addListener(){}},setShowColumnHeaders:async value=>calls.push(value),
       setHideTodayPane:noop,setComposeAutosave:noop,setMessagesPerPage:noop,setIndependentReader:noop,start:noop
     }}});
-    vm.runInContext(fs.readFileSync(path.join(__dirname,'../inline-labels/background.js'),'utf8'),scope);
+    vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/background.js'),'utf8'),scope);
     await new Promise(resolve=>setImmediate(resolve));
     assert.deepEqual(calls,[saved===true]);
     changed({showColumnHeaders:{newValue:true}},'sync');assert.equal(calls.length,1);
@@ -126,7 +126,7 @@ test('column headers default hidden, restore explicit choice and respond only to
 });
 
 test('mail tab watcher scans existing and newly opened search browsers and cleans listeners',()=>{
- const scope=vm.createContext({console});const source=fs.readFileSync(path.join(__dirname,'../inline-labels/experiments/api.js'),'utf8');
+ const scope=vm.createContext({console});const source=fs.readFileSync(path.join(__dirname,'../thunder-g/experiments/api.js'),'utf8');
  vm.runInContext(source.slice(source.indexOf('function watchMailTabs'),source.indexOf('var inlineLabels = class')),scope);
  const scans=[],listeners=new Map();let monitor,removed;
  const browser={contentDocument:{name:'existing search'},addEventListener(name,fn){listeners.set(this,fn)},removeEventListener(){listeners.delete(this)}};

@@ -12,7 +12,7 @@ ADDON_ID = 'thunder-g@vschiavoni'
 
 
 def generate(root, tag):
-    manifest = json.loads((root / 'inline-labels/manifest.json').read_text())
+    manifest = json.loads((root / 'thunder-g/manifest.json').read_text())
     version = manifest['version']
     if not re.fullmatch(r'(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)', version) or tag != 'v' + version:
         raise ValueError('Release tag must match the manifest version exactly.')
