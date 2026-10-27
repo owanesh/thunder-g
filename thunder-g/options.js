@@ -160,3 +160,15 @@ columnHeaders.addEventListener('change', async () => {
     reportStatus('Unable to save. Please try again.');
   } finally { columnHeaders.disabled = false; }
 });
+
+const searchResultsAsList=document.getElementById('search-results-as-list');
+searchResultsAsList.disabled=true;
+browser.storage.local.get({searchResultsAsList:true}).then(settings=>{
+ searchResultsAsList.checked=settings.searchResultsAsList!==false;searchResultsAsList.disabled=false;
+}).catch(()=>reportStatus('Unable to load settings.'));
+searchResultsAsList.addEventListener('change',async()=>{
+ searchResultsAsList.disabled=true;
+ try{await browser.storage.local.set({searchResultsAsList:searchResultsAsList.checked});reportStatus('Saved. Applies to new searches.');}
+ catch(_){searchResultsAsList.checked=!searchResultsAsList.checked;reportStatus('Unable to save. Please try again.');}
+ finally{searchResultsAsList.disabled=false;}
+});

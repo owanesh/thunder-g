@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Open global search results as a styled list by default; add a setting to restore Thunderbird’s timeline and faceted results.
+
 ## 0.18.0
 
 - Attach the skin and label shortcuts to newly opened search-result tabs, using the Gmail-style columns in synthetic message lists.

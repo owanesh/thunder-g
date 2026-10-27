@@ -69,3 +69,5 @@ an optional Google Desktop OAuth client, choose custom labels and a destination
 System labels, emails, assignments and colors are excluded. Existing labels are
 never overwritten. See the [Gmail import guide](gmail-import.md) for setup, Google
 permissions, session-only credentials, conflict handling and safe retries.
+
+Global searches open in the styled message list by default. Turn off **Inbox → Always show search results as a list** to use Thunderbird’s timeline and faceted search view for new searches. The option uses the complete native result set and does not change Thunderbird’s global preferences.

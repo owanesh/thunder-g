@@ -135,8 +135,56 @@ test('mail tab watcher scans existing and newly opened search browsers and clean
  assert.equal(scans.length,1);
  const next={addEventListener(name,fn){listeners.set(this,fn)},removeEventListener(){listeners.delete(this)}};
  const tab={chromeBrowser:next};monitor.onTabOpened(tab);
- const doc={nodeType:9,name:'new search'};listeners.get(next)({target:doc});assert.equal(scans.at(-1),doc);
+ const doc={nodeType:9,name:'new search'};next.contentDocument=doc;listeners.get(next)({target:next});assert.equal(scans.at(-1),doc);
  next.contentDocument=doc;monitor.onTabSwitched(tab);assert.equal(scans.at(-1),doc);assert.equal(listeners.size,2);
  monitor.onTabClosing(tab);assert.equal(listeners.size,1);
  watcher.close();assert.equal(removed,monitor);assert.equal(listeners.size,0);
+});
+
+test('search lists use the complete native result set once, only after results are ready and while enabled',()=>{
+ const scope=vm.createContext({console});const source=fs.readFileSync(path.join(__dirname,'../thunder-g/experiments/api.js'),'utf8');
+ vm.runInContext(source.slice(source.indexOf('function installSearchListDefault'),source.indexOf('var inlineLabels = class')),scope);
+ let enabled=true,closed=0,opened=0,loaded=0;const events={};
+ const tab={},tabmail={currentTabInfo:tab,closeTab(value){assert.equal(value,tab);closed++}};
+ const context={tab,rootWin:{document:{getElementById:()=>tabmail}},activeSet:null,initialBuild(){loaded++;this.activeSet=[]},showActiveSetInTab(){opened++;assert.equal(this.activeSet.length,23)}};
+ const original=context.initialBuild;
+ const win={FacetContext:context,addEventListener(name,fn){events[name]=fn},removeEventListener(name){delete events[name]}};
+ const controller=scope.installSearchListDefault(win,()=>enabled);controller.refresh();assert.equal(opened,0);
+ enabled=false;context.activeSet=Array(23).fill({});controller.refresh();assert.equal(opened,0);
+ enabled=true;tabmail.currentTabInfo={};controller.refresh();assert.equal(opened,0,'background searches do not steal focus');
+ tabmail.currentTabInfo=tab;controller.refresh();controller.refresh();assert.equal(opened,1);assert.equal(closed,1);
+ controller.close();assert.equal(context.initialBuild,original);assert.equal(events.unload,undefined);
+ const next=scope.installSearchListDefault(win,()=>false);context.initialBuild();assert.equal(loaded,1);assert.equal(opened,1);next.close();
+});
+test('search-list preference defaults on and live opt-out is preserved',async()=>{
+ for(const initial of [undefined,false]){
+  let changed;const calls=[];
+  const scope=vm.createContext({console,browser:{storage:{local:{async get(defaults){return {...defaults,...(initial===undefined?{}:{searchResultsAsList:initial})}}},onChanged:{addListener(fn){changed=fn}}},inlineLabels:{onDkimRequest:{addListener(){}},async setSearchResultsAsList(value){calls.push(value)},async setHideTodayPane(){},async setComposeAutosave(){},async setMessagesPerPage(){},async setIndependentReader(){},async start(){}}}});
+  await vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/background.js'),'utf8'),scope);
+  assert.deepEqual(calls,[initial!==false]);changed({searchResultsAsList:{newValue:false}},'local');assert.equal(calls.at(-1),false);changed({searchResultsAsList:{newValue:undefined}},'local');assert.equal(calls.at(-1),true);
+ }
+});
+
+test('search startup waits for late page scripts, wraps native completion and cancels startup on close',()=>{
+ const scope=vm.createContext({console});const source=fs.readFileSync(path.join(__dirname,'../thunder-g/experiments/api.js'),'utf8');
+ vm.runInContext(source.slice(source.indexOf('function installSearchListDefault'),source.indexOf('var inlineLabels = class')),scope);
+ const timers=new Map();let sequence=0,opened=0,closed=0;
+ const tab={},tabmail={currentTabInfo:tab,closeTab(){closed++}};
+ const win={addEventListener(){},removeEventListener(){},setTimeout(fn){timers.set(++sequence,fn);return sequence},clearTimeout(id){timers.delete(id)}};
+ const controller=scope.installSearchListDefault(win,()=>true);controller.refresh();assert.equal(timers.size,1);
+ const original=function(){this.activeSet=[1,2,3]};win.FacetContext={tab,rootWin:{document:{getElementById:()=>tabmail}},activeSet:null,initialBuild:original,showActiveSetInTab(){opened++;assert.equal(this.activeSet.length,3)}};
+ const [id,tick]=timers.entries().next().value;timers.delete(id);tick();assert.notEqual(win.FacetContext.initialBuild,original);
+ win.FacetContext.initialBuild();assert.equal(opened,1);assert.equal(closed,1);assert.equal(timers.size,0);controller.close();
+ delete win.FacetContext;const pending=scope.installSearchListDefault(win,()=>true);pending.refresh();assert.equal(timers.size,1);pending.close();assert.equal(timers.size,0);
+});
+test('tab watcher observes nested search browser loads whose event targets are frame elements',()=>{
+ const scope=vm.createContext({console});const source=fs.readFileSync(path.join(__dirname,'../thunder-g/experiments/api.js'),'utf8');vm.runInContext(source.slice(source.indexOf('function watchMailTabs'),source.indexOf('// Reuse Thunderbird')),scope);
+ const listeners=new Map(),scans=[];
+ const frame=()=>({addEventListener(_name,fn){listeners.set(this,fn)},removeEventListener(){listeners.delete(this)}});
+ const outer=frame(),inner=frame(),tab={iframe:outer};let monitor;
+ const tabmail={tabInfo:[tab],registerTabMonitor(value){monitor=value},unregisterTabMonitor(){}};
+ const watcher=scope.watchMailTabs({document:{getElementById:()=>tabmail}},doc=>scans.push(doc));
+ outer.contentDocument={querySelectorAll:()=>[inner]};listeners.get(outer)({target:outer});assert.ok(listeners.has(inner));
+ inner.contentDocument={name:'facet results'};listeners.get(inner)({target:inner});assert.equal(scans.at(-1),inner.contentDocument);
+ monitor.onTabClosing(tab);assert.equal(listeners.size,0);watcher.close();
 });

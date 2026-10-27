@@ -34,20 +34,64 @@ function waitForMailPane(doc, onReady) {
 // New synthetic search tabs do not reliably bubble their document load through
 // the main window. Watch each chrome browser as well as native tab lifecycle.
 function watchMailTabs(win,scan) {
-  const tabmail=win.document.getElementById('tabmail'),browsers=new Map();
+  const tabmail=win.document.getElementById('tabmail'),tabs=new Map();
   if(!tabmail?.registerTabMonitor)return {close(){}};
   function watch(tab){
-    const browser=tab?.chromeBrowser || tab?.browser;if(!browser)return;
-    if(!browsers.has(browser)){
-      const load=event=>{if(event.target?.nodeType===9)scan(event.target);};
-      browser.addEventListener('load',load,true);browsers.set(browser,load);
+    const root=tab?.chromeBrowser || tab?.iframe || tab?.browser;if(!root)return;
+    if(!tabs.has(tab))tabs.set(tab,new Map());
+    const browsers=tabs.get(tab);
+    function visit(browser){
+      if(!browsers.has(browser)){
+        const load=()=>visit(browser);
+        browser.addEventListener('load',load,true);browsers.set(browser,load);
+      }
+      try{
+        const doc=browser.contentDocument;if(!doc)return;
+        scan(doc);
+        // The global search uses an HTML iframe wrapper containing a chrome
+        // browser. Its load event targets the element, not a Document.
+        for(const child of doc.querySelectorAll?.('browser, iframe') || [])visit(child);
+      }catch(error){console.error('Thunder-G: could not inspect mail tab.',error);}
     }
-    try{if(browser.contentDocument)scan(browser.contentDocument);}catch(error){console.error('Thunder-G: could not inspect mail tab.',error);}
+    visit(root);
   }
-  function forget(tab){const browser=tab?.chromeBrowser || tab?.browser,load=browsers.get(browser);if(load){browser.removeEventListener('load',load,true);browsers.delete(browser);}}
+  function forget(tab){const browsers=tabs.get(tab);if(!browsers)return;for(const [browser,load]of browsers)browser.removeEventListener('load',load,true);tabs.delete(tab);}
   const monitor={onTabOpened:watch,onTabRestored:watch,onTabSwitched:watch,onTabClosing:forget,onTabTitleChanged(){},onTabPersist(){return null}};
   tabmail.registerTabMonitor(monitor);for(const tab of tabmail.tabInfo || [])watch(tab);
-  return {close(){tabmail.unregisterTabMonitor(monitor);for(const [browser,load]of browsers)browser.removeEventListener('load',load,true);browsers.clear();}};
+  return {close(){tabmail.unregisterTabMonitor(monitor);for(const tab of [...tabs.keys()])forget(tab);}};
+}
+
+// Reuse Thunderbird's own Show results as list action after its full query has
+// completed. No second search, copied result limit, or permanent native pref.
+function installSearchListDefault(win,isEnabled) {
+  let context=null,original=null,closed=false,opened=false,timer=null,attempts=0;
+  function refresh(){
+    if(closed || opened)return;
+    if(!context){
+      const candidate=win.FacetContext;
+      if(typeof candidate?.initialBuild!=='function'){
+        if(timer===null && ++attempts<=100)timer=win.setTimeout(()=>{timer=null;refresh();},100);
+        return;
+      }
+      context=candidate;original=context.initialBuild;context.initialBuild=initialBuild;
+    }
+    if(!isEnabled() || !Array.isArray(context.activeSet) || !context.tab)return;
+    const tabmail=context.rootWin?.document.getElementById('tabmail');
+    if(!tabmail || tabmail.currentTabInfo!==context.tab)return;
+    try{
+      context.showActiveSetInTab();opened=true;
+      // Only close the faceted tab after the native list was opened.
+      tabmail.closeTab(context.tab);
+    }catch(error){console.error('Thunder-G: could not open search results as a list.',error);}
+  }
+  function initialBuild(...args){const result=original.apply(this,args);refresh();return result;}
+  function close(){
+    if(closed)return;closed=true;if(timer!==null)win.clearTimeout(timer);timer=null;
+    if(context?.initialBuild===initialBuild)context.initialBuild=original;
+    win.removeEventListener('unload',close);
+  }
+  win.addEventListener('unload',close,{once:true});
+  return {refresh,close};
 }
 
 var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
@@ -89,7 +133,8 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
     const conversationDocuments = new Map();
     const id = context.extension.id;
     const skinWindows = new Map();
-    let hideTodayPane = false, showColumnHeaders = false;
+    let hideTodayPane = false, showColumnHeaders = false, searchResultsAsList=true;
+    const searchViews=new Map();
     let messagesPerPage = 0, independentReader = false, threadGuides = true;
     const readers = new Map();
     const pagedDocuments = new Map(), zoomWindows = new Map();
@@ -127,6 +172,15 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
     const attach = doc => {
       if (!closed && doc?.documentURI === "chrome://messenger/content/multimessageview.xhtml") {
         if (!conversationDocuments.has(doc)) conversationDocuments.set(doc,installNativeSummaryStyle(doc.defaultView,MailServices));
+        return;
+      }
+      if(!closed && doc?.documentURI==='chrome://messenger/content/glodaFacetView.xhtml'){
+        if(!searchViews.has(doc)){
+          const controller=installSearchListDefault(doc.defaultView,()=>searchResultsAsList);
+          searchViews.set(doc,controller);
+          doc.defaultView.addEventListener('unload',()=>{controller.close();searchViews.delete(doc);},{once:true});
+          controller.refresh();
+        }else searchViews.get(doc).refresh();
         return;
       }
       if (!closed && doc?.documentURI === 'chrome://conversations/content/experiment-api/stub.html') {
@@ -228,6 +282,7 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
       for (const win of skinWindows.keys()) unloadSkin(win);
       for (const win of todayWindows) removeTodayPaneStyle(win);
       for(const watcher of tabWatchers.values())watcher.close();tabWatchers.clear();
+      for(const controller of searchViews.values())controller.close();searchViews.clear();
       documents.clear(); windows.clear();
     }});
     return { inlineLabels: {
@@ -245,6 +300,7 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
           return JSON.stringify({ok:false,error:error.message || 'The Gmail import operation failed.'});
         }
       },
+      async setSearchResultsAsList(enabled){searchResultsAsList=enabled!==false;},
       async setShowColumnHeaders(enabled) {
         showColumnHeaders = enabled === true;
         for (const doc of documents.keys()) doc.documentElement.toggleAttribute('data-gm-hide-column-headers', !showColumnHeaders);

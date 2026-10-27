@@ -151,6 +151,17 @@
         "returns": {
           "type": "string"
         }
+      },
+      {
+        "name": "setSearchResultsAsList",
+        "type": "function",
+        "async": true,
+        "parameters": [
+          {
+            "name": "enabled",
+            "type": "boolean"
+          }
+        ]
       }
     ],
     "events": [
