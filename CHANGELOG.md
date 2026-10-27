@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.18.0
+
 - Attach the skin and label shortcuts to newly opened search-result tabs, using the Gmail-style columns in synthetic message lists.
 
 - Edit selected sidebar labels together: shared parent with path preview, color and visibility, preserving tag keys and assignments with collision checks and rollback on errors.
