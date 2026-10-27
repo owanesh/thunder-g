@@ -143,6 +143,55 @@ function independentContentHeight(content) {
   return Math.max(48,Math.ceil(bounds.bottom-body.top+
     (parseFloat(css.marginTop)||0)+(parseFloat(css.marginBottom)||0)+(parseFloat(css.paddingBottom)||0)));
 }
+// Each card grows to fit its message. A second root scrollport can retain a
+// small margin overflow and trap trackpad momentum inside the message viewer.
+function lockIndependentViewport(content) {
+  const root=content.documentElement,style=root.style;
+  const value=style.getPropertyValue('overflow-y'),priority=style.getPropertyPriority('overflow-y');
+  style.setProperty('overflow-y','hidden','important');
+  if(content.scrollingElement)content.scrollingElement.scrollTop=0;
+  return ()=>{
+    try {
+      if(value)style.setProperty('overflow-y',value,priority);
+      else style.removeProperty('overflow-y');
+    }catch(_){ /* The native message document may already have been destroyed. */ }
+  };
+}
+// Native message viewers are separate browsing contexts. Hand off vertical wheel
+// gestures explicitly when their content cannot consume them (notably macOS
+// trackpad gestures over auto-sized plain-text messages).
+function installIndependentScrollBridge(content, host, ignoreBrowsers = false) {
+  const wheel = event => {
+    if (event.defaultPrevented || !event.cancelable || event.ctrlKey || event.metaKey ||
+        event.altKey || event.shiftKey || !event.deltaY ||
+        Math.abs(event.deltaX || 0) > Math.abs(event.deltaY)) return;
+    // The envelope must not steal gestures from an embedded native viewer.
+    if (ignoreBrowsers && event.target?.closest?.('browser,iframe')) return;
+    const view = content.defaultView;
+    // The viewer is sized to its content: the conversation owns root scrolling.
+    // Ignore residual body/root overflow from margins and rounding, but preserve
+    // intentionally scrollable elements inside an HTML message.
+    for (let node = event.target?.nodeType === 3 ? event.target.parentElement : event.target;
+         node; node = node.parentElement) {
+      if (node.nodeType !== 1) continue;
+      if (node === content.scrollingElement || node === content.documentElement || node === content.body) continue;
+      if (!['auto','scroll'].includes(view.getComputedStyle(node).overflowY)) continue;
+      const max = node.scrollHeight - node.clientHeight;
+      if (max > 1 && (event.deltaY > 0 ? node.scrollTop < max - 1 : node.scrollTop > 1)) return;
+    }
+    const max = Math.max(0, host.scrollHeight - host.clientHeight);
+    if (event.deltaY > 0 ? host.scrollTop >= max : host.scrollTop <= 0) return;
+    const unit = event.deltaMode === 1
+      ? parseFloat(view.getComputedStyle(content.body).lineHeight) || 16
+      : event.deltaMode === 2 ? host.clientHeight : 1;
+    event.preventDefault();
+    host.scrollTop = Math.max(0, Math.min(max, host.scrollTop + event.deltaY * unit));
+  };
+  content.addEventListener('wheel', wheel, {passive:false});
+  return () => {
+    try { content.removeEventListener('wheel', wheel); } catch (_) { /* Viewer already destroyed. */ }
+  };
+}
 // RFC 5322 Sender describes an agent sending on behalf of From. It is
 // header metadata, not a verified identity or a guess from relay hostnames.
 function independentViaDomain(from,sender,parser) {
@@ -501,7 +550,7 @@ function installIndependentReader(win) {
     }
     tagRenderers.add(renderTags);renderTags();
     const body=doc.createElement('div');body.className='body';body.hidden=true;article.append(body);
-    let browser=null,timeout=null,zoom=null,bodyResize=null,contentChanges=null,contentLoad=null,resizeFrame=null,ready=false,toggleQuotes=null,restoreCommands=null,focusCleanup=null;
+    let browser=null,timeout=null,zoom=null,bodyResize=null,contentChanges=null,contentLoad=null,resizeFrame=null,ready=false,toggleQuotes=null,restoreCommands=null,focusCleanup=null,scrollCleanup=null;
     const quoteButton=text('button','quote-toggle','…');quoteButton.type='button';quoteButton.hidden=true;
     quoteButton.setAttribute('aria-label','Show quoted text');quoteButton.setAttribute('aria-expanded','false');
     quoteButton.addEventListener('click',()=>toggleQuotes?.());
@@ -517,6 +566,7 @@ function installIndependentReader(win) {
       contentLoad?.();contentLoad=null;toggleQuotes=null;
       if(resizeFrame!==null)win.cancelAnimationFrame(resizeFrame);resizeFrame=null;
       restoreCommands?.();restoreCommands=null;focusCleanup?.();focusCleanup=null;
+      scrollCleanup?.();scrollCleanup=null;
       for(const [document,message] of messageDocs)if(message===header)messageDocs.delete(document);
       frames.delete(independentMessageKey(header));updateActions();
       zoom?.close();zoom=null;
@@ -603,6 +653,11 @@ function installIndependentReader(win) {
         const pane=browser.contentDocument.getElementById('messagepane');
         if(pane && messageZoom!==null)(win.top?.ZoomManager || win.ZoomManager)?.setZoomForBrowser(pane,messageZoom);
         const content=pane?.contentDocument;
+        scrollCleanup?.();
+        const envelopeScroll=installIndependentScrollBridge(browser.contentDocument,host,true);
+        const bodyScroll=content ? installIndependentScrollBridge(content,host) : () => {};
+        const unlockViewport=content ? lockIndependentViewport(content) : () => {};
+        scrollCleanup=()=>{envelopeScroll();bodyScroll();unlockViewport();};
         if(content) {
           messageDocs.set(content,header);
           const activate=()=>activateMessage(header);
@@ -676,16 +731,18 @@ function installIndependentReader(win) {
     const pending=[...pendingReplies];
     clearCards();currentHeaders=headers;
     actionHeader=headers.at(-1) || anchor;
-    let latestCard;
+    const selected=headers.find(header=>independentMessageKey(header)===independentMessageKey(anchor)) || actionHeader;
+    let selectedCard;
     for(const header of headers) {
-      const card=buildCard(header,header===actionHeader,token);
-      if(header===actionHeader)latestCard=card;
+      const card=buildCard(header,header===selected || header===actionHeader,token);
+      if(header===selected)selectedCard=card;
     }
+    activateMessage(selected);
     for(const [id,entry] of pending){cards.append(entry.card);pendingReplies.set(id,entry);}
     updateActions();refreshTags();reconcilePendingReplies();
     revealFrame=win.requestAnimationFrame(()=>{
       revealFrame=null;
-      if(!closed && token===ticket)latestCard?.scrollIntoView({block:'nearest',inline:'nearest'});
+      if(!closed && token===ticket)selectedCard?.scrollIntoView({block:'nearest',inline:'nearest'});
     });
   }
   function setMessageTag(header,key,add) {

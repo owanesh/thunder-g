@@ -32,8 +32,10 @@ test('index queries include Sent and cancel stale conversations; timeouts preser
 });
 function readerFixture({photo=null,tagged=false,verifyIndependentDkim}={}) {
   function node(tag='div') {
-    const attrs=new Map(),classes=new Set();
-    return {tag,children:[],events:{},style:{},hidden:false,classList:{add:key=>classes.add(key),remove:key=>classes.delete(key),contains:key=>classes.has(key)},
+    const attrs=new Map(),classes=new Set(),css=new Map();
+    return {tag,children:[],events:{},style:{
+      getPropertyValue:key=>css.get(key)?.value||'',getPropertyPriority:key=>css.get(key)?.priority||'',
+      setProperty(key,value,priority=''){css.set(key,{value,priority})},removeProperty:key=>css.delete(key)},hidden:false,classList:{add:key=>classes.add(key),remove:key=>classes.delete(key),contains:key=>classes.has(key)},
       append(...items){for(const item of items){item.parentNode=this;this.children.push(item)}},
       insertBefore(item,before){item.parentNode=this;this.children.splice(this.children.indexOf(before),0,item)},
       replaceChildren(...items){this.children=[];this.append(...items)},remove(){this.removed=true;if(this.parentNode)this.parentNode.children=this.parentNode.children.filter(item=>item!==this)},
@@ -108,21 +110,21 @@ test('short messages shrink independently of viewport, growing images and pane r
   f.resizes[0].fn();assert.equal(f.animationFrames.size,1);f.reader.hide();assert.equal(f.animationFrames.size,0);
   assert.equal(f.resizes[0].disconnected,true);assert.equal(f.mutations[0].disconnected,true);assert.equal(frame.content.events.load.length,0);
 });
-test('opening an old conversation message always expands and reveals the newest reply with older cards compact',async()=>{
+test('opening a specific conversation message expands and reveals that message while keeping latest-reply actions available',async()=>{
   const f=readerFixture();const middle=f.prepare(message(2,'b','sent',2)),latest=f.prepare(message(3,'c','sent',3));
   f.anchor.folder.msgDatabase={getThreadContainingMsgHdr:()=>({numChildren:3,getChildHdrAt:i=>[latest,f.anchor,middle][i]})};
   await f.reader.open(f.anchor);f.flush();
   assert.equal(f.cards.children.length,3);assert.equal(f.conversation.children[2].textContent,'3 messages');
-  assert.equal(f.browsers.length,1,'only the newest message expands when an older row opens the conversation');
-  assert.equal(f.cards.children[0].children[1].hidden,true);assert.equal(f.cards.children[1].children[1].hidden,true);
+  assert.equal(f.browsers.length,2,'the selected message and latest reply are available');
+  assert.equal(f.cards.children[0].children[1].hidden,false);assert.equal(f.cards.children[1].children[1].hidden,true);
   assert.equal(f.cards.children[2].children[1].hidden,false);
-  assert.equal(f.cards.children[2].scrolled.block,'nearest','the newest reply is brought into view');
-  assert.equal(f.cards.children[0].scrolled,undefined,'the older selected message must not steal the viewport');
+  assert.equal(f.cards.children[0].scrolled.block,'nearest','the selected message is brought into view');
+  assert.equal(f.cards.children[2].scrolled,undefined,'the newest reply must not steal the viewport');
   assert.equal(f.actions.children[0].disabled,true);f.loaded();
   f.actions.children[1].emit('click');assert.deepEqual(f.commands,[['cmd_replyall','mailbox://sent/3']]);
-  const toggle=f.cards.children[1].children[0].children[0];toggle.emit('click');assert.equal(f.browsers.length,2);
-  f.loaded();toggle.emit('click');assert.notEqual(f.browsers[1].removed,true);assert.equal(f.actions.children[0].disabled,false);
-  toggle.emit('click');assert.equal(f.browsers.length,2,'reopening a folded message reuses its native frame');
+  const toggle=f.cards.children[1].children[0].children[0];toggle.emit('click');assert.equal(f.browsers.length,3);
+  f.loaded();toggle.emit('click');assert.notEqual(f.browsers[2].removed,true);assert.equal(f.actions.children[0].disabled,false);
+  toggle.emit('click');assert.equal(f.browsers.length,3,'reopening a folded message reuses its native frame');
   const latestToggle=f.cards.children[2].children[0].children[0];latestToggle.emit('click');
   assert.equal(f.cards.children[2].children[1].hidden,false,'latest message cannot accidentally be folded away');
   f.actions.children[0].emit('click');assert.deepEqual(f.commands.at(-1),['cmd_replySender','mailbox://sent/3']);
@@ -213,8 +215,8 @@ test('numeric shortcuts and native tag menu target the opened Sent reply, never 
   f.anchor.folder.msgDatabase={getThreadContainingMsgHdr:()=>({numChildren:3,getChildHdrAt:i=>[f.anchor,sent,latest][i]})};
   await f.reader.open(f.anchor);f.loaded();
   const active=()=>f.cards.children.filter(card=>card.getAttribute('aria-current')==='true');
-  assert.deepEqual(active(),[f.cards.children[2]],'the latest message starts as the visible numeric-tag target');
-  assert.equal(f.cards.children[2].getAttribute('data-active-message'),'');
+  assert.deepEqual(active(),[f.cards.children[0]],'the selected message starts as the visible numeric-tag target');
+  assert.equal(f.cards.children[0].getAttribute('data-active-message'),'');
   const toggle=f.cards.children[1].children[0].children[0];toggle.emit('click');f.loaded();
   assert.deepEqual(active(),[f.cards.children[1]],'opening a Sent reply moves the marker to the exact target');
   assert.equal(f.cards.children[2].getAttribute('data-active-message'),undefined);
@@ -223,7 +225,7 @@ test('numeric shortcuts and native tag menu target the opened Sent reply, never 
   assert.equal(sent.tagged,true);assert.notEqual(f.anchor.tagged,true);assert.notEqual(latest.tagged,true);
   assert.equal(f.removals[0].headers[0],sent);
   f.reader.handleTagKey(event());assert.equal(sent.tagged,false,'pressing 1 twice toggles only that reply');
-  const frame=f.browsers[1];frame.contentWindow.commandController._toggleMessageTagKey(1);
+  const frame=f.browsers.at(-1);frame.contentWindow.commandController._toggleMessageTagKey(1);
   assert.equal(f.removals.at(-1).headers[0],sent,'native menu and command routing also use the exact embedded header');
   frame.contentWindow.commandController._toggleMessageTag('work',false);assert.equal(sent.tagged,false);
   f.cards.children[2].emit('pointerdown');f.reader.handleTagKey(event());assert.equal(latest.tagged,true);
@@ -324,7 +326,7 @@ test('actual body context menu is routed from the outer inbox to the exact embed
   f.anchor.folder.msgDatabase={getThreadContainingMsgHdr:()=>({numChildren:3,getChildHdrAt:i=>[f.anchor,sent,latest][i]})};
   await f.reader.open(f.anchor);f.loaded();
   f.cards.children[1].children[0].children[0].emit('click');f.loaded();
-  const frame=f.browsers[1],document=frame.contentDocument,win=frame.contentWindow;
+  const frame=f.browsers.at(-1),document=frame.contentDocument,win=frame.contentWindow;
   win.document=document;
   const nativeGet=document.getElementById;
   frame.pane.ownerDocument=document;document.defaultView=win;win.devicePixelRatio=2;
@@ -356,11 +358,11 @@ test('conversation zoom targets all message bodies, persists for newly expanded 
     enlarge(pane){pane.fullZoom=(pane.fullZoom || 1)+.1},
     reduce(pane){pane.fullZoom=(pane.fullZoom || 1)-.1},reset(pane){pane.fullZoom=1}}};
   assert.equal(f.reader.zoom('increaseSize'),false,'a hidden reader does not consume inbox shortcuts');
-  await f.reader.open(f.anchor);f.loaded();
+  await f.reader.open(f.anchor);f.loaded(f.browsers[0]);f.loaded();
   assert.equal(f.reader.zoom('increaseSize'),true);
   assert.equal(f.browsers[0].pane.fullZoom,1.1);
   f.cards.children[1].children[0].children[0].emit('click');f.loaded();
-  assert.equal(f.browsers[1].pane.fullZoom,1.1,'newly opened Sent reply inherits conversation zoom');
+  assert.equal(f.browsers.at(-1).pane.fullZoom,1.1,'newly opened Sent reply inherits conversation zoom');
   f.reader.zoom('increaseSize');
   for(const frame of f.browsers)assert.ok(Math.abs(frame.pane.fullZoom-1.2)<.001);
   f.reader.zoom('reduceSize');
@@ -485,4 +487,79 @@ for(const copyFirst of [false,true])test(`inline forward appears immediately and
  assert.equal(f.reader.getMessages()[1],forwarded);
  f.tagListener.msgAdded(forwarded);assert.equal(f.cards.children.length,2);
  f.reader.close();
+});
+
+
+test('wheel handoff scrolls the conversation from native text and HTML viewers without duplicating native scrolling',()=>{
+ const scope=context();
+ for (const format of ['plain','html']) {
+  const handlers=new Map(),host={scrollTop:100,scrollHeight:2000,clientHeight:500};
+  const root={nodeType:1,scrollTop:0,scrollHeight:500,clientHeight:500};
+  const target={nodeType:1,parentElement:root,scrollTop:0,scrollHeight:100,clientHeight:100};
+  const content={body:root,scrollingElement:root,
+   defaultView:{getComputedStyle:node=>({overflowY:node===target?'auto':'visible',lineHeight:'20px'})},
+   addEventListener(name,fn,options){assert.equal(options.passive,false);handlers.set(name,fn)},
+   removeEventListener(name,fn){assert.equal(handlers.get(name),fn);handlers.delete(name)}};
+  const close=scope.installIndependentScrollBridge(content,host);
+  const emit=(overrides={})=>{let prevented=0;handlers.get('wheel')({target,deltaY:12.5,deltaX:0,deltaMode:0,cancelable:true,preventDefault(){prevented++},...overrides});return prevented};
+  assert.equal(emit(),1,format);assert.equal(host.scrollTop,112.5,'fractional trackpad deltas are preserved');
+  assert.equal(emit({deltaY:-10}),1);assert.equal(host.scrollTop,102.5);
+  for(const overrides of [{ctrlKey:true},{metaKey:true},{altKey:true},{shiftKey:true},{deltaX:30},{deltaY:0},{cancelable:false},{defaultPrevented:true}]){
+   assert.equal(emit(overrides),0);assert.equal(host.scrollTop,102.5);
+  }
+  target.scrollHeight=300;
+  assert.equal(emit(),0,'an internally scrollable HTML block keeps its native wheel gesture');
+  target.scrollTop=200;assert.equal(emit(),1,'at the inner boundary scrolling hands off');
+  const before=host.scrollTop;root.scrollHeight=502;
+  assert.equal(emit(),1,'two pixels of residual root overflow must not trap a trackpad gesture');
+  assert.equal(host.scrollTop,before+12.5);
+  root.scrollHeight=1000;
+  assert.equal(emit(),1,'the auto-sized viewer always hands root scrolling to the conversation');
+  root.scrollTop=500;host.scrollTop=100;
+  assert.equal(emit({deltaMode:1,deltaY:2}),1);assert.equal(host.scrollTop,140);
+  assert.equal(emit({deltaMode:2,deltaY:1}),1);assert.equal(host.scrollTop,640);
+  host.scrollTop=1495;emit({deltaY:100});assert.equal(host.scrollTop,1500);
+  assert.equal(emit(),0,'the conversation boundary does not consume more scrolling');
+  host.scrollTop=0;target.scrollTop=0;root.scrollTop=0;
+  assert.equal(emit({deltaY:-10}),0);
+  close();assert.equal(handlers.size,0);
+ }
+});
+
+test('closing a conversation removes its native message wheel handler',async()=>{
+ const f=readerFixture();await f.reader.open(f.anchor);f.loaded();
+ const content=f.browsers[0].content;
+ assert.equal(content.events.wheel.length,1);
+ const envelope=f.browsers[0].contentDocument;
+ assert.equal(envelope.events.wheel.length,1,'the native message envelope also receives a non-passive wheel handler');
+ f.reader.hide();assert.equal(content.events.wheel.length,0);assert.equal(envelope.events.wheel.length,0);
+});
+
+
+test('envelope header gestures scroll the conversation while nested viewers and handled events remain independent',()=>{
+ const scope=context(),host={scrollTop:100,scrollHeight:2000,clientHeight:500};
+ let wheel,removed=0;
+ const content={defaultView:{getComputedStyle:()=>({overflowY:'visible',lineHeight:'20px'})},
+  addEventListener(type,fn,options){assert.equal(type,'wheel');assert.equal(options.passive,false);wheel=fn},
+  removeEventListener(type,fn){assert.equal(fn,wheel);removed++}};
+ const close=scope.installIndependentScrollBridge(content,host,true);
+ const header={nodeType:1,closest:()=>null,parentElement:null};
+ const event=(extra={})=>({target:header,deltaY:2.5,deltaX:0,deltaMode:0,cancelable:true,preventDefault(){this.defaultPrevented=true},...extra});
+ const e=event();wheel(e);assert.equal(host.scrollTop,102.5);assert.equal(e.defaultPrevented,true);
+ wheel(e);assert.equal(host.scrollTop,102.5,'a gesture handled by the body or envelope cannot be applied twice');
+ wheel(event({target:{closest:()=>({})}}));assert.equal(host.scrollTop,102.5,'embedded native viewer keeps its own scroll handler');
+ close();assert.equal(removed,1);
+});
+
+
+test('auto-sized message viewport removes residual body scrolling and restores its original style on cleanup',()=>{
+ const scope=context(),values=new Map([['overflow-y','auto']]),priorities=new Map(),root={style:{
+  getPropertyValue:key=>values.get(key)||'',getPropertyPriority:key=>priorities.get(key)||'',
+  setProperty(key,value,priority){values.set(key,value);priorities.set(key,priority)},removeProperty:key=>values.delete(key)}};
+ const content={documentElement:root,scrollingElement:{scrollTop:13.3667}};
+ const close=scope.lockIndependentViewport(content);
+ assert.equal(values.get('overflow-y'),'hidden');assert.equal(priorities.get('overflow-y'),'important');
+ assert.equal(content.scrollingElement.scrollTop,0,'an already displaced message body returns to its beginning');
+ assert.equal(values.has('overflow-x'),false,'horizontal scrolling stays native');
+ close();assert.equal(values.get('overflow-y'),'auto');assert.equal(priorities.get('overflow-y'),'');
 });
