@@ -13,6 +13,16 @@ selection menus, label dialogs and reply actions. Open drafts stay open.
 Native Thunderbird controls keep Thunderbird’s own language. User label names,
 message subjects and message bodies are never translated.
 
+## Quick setup
+
+**Apply recommended** applies a single preset: Thunder-G’s conversation reader,
+in-window replies and new messages, thread guides,
+list-style search results, draft autosave every minute, and 50 messages per page.
+It hides Today Pane and column headers. Language, Gmail connection and BIMI
+preferences are preserved. The switches update together; open a conversation to
+try the reader and reply settings. Disable Thunderbird Conversations first, as
+with manually enabling Thunder-G’s reader.
+
 ## Inbox
 
 - **Show column headers** *(off by default)* — Restore clickable headers, column resizing and the column picker. Applies immediately without changing the sort order or saved widths.

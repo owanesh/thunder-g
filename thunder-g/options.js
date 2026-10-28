@@ -195,3 +195,41 @@ interfaceLanguage.addEventListener('change', async () => {
     reportStatus(gmText('Unable to save. Please try again.'));
   } finally { interfaceLanguage.disabled = false; }
 });
+
+
+// A single storage write lets the existing onChanged handler apply the preset.
+// Leave language, remote-logo consent and Gmail import state untouched.
+const THUNDER_G_RECOMMENDED_SETTINGS = Object.freeze({
+  showColumnHeaders:false, messagesPerPage:50, hideTodayPane:true,
+  threadGuides:true, searchResultsAsList:true, independentReader:true,
+  inlineReplyEnabled:true, inlineNewMessageEnabled:true,
+  composeAutosave:true, composeAutosaveMinutes:1
+});
+const recommendedButton=document.getElementById('apply-recommended');
+const recommendedStatus=document.getElementById('recommended-status');
+browser.storage.local.get(THUNDER_G_RECOMMENDED_SETTINGS).then(()=>{
+  recommendedButton.disabled=false;
+}).catch(()=>{recommendedStatus.textContent=gmText('Unable to load settings.');recommendedStatus.dataset.kind='error';});
+recommendedButton.addEventListener('click',async()=>{
+  const controls=[checkbox,autosave,autosaveMinutes,pageSize,independentReader,bimi,inlineReply,inlineNewMessage,threadGuides,columnHeaders,searchResultsAsList,interfaceLanguage];
+  const disabled=controls.map(control=>control.disabled);
+  recommendedButton.disabled=true;for(const control of controls)control.disabled=true;
+  recommendedButton.textContent=gmText('Applying…');recommendedStatus.textContent='';
+  let applied=false;
+  try{
+    await browser.storage.local.set({...THUNDER_G_RECOMMENDED_SETTINGS});
+    const switches={hideTodayPane:checkbox,composeAutosave:autosave,independentReader,inlineReplyEnabled:inlineReply,
+      inlineNewMessageEnabled:inlineNewMessage,threadGuides,showColumnHeaders:columnHeaders,searchResultsAsList};
+    for(const [name,control] of Object.entries(switches))control.checked=THUNDER_G_RECOMMENDED_SETTINGS[name];
+    savedPageSize=THUNDER_G_RECOMMENDED_SETTINGS.messagesPerPage;pageSize.value=String(savedPageSize);
+    savedAutosave={composeAutosave:true,composeAutosaveMinutes:1};autosaveMinutes.value='1';
+    applied=true;recommendedStatus.dataset.kind='success';
+    recommendedStatus.textContent=gmText('Recommended settings applied. Open a conversation to try them.');
+  }catch(_){
+    recommendedStatus.dataset.kind='error';recommendedStatus.textContent=gmText('Unable to save. Please try again.');
+  }finally{
+    controls.forEach((control,index)=>control.disabled=disabled[index]);
+    if(applied)autosaveMinutes.disabled=false;
+    recommendedButton.disabled=false;recommendedButton.textContent=gmText('Apply recommended');
+  }
+});

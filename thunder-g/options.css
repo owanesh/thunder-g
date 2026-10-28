@@ -106,3 +106,13 @@ summary { width: fit-content; max-width: 100%; padding: 13px 0; color: var(--acc
 #gmail-preview-table :is(th,td) { text-align:start; vertical-align:top; padding:6px; border-bottom:1px solid var(--border); overflow-wrap:anywhere; }
 #gmail-feedback[data-error=true] { color:light-dark(#b3261e,#ffb4ab); }
 #gmail-labels [hidden] { display:none !important; }
+
+#apply-recommended {
+  appearance:none; padding:9px 16px; border:1px solid var(--accent); border-radius:20px;
+  color:var(--accent); background:var(--surface); font:inherit; font-weight:600; cursor:pointer;
+}
+#apply-recommended:hover:enabled { background:color-mix(in srgb,var(--accent) 8%,var(--surface)); }
+#apply-recommended:focus-visible { outline:2px solid var(--focus); outline-offset:3px; }
+#apply-recommended:disabled { opacity:.6; cursor:default; }
+#recommended-status { margin-block:10px 0; min-height:1.3em; font-size:13px; }
+#recommended-status[data-kind=error] { color:var(--error,#b3261e); }

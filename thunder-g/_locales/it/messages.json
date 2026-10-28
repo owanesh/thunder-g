@@ -1694,5 +1694,29 @@
   "label_as_1_selected_message_e6131a9": {
     "message": "Assegna etichetta — $1 messaggio selezionato",
     "description": "Label as — $1 selected message"
+  },
+  "apply_recommended_c7620fb": {
+    "message": "Applica impostazioni consigliate",
+    "description": "Apply recommended"
+  },
+  "quick_setup_24cc244": {
+    "message": "Configurazione rapida",
+    "description": "Quick setup"
+  },
+  "enable_the_conversation_reader_compact_threads_in_wi_132749e": {
+    "message": "Attiva il lettore di conversazioni, risposte e scrittura nella stessa finestra, linee dei thread, salvataggio automatico e 50 messaggi per pagina. Nasconde il pannello Oggi e le intestazioni delle colonne.",
+    "description": "Enable the conversation reader, in-window replies and writing, thread guides, autosave, and 50 messages per page. Hide Today Pane and column headers."
+  },
+  "your_language_gmail_connection_and_sender_logo_prefe_e7d9fdd": {
+    "message": "La lingua, la connessione Gmail e le preferenze per i loghi dei mittenti restano invariate.",
+    "description": "Your language, Gmail connection, and sender-logo preferences stay unchanged."
+  },
+  "recommended_settings_applied_open_a_conversation_to__d12c130": {
+    "message": "Impostazioni consigliate applicate. Apri una conversazione per provarle.",
+    "description": "Recommended settings applied. Open a conversation to try them."
+  },
+  "applying_e578c27": {
+    "message": "Applicazione…",
+    "description": "Applying…"
   }
 }
