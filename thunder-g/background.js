@@ -7,9 +7,9 @@ browser.inlineLabels.onDkimRequest.addListener(async(request,messageId,domain,ba
 });
 async function startThunderG() {
   // Optional settings must never prevent the companion from starting.
-  let searchResultsAsList=true, showColumnHeaders = false, threadGuides = true, independentReader = false, hideTodayPane = false, messagesPerPage = 0, composeAutosave = true, composeAutosaveMinutes = 1, bimiEnabled = false, inlineReplyEnabled = false, inlineNewMessageEnabled = false;
+  let searchResultsAsList=true, showColumnHeaders = false, threadGuides = true, independentReader = false, hideTodayPane = false, messagesPerPage = 0, composeAutosave = true, composeAutosaveMinutes = 1, composeAutosaveMode = 'auto', bimiEnabled = false, inlineReplyEnabled = false, inlineNewMessageEnabled = false;
   try {
-    const settings = await browser.storage.local.get({searchResultsAsList:true,showColumnHeaders:false,threadGuides:true,independentReader:false,hideTodayPane:false,messagesPerPage:0,composeAutosave:true,composeAutosaveMinutes:1,bimiEnabled:false,inlineReplyEnabled:false,inlineNewMessageEnabled:false});
+    const settings = await browser.storage.local.get({searchResultsAsList:true,showColumnHeaders:false,threadGuides:true,independentReader:false,hideTodayPane:false,messagesPerPage:0,composeAutosave:true,composeAutosaveMinutes:1,composeAutosaveMode:'auto',bimiEnabled:false,inlineReplyEnabled:false,inlineNewMessageEnabled:false});
     searchResultsAsList=settings.searchResultsAsList!==false;
     showColumnHeaders = settings.showColumnHeaders === true;
     threadGuides = settings.threadGuides !== false;
@@ -21,12 +21,13 @@ async function startThunderG() {
     messagesPerPage = settings.messagesPerPage;
     composeAutosave = settings.composeAutosave !== false;
     composeAutosaveMinutes = settings.composeAutosaveMinutes;
+    composeAutosaveMode=settings.composeAutosaveMode==='fixed'?'fixed':'auto';
   } catch (error) { console.warn('Thunder-G: using default settings.',error); }
   await browser.inlineLabels.setSearchResultsAsList?.(searchResultsAsList);
   await browser.inlineLabels.setShowColumnHeaders?.(showColumnHeaders);
   await browser.inlineLabels.setThreadGuides?.(threadGuides);
   await browser.inlineLabels.setHideTodayPane(hideTodayPane);
-  await browser.inlineLabels.setComposeAutosave(composeAutosave,composeAutosaveMinutes || 1);
+  await browser.inlineLabels.setComposeAutosave(composeAutosave,composeAutosaveMinutes || 1,composeAutosaveMode);
   await browser.inlineLabels.setMessagesPerPage(messagesPerPage || 0);
   await browser.inlineLabels.setIndependentReader(independentReader);
   await browser.inlineLabels.setBimiEnabled?.(bimiEnabled);
@@ -37,10 +38,11 @@ async function startThunderG() {
     if(area==='local' && changes.searchResultsAsList)browser.inlineLabels.setSearchResultsAsList(changes.searchResultsAsList.newValue!==false).catch(console.error);
     if(area==='local' && changes.showColumnHeaders)browser.inlineLabels.setShowColumnHeaders(changes.showColumnHeaders.newValue===true).catch(console.error);
     if(area==='local' && changes.threadGuides)browser.inlineLabels.setThreadGuides(changes.threadGuides.newValue!==false).catch(console.error);
-    if (area === 'local' && (changes.composeAutosave || changes.composeAutosaveMinutes)) {
+    if (area === 'local' && (changes.composeAutosave || changes.composeAutosaveMinutes || changes.composeAutosaveMode)) {
+      if(changes.composeAutosaveMode)composeAutosaveMode=changes.composeAutosaveMode.newValue==='fixed'?'fixed':'auto';
       if (changes.composeAutosave) composeAutosave = changes.composeAutosave.newValue !== false;
       if (changes.composeAutosaveMinutes) composeAutosaveMinutes = changes.composeAutosaveMinutes.newValue || 1;
-      browser.inlineLabels.setComposeAutosave(composeAutosave,composeAutosaveMinutes || 1).catch(console.error);
+      browser.inlineLabels.setComposeAutosave(composeAutosave,composeAutosaveMinutes || 1,composeAutosaveMode).catch(console.error);
     }
     if (area === 'local' && changes.messagesPerPage) {
       browser.inlineLabels.setMessagesPerPage(changes.messagesPerPage.newValue || 0).catch(console.error);

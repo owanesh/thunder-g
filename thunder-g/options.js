@@ -38,29 +38,23 @@ checkbox.addEventListener('change',async () => {
 });
 
 const autosave = document.getElementById('compose-autosave');
-const autosaveMinutes = document.getElementById('compose-autosave-minutes');
-autosave.disabled = autosaveMinutes.disabled = true;
-let savedAutosave = {composeAutosave:true,composeAutosaveMinutes:1};
-browser.storage.local.get(savedAutosave).then(settings => {
-  savedAutosave = settings;
-  autosave.checked = settings.composeAutosave !== false;
-  autosaveMinutes.value = String([1,2,5,10].includes(settings.composeAutosaveMinutes) ? settings.composeAutosaveMinutes : 1);
-  autosave.disabled = false; autosaveMinutes.disabled = !autosave.checked;
-}).catch(() => { reportStatus('Unable to load settings.'); });
-async function saveAutosave() {
-  autosave.disabled = autosaveMinutes.disabled = true;
-  const settings = {composeAutosave:autosave.checked,composeAutosaveMinutes:Number(autosaveMinutes.value)};
-  try {
-    await browser.storage.local.set(settings); savedAutosave = settings;
-    reportStatus('Saved. Applies to newly opened compose windows.');
-  } catch (_) {
-    autosave.checked = savedAutosave.composeAutosave !== false;
-    autosaveMinutes.value = String(savedAutosave.composeAutosaveMinutes);
-    reportStatus('Unable to save. Please try again.');
-  } finally { autosave.disabled = false; autosaveMinutes.disabled = !autosave.checked; }
+const autosaveTiming=document.getElementById('compose-autosave-timing');
+autosave.disabled=autosaveTiming.disabled=true;
+let savedAutosave={composeAutosave:true,composeAutosaveMode:'auto',composeAutosaveMinutes:1};
+function showAutosave(settings){
+  autosave.checked=settings.composeAutosave!==false;
+  autosaveTiming.value=settings.composeAutosaveMode==='fixed'?String([1,2,5,10].includes(settings.composeAutosaveMinutes)?settings.composeAutosaveMinutes:1):'auto';
+  autosave.disabled=false;autosaveTiming.disabled=!autosave.checked;
 }
-autosave.addEventListener('change',saveAutosave);
-autosaveMinutes.addEventListener('change',saveAutosave);
+browser.storage.local.get(savedAutosave).then(settings=>{savedAutosave=settings;showAutosave(settings)}).catch(()=>reportStatus('Unable to load settings.'));
+async function saveAutosave(){
+  autosave.disabled=autosaveTiming.disabled=true;
+  const settings={composeAutosave:autosave.checked,composeAutosaveMode:autosaveTiming.value==='auto'?'auto':'fixed',composeAutosaveMinutes:autosaveTiming.value==='auto'?savedAutosave.composeAutosaveMinutes:Number(autosaveTiming.value)};
+  try{await browser.storage.local.set(settings);savedAutosave=settings;reportStatus('Saved. Applies to open and new composers.');}
+  catch(_){reportStatus('Unable to save. Please try again.');}
+  finally{showAutosave(savedAutosave)}
+}
+autosave.addEventListener('change',saveAutosave);autosaveTiming.addEventListener('change',saveAutosave);
 
 const pageSize = document.getElementById('messages-per-page');
 pageSize.disabled = true;

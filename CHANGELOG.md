@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+## 0.20.0
+
+- Do not create drafts for empty replies: automatic saves and closing the inline composer require new non-whitespace body text beyond the initial quote/signature. Existing drafts still save deletions.
+
+- Offer Auto draft saving after 1.5 seconds without edits, or fixed intervals of 1, 2, 5 or 10 minutes, in inline and classic composers. Include recipients, subject and attachment changes; defer during IME composition or an active save.
+
+- Load saved MIME drafts directly into the inline composer without opening a temporary native compose window.
+
+- Scroll directly to the resumed inline draft after its editor is ready; cancel the scroll when the user has already navigated elsewhere.
+
+- Show a red “Bozza” (Italian) or “Draft” beside the sender for saved drafts and conversations with a saved reply draft, including collapsed threads. Update the indicator after draft saves, sends, moves, and deletions. With inline replies enabled, clicking the message opens the conversation and resumes its saved draft below the last message; otherwise open the saved draft in the classic composer; when several drafts match, open the most recent. The red indicator remains plain text.
+
 ## 0.19.1
 
 - Keep bottom-posted and interleaved replies visible instead of folding new answers with quoted history, in both immediate previews and saved conversation messages.
@@ -96,7 +108,6 @@
 
 - Add expandable nested native labels in the Tags sidebar and label picker, searchable by full path.
 - Add a New label panel with a parent selector; preserve existing tag keys, full-path chips and conversation-wide application.
-
 
 ### Added
 

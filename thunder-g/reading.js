@@ -94,6 +94,7 @@ function installReadingMode(win) {
   const folderTree = doc.getElementById('folderTree');
   if (!layout || !tree || !folderTree) return { close() {} };
   let active = false;
+  let draftOpener = null, draftResolver = null;
   let useIndependent = false, independent = null;
   let closed = false;
   let pending = null, openTicket = 0;
@@ -629,6 +630,11 @@ function installReadingMode(win) {
     let header;
     try { header = win.gDBView.getMsgHdrAt(row.index); } catch (_) { return; }
     if (!header) return;
+    const inlineDraft=useIndependent && typeof inlineReplyEnabled!=='undefined' && inlineReplyEnabled ? draftResolver?.(row) : null;
+    if (!inlineDraft && draftOpener?.(row)) {
+      leave(false);
+      return;
+    }
     previous = {
       index:row.index,
       message:{key:header.messageKey, folderURI:header.folder?.URI},
@@ -655,7 +661,7 @@ function installReadingMode(win) {
     if (useIndependent) {
       independent ||= installIndependentReader(win);
       const identity = previous.message;
-      independent.open(header).catch(() => {
+      independent.open(header,inlineDraft).catch(() => {
         if (!active || !sameMessage(header,previous?.message) || !sameMessage(header,identity)) return;
         independent.hide();
         layout.messagePaneVisible = true;
@@ -743,6 +749,7 @@ function installReadingMode(win) {
   }
   win.addEventListener('unload', close, {once:true});
   return {close,zoom:zoomReading,
+    setDraftOpener(opener,resolver) { draftOpener = typeof opener === 'function' ? opener : null; draftResolver=typeof resolver==='function'?resolver:null; },
     setIndependent(enabled) {
       if (useIndependent === (enabled === true)) return;
       if (active) leave(true);

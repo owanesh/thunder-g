@@ -229,7 +229,11 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
         catch (error) { console.error("Inline labels document attachment:", error); }
       }
     };
+    const nativeComposeAutosaves=new Map();
     const loadWindow = win => {
+      if(win.document.documentURI==='chrome://messenger/content/messengercompose/messengercompose.xhtml'){
+        nativeComposeAutosaves.set(win,installNativeChangeAutosave(win));return;
+      }
       loadSkin(win);
       if (!zoomWindows.has(win)) zoomWindows.set(win,installMailZoom(win,fontSize,action=>{
         const tabmail=win.document.getElementById('tabmail');
@@ -266,6 +270,7 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
       verifyIndependentDkim=null;
       for(const pending of dkimRequests.values()){clearTimeout(pending.timer);pending.reject(new Error('Reader closed'));}dkimRequests.clear();
       closed = true;
+      for(const controller of nativeComposeAutosaves.values())controller.close();nativeComposeAutosaves.clear();
       try { autosaveController?.close(); } catch (_) { console.warn('Thunder-G: could not restore draft autosave settings.'); }
       if (!started) return;
       ExtensionSupport.unregisterWindowListener(id);
@@ -323,8 +328,9 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
         messagesPerPage = [25,50,100].includes(value) ? value : 0;
         for (const pages of pagedDocuments.values()) pages.setSize(messagesPerPage);
       },
-      async setComposeAutosave(enabled, minutes) {
+      async setComposeAutosave(enabled, minutes, mode='auto') {
         composeAutosave = enabled === true;
+        if(typeof configureChangeAutosave==='function')configureChangeAutosave(composeAutosave,mode,minutes);
         composeAutosaveMinutes = Number.isInteger(minutes) && minutes >= 1 && minutes <= 30 ? minutes : 1;
         autosaveController?.set(composeAutosave,composeAutosaveMinutes);
       },
@@ -344,9 +350,10 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
       Services.prefs.addObserver(HIDDEN_MESSAGE_LABELS_PREF, observer);
       MailServices.mfn.addListener(tagChanges, Ci.nsIMsgFolderNotificationService.msgPropertyChanged);
       ExtensionSupport.registerWindowListener(id, {
-        chromeURLs: ["chrome://messenger/content/messenger.xhtml"],
+        chromeURLs: ["chrome://messenger/content/messenger.xhtml","chrome://messenger/content/messengercompose/messengercompose.xhtml"],
         onLoadWindow: loadWindow,
         onUnloadWindow(win) {
+          nativeComposeAutosaves.get(win)?.close();nativeComposeAutosaves.delete(win);
           tabWatchers.get(win)?.close();tabWatchers.delete(win);
           zoomWindows.get(win)?.close(); zoomWindows.delete(win);
           removeTodayPaneStyle(win);

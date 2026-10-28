@@ -1,3 +1,121 @@
+// Index local draft summary headers, including replies stored outside the inbox.
+// References identify conversations; subjects alone must never match a draft.
+function draftMessageIds(header) {
+  const normalize=value=>String(value || '').trim().replace(/^<|>$/g,'');
+  const ids=new Set();
+  if(header.messageId)ids.add(normalize(header.messageId));
+  for(let i=0;i<(header.numReferences || 0);i++) {
+    const id=normalize(header.getStringReference(i));if(id)ids.add(id);
+  }
+  return ids;
+}
+function draftRowTarget(header,view,index,drafts,isDraft) {
+  const match=message=>isDraft(message.folder)?message:drafts.get(String(message.messageId || '').trim().replace(/^<|>$/g,''));
+  let target=match(header);
+  if(!view?.isContainer?.(index) || view.isContainerOpen?.(index))return target;
+  try {
+    const thread=view.getThreadContainingIndex?.(index) || header.folder.msgDatabase.getThreadContainingMsgHdr(header);
+    for(let i=0;i<thread.numChildren;i++) {
+      const candidate=match(thread.getChildHdrAt(i));
+      if(candidate && (!target || candidate.dateInSeconds>target.dateInSeconds))target=candidate;
+    }
+  }catch(_){/* Transiently unavailable summaries are retried on refresh. */}
+  return target;
+}
+function installSenderDraftLabels(win,mail=globalThis.MailServices,interfaces=typeof Ci==='undefined'?null:Ci) {
+  if(!mail?.accounts || !interfaces)return {render(){},refresh(){},close(){}};
+  const doc=win.document;let drafts=new Map(),folders=new Set(),closed=false,timer=null,generation=0;
+  const normalize=value=>String(value || '').trim().replace(/^<|>$/g,'');
+  function isDraft(folder) {
+    try{return !!folder && (folders.has(folder.URI) || folder.isSpecialFolder(interfaces.nsMsgFolderFlags.Drafts,false));}
+    catch(_){return false;}
+  }
+  function clear(row) {
+    const content=row.querySelector('.gm-draft-sender-content');
+    const name=content?.querySelector('.gm-draft-sender-name');
+    if(name)content.replaceWith(...name.childNodes);
+  }
+  function render(row) {
+    clear(row);
+    if(closed || (row.dataset.properties || '').split(' ').includes('dummy'))return;
+    let header;try{header=win.gDBView?.getMsgHdrAt(row.index)}catch(_){return}
+    if(!header || !draftRowTarget(header,win.gDBView,row.index,drafts,isDraft))return;
+    const cell=row.querySelector('.sendercol-column') || row.querySelector('.correspondentcol-column');
+    if(!cell)return;
+    const name=doc.createElement('span');name.className='gm-draft-sender-name';
+    const content=doc.createElement('span');content.className='gm-draft-sender-content';
+    name.append(...cell.childNodes);content.append(name);cell.append(content);
+    const label=doc.createElement('span');label.className='gm-sender-draft';
+    const locale=win.Services?.locale?.appLocaleAsBCP47 || win.navigator?.language || 'en';
+    label.textContent=String(locale).toLowerCase().startsWith('it')?'Bozza':'Draft';
+    content.append(label);
+  }
+  function getRowDraft(row) {
+    if(closed)return null;
+    try {const header=win.gDBView?.getMsgHdrAt(row.index);return header?draftRowTarget(header,win.gDBView,row.index,drafts,isDraft):null}catch(_){return null}
+  }
+  function openRow(row) {
+    if(closed || (row.dataset.properties || '').split(' ').includes('dummy'))return false;
+    try {
+      const view=win.gDBView,header=view?.getMsgHdrAt(row.index);
+      if(!header)return false;
+      const draft=draftRowTarget(header,view,row.index,drafts,isDraft);
+      if(!draft)return false;
+      // Resume the saved MIME draft with Thunderbird's classic composer, even
+      // when inline replies are enabled. This is editing, not a new reply.
+      mail.compose.OpenComposeWindow(null,draft,draft.folder.getUriForMsg(draft),
+        interfaces.nsIMsgCompType.Draft,interfaces.nsIMsgCompFormat.Default,null,null,win.msgWindow);
+      return true;
+    }catch(error){console.warn('Thunder-G: could not open saved draft.',error);refresh();return false;}
+  }
+  function renderAll(){if(!closed)for(const row of doc.querySelectorAll('#threadTree tr.table-layout'))render(row)}
+  async function rebuild() {
+    timer=null;const revision=++generation,next=new Map();let visited=0;
+    try {
+      folders=new Set(Array.from(mail.accounts.allIdentities,identity=>identity.draftFolder).filter(Boolean));
+      for(const folder of mail.accounts.allFolders) {
+        if(closed || revision!==generation)return;
+        if(!isDraft(folder))continue;
+        try {
+          for(const header of folder.messages) {
+            for(const id of draftMessageIds(header)) {
+              const key=normalize(id),previous=next.get(key);
+              if(!previous || header.dateInSeconds>previous.dateInSeconds)next.set(key,header);
+            }
+            if(++visited%200===0)await new Promise(resolve=>win.setTimeout(resolve,0));
+            if(closed || revision!==generation)return;
+          }
+        }catch(_){/* Read local metadata only; no server fetch or body access. */}
+      }
+    }catch(_){/* Account setup can be temporarily unavailable during startup. */}
+    if(!closed && revision===generation){drafts=next;renderAll()}
+  }
+  function refresh() {
+    if(closed)return;
+    generation++;
+    if(timer!==null)win.clearTimeout(timer);
+    timer=win.setTimeout(rebuild,100);
+  }
+  const listener={};let flags=0;
+  for(const name of ['msgAdded','msgsDeleted','msgsMoveCopyCompleted','folderAdded','folderDeleted','folderRenamed','msgKeyChanged']) {
+    listener[name]=refresh;flags|=interfaces.nsIMsgFolderNotificationService[name] || 0;
+  }
+  mail.mfn?.addListener(listener,flags);
+  const style=doc.createElement('style');style.textContent=`
+    #threadTree .gm-draft-sender-content { display:inline-flex; max-width:100%; align-items:center; gap:4px; vertical-align:bottom; }
+    #threadTree .gm-draft-sender-name { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    #threadTree .gm-sender-draft { flex:none; color:light-dark(#b3261e,#f28b82); font-weight:400; }
+    @media (forced-colors:active) { #threadTree .gm-sender-draft { color:CanvasText; } }
+  `;doc.head.append(style);
+  win.addEventListener('focus',refresh);refresh();
+  return {render,refresh,openRow,getRowDraft,close(){
+    closed=true;generation++;if(timer!==null)win.clearTimeout(timer);
+    mail.mfn?.removeListener(listener);win.removeEventListener('focus',refresh);
+    for(const row of doc.querySelectorAll('#threadTree tr.table-layout'))clear(row);
+    style.remove();drafts.clear();folders.clear();
+  }};
+}
+
 /* Native quick filters, cached previews, and row-scoped actions. */
 function cachedMessagePreview(header) {
   try {
@@ -508,6 +626,8 @@ function installInboxControls(win,{threadGuides=true,reader=null}={}) {
   const doc = win.document;
   const tree = doc.getElementById('threadTree');
   if (!tree) return {close(){}};
+  const drafts = installSenderDraftLabels(win);
+  reader?.setDraftOpener?.(drafts.openRow,drafts.getRowDraft);
   const compose = installComposeLabel(doc);
   const selectionColumn=installSelectionColumn(win);
   const searchColumns=installSearchColumns(win);
@@ -592,6 +712,7 @@ function installInboxControls(win,{threadGuides=true,reader=null}={}) {
   doc.head.append(style);
   function render(row) {
     renderThreadGuide(row);
+    drafts.render(row);
     row.querySelector('.gm-row-actions')?.remove();
     row.querySelector('.gm-message-snippet')?.remove();
     row.querySelector('.subject-line')?.classList?.remove('gm-has-snippet');
@@ -680,6 +801,8 @@ function installInboxControls(win,{threadGuides=true,reader=null}={}) {
     for (const row of doc.querySelectorAll('#threadTree tr.table-layout')) delete row.dataset.gmThreadGuide;
     style.remove();
     previews.close();
+    reader?.setDraftOpener?.(null);
+    drafts.close();
     compose.close();
     responsive.close();
     viewCopy.close();

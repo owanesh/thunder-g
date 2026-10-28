@@ -93,6 +93,7 @@ test('inline compose preserves an open reply across navigation and guards dirty 
  sidebar.getBoundingClientRect=()=>({width:340,right:340,left:0});events.get('pane-resize')();assert.equal(fullPanel.style.left,'12px','expanded composer keeps its modal inset when the sidebar changes');
  composer.float();assert.equal(composer.presentation,'floating');const newFrame=frame;composer.minimize();assert.equal(frame,newFrame);assert.equal(composer.active,true);composer.minimize();assert.equal(frame,newFrame);composer.returnInline();assert.equal(composer.presentation,'full');assert.equal(frame,newFrame);
  composer.open(header,'cmd_replySender');assert.equal(composer.command,'cmd_newMessage','Reply must not replace an open new message');let closeSaves=0;testScope.saveInlineReplyDraft=async()=>{closeSaves++;throw new Error('Draft folder unavailable')};
+ testScope.initialComposeText.set(native,'');native.GetCurrentEditor=()=>({outputToString:()=> 'A reply I wrote'});
  const closeControl=doc.documentElement.children.at(-1).children[0].children[4];
  await closeControl.events.click();assert.equal(composer.active,true,'failed close-save preserves reply');
  testScope.saveInlineReplyDraft=async()=>{closeSaves++;return 'draft://confirmed'};
@@ -397,4 +398,94 @@ test('embedded compose content resolves the native editor window before signatur
  const previous=Object.getOwnPropertyDescriptor(native,'content');const bridge=scope.installEmbeddedComposeContent(native);
  assert.equal(native.content,null);const editorWindow={};editor={contentWindow:editorWindow};assert.equal(native.content,editorWindow);
  bridge.close();assert.deepEqual(Object.getOwnPropertyDescriptor(native,'content'),previous);
+});
+
+test('resuming a draft loads parameters directly without creating a native window',async()=>{
+  const context=vm.createContext({});
+  vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/compose.js'),'utf8'),context);
+  let received,focused=false;
+  const composer={active:false,open(header,command,placement){received={header,command,placement}},returnInline(){focused=true}};
+  context.createInlineCompose=()=>composer;
+  const win={},header={},container={},params={composeFields:{body:'Saved answer',draftId:'draft://42'}};
+  await context.resumeInlineDraft(win,header,{container,isCurrent:()=>true},async()=>params);
+  assert.equal(received.header,header);assert.equal(received.command,'cmd_editDraft');assert.equal(received.placement.params,params);assert.equal(received.placement.container,container);
+  composer.active=true;
+  await context.resumeInlineDraft(win,header,{container},()=>{throw Error('existing editor must not be replaced')});
+  assert.equal(focused,true);
+  composer.active=false;received=null;
+  await context.resumeInlineDraft(win,header,{isCurrent:()=>false},async()=>params);
+  assert.equal(received,null,'navigation during parsing cancels the pending editor');
+});
+
+test('resumed drafts scroll to the composer after layout and do not steal scroll after navigation',()=>{
+  const frames=[],positions=[];
+  const win={requestAnimationFrame:fn=>frames.push(fn)},panel={scrollIntoView:options=>positions.push(options)};
+  let current=true;
+  scope.revealInlineDraft(win,panel,()=>current);
+  assert.equal(positions.length,0,'wait for the ready editor layout');
+  frames.shift()();assert.equal(positions.length,1);assert.equal(positions[0].block,'start');assert.equal(positions[0].behavior,'instant');
+  scope.revealInlineDraft(win,panel,()=>current);current=false;frames.shift()();
+  assert.equal(positions.length,1,'a superseded draft must not change the new view scroll');
+});
+
+test('direct draft parsing restores saved fields, identity, body and attachments',async()=>{
+  const identity={key:'account'},added=[],fields={addAttachment:a=>added.push(a)};
+  const mime={headers:{'x-identity-key':['account'],from:['Me <me@example.org>'],to:['You <you@example.org>'],cc:['Cc <cc@example.org>'],bcc:['Hidden <hidden@example.org>'],subject:['Saved subject'],references:['<original>']},parts:[{contentType:'text/plain',body:'Saved answer, not a new reply'}],allUserAttachments:[{url:'imap://local?part=1.2',name:'notes.pdf',contentType:'application/pdf',size:42}]};
+  const classes={'@mozilla.org/messengercompose/composeparams;1':{createInstance:()=>({})},'@mozilla.org/messengercompose/composefields;1':{createInstance:()=>fields},'@mozilla.org/messengercompose/attachment;1':{createInstance:()=>({})}};
+  const interfaces={nsIMsgCompType:{Draft:9},nsIMsgCompFormat:{PlainText:1,HTML:2}};
+  const modules={importESModule(){return {MsgHdrToMimeMessage(header,context,callback,download,options){assert.equal(download,true);assert.equal(options.saneBodySize,false);callback(header,mime)}}}};
+  const services={accounts:{getIdentity:key=>key==='account'?identity:null}},header={folder:{getUriForMsg:()=> 'draft://42'}};
+  const params=await scope.inlineDraftParams(header,services,interfaces,classes,modules);
+  assert.equal(params.type,9);assert.equal(params.format,1);assert.equal(params.identity,identity);
+  assert.equal(fields.draftId,'draft://42');assert.equal(fields.body,'Saved answer, not a new reply');assert.equal(fields.subject,'Saved subject');assert.equal(fields.bcc,'Hidden <hidden@example.org>');assert.equal(fields.references,'<original>');
+  assert.equal(added.length,1);assert.equal(added[0].url,'imap://local?part=1.2');assert.equal(added[0].name,'notes.pdf');
+  mime.parts=[{contentType:'text/html',body:'<p>Saved HTML<img src="cid:picture"></p>'},{contentType:'image/png',url:'imap://local?part=1.3',headers:{'content-id':['<picture>']}}];
+  const html=await scope.inlineDraftParams(header,services,interfaces,classes,modules);assert.equal(html.format,2);assert.match(fields.body,/src="imap:\/\/local\?part=1.3"/);
+  mime.isEncrypted=true;
+  await assert.rejects(scope.inlineDraftParams(header,services,interfaces,classes,modules),/encrypted draft/);
+});
+
+test('change-driven autosave debounces edits, defers IME and in-flight saves, and cancels on disable',async()=>{
+  function target(){const events={};return {events,addEventListener(name,fn){events[name]=fn},removeEventListener(name){delete events[name]},emit(name,extra={}){events[name]?.({type:name,isTrusted:true,...extra})}}}
+  const document=target(),body=target(),native=target(),timers=new Map();let sequence=0,listener,saves=0;
+  const clock={setTimeout(fn,delay){const id=++sequence;timers.set(id,{fn,delay});return id},clearTimeout(id){timers.delete(id)}};
+  Object.assign(native,{document,gAutoSaveInterval:60000,gAutoSaveTimeout:99,clearTimeout(){},setTimeout(){},GetCurrentEditor:()=>({document:body}),gMsgCompose:{bodyModified:false,RegisterStateListener(value){listener=value},UnregisterStateListener(){},compFields:{}},async GenericSendMessage(mode){assert.equal(mode,7);saves++;native.emit('compose-send-message',{detail:{msgType:mode}});native.gMsgCompose.bodyModified=false}});
+  const controller=scope.installChangeDrivenAutosave(native,clock,{AutoSaveAsDraft:7,SaveAsDraft:4});
+  assert.equal(native.gAutoSaveInterval,0);assert.equal(timers.size,0,'idle editors have no save timer');
+  let text='';native.GetCurrentEditor=()=>({document:body,outputToString:()=>text});
+  function edit(){text+='x';native.gMsgCompose.bodyModified=true;body.emit('input')}
+  async function tick(){const [id,job]=timers.entries().next().value;timers.delete(id);assert.equal(job.delay,1500);await job.fn()}
+  edit();const first=[...timers.keys()][0];edit();assert.equal(timers.size,1);assert.equal(timers.has(first),false,'each edit restarts the pause');
+  await tick();assert.equal(saves,1);assert.equal(timers.size,0);
+  edit();listener.ComposeProcessDone(0);assert.equal(timers.size,1,'edits during save schedule the next save');await tick();assert.equal(saves,2);listener.ComposeProcessDone(0);assert.equal(timers.size,0);
+  body.emit('compositionstart');edit();assert.equal(timers.size,0,'do not save partially composed input');body.emit('compositionend');assert.equal(timers.size,1);await tick();listener.ComposeProcessDone(0);
+  document.emit('input',{isTrusted:false});assert.equal(timers.size,0,'synthetic native serialization does not start a save');
+  native.gContentChanged=true;document.emit('attachments-added');assert.equal(timers.size,1);
+  controller.setEnabled(false);assert.equal(timers.size,0);edit();assert.equal(timers.size,0);controller.setEnabled(true);assert.equal(timers.size,1);
+  controller.close();assert.equal(timers.size,0);assert.equal(body.events.input,undefined);assert.equal(native.gAutoSaveInterval,60000,'cleanup restores the native interval');
+});
+
+
+test('new drafts require user text beyond initial quotation and signature',()=>{
+  const initial='\nOn Monday, Jamie wrote:\n> Original mail\n-- Alex';
+  assert.equal(scope.hasWrittenDraftText(initial,initial),false);
+  assert.equal(scope.hasWrittenDraftText(initial,'  '+initial),false);
+  assert.equal(scope.hasWrittenDraftText(initial,'x'+initial),true);
+  assert.equal(scope.hasWrittenDraftText(initial,initial.slice(5)),false,'deleting initial quoted text alone is not a reply');
+  assert.equal(scope.shouldSaveDraft({gMsgCompose:{compFields:{draftId:'existing'}},GetCurrentEditor:()=>({outputToString:()=>''})}),true,'clearing an existing draft can still be saved');
+});
+
+test('fixed autosave retains its deadline during typing and switching to Auto resets it to the editing pause',()=>{
+  const events={},timers=new Map();let sequence=0,text='';
+  const document={addEventListener(name,fn){events[name]=fn},removeEventListener(name){delete events[name]}};
+  const native={document,gAutoSaveInterval:0,clearTimeout(){},GetCurrentEditor:()=>({document,outputToString:()=>text}),addEventListener(){},removeEventListener(){},gMsgCompose:{compFields:{},RegisterStateListener(){},UnregisterStateListener(){}}};
+  const clock={setTimeout(fn,delay){timers.set(++sequence,{fn,delay});return sequence},clearTimeout(id){timers.delete(id)}};
+  scope.configureChangeAutosave(true,'fixed',2);
+  const controller=scope.installChangeDrivenAutosave(native,clock,{});
+  text='a';events.input({type:'input',isTrusted:true});const deadline=[...timers.keys()][0];
+  assert.equal(timers.get(deadline).delay,120000);
+  text='ab';events.input({type:'input',isTrusted:true});assert.equal([...timers.keys()][0],deadline,'typing does not postpone a fixed interval');
+  scope.configureChangeAutosave(true,'auto',2);assert.equal(timers.has(deadline),false);assert.equal([...timers.values()][0].delay,1500);
+  const before=[...timers.keys()][0];text='abc';events.input({type:'input',isTrusted:true});assert.equal(timers.has(before),false,'Auto restarts on each edit');
+  controller.close();scope.configureChangeAutosave(true,'auto');
 });

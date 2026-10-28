@@ -381,3 +381,55 @@ test('synthetic search results use Gmail columns without changing regular folder
  controller.close();assert.equal(pane.updateColumns,original);assert.deepEqual(columns,snapshot);
  win.gViewWrapper.isSynthetic=false;const regular=scope.installSearchColumns(win);assert.deepEqual(columns,snapshot);regular.close();
 });
+
+test('draft references match exact message IDs and collapsed thread children, never subjects or unrelated references',()=>{
+  const draft={messageId:'<draft>',numReferences:2,getStringReference:i=>['<root>','<reply>'][i]};
+  assert.deepEqual([...scope.draftMessageIds(draft)],['draft','root','reply']);
+  const ids=new Map([...scope.draftMessageIds(draft)].map(id=>[id,draft])),isDraft=folder=>folder?.draft===true;
+  const header={messageId:'other',subject:'Same subject',folder:{}};
+  const view={isContainer:()=>true,isContainerOpen:()=>false,getThreadContainingIndex:()=>({numChildren:2,getChildHdrAt:i=>i?{messageId:'reply',folder:{}}:header})};
+  assert.equal(!!scope.draftRowTarget(header,view,0,ids,isDraft),true);
+  view.isContainerOpen=()=>true;
+  assert.equal(!!scope.draftRowTarget(header,view,0,ids,isDraft),false);
+  assert.equal(!!scope.draftRowTarget({...header,messageId:'<root>'},view,0,ids,isDraft),true);
+  assert.equal(!!scope.draftRowTarget({...header,folder:{draft:true}},view,0,new Map(),isDraft),true);
+  assert.equal(!!scope.draftRowTarget({...header,numReferences:1,getStringReference:()=>'<root>'},view,0,ids,isDraft),false);
+});
+
+test('sender draft labels follow local save/delete notifications, locale, row recycling and cleanup',async()=>{
+  class Node {
+    constructor(text=''){this.events={};this.children=[];this.textContent=text;this.className='';this.parent=null;this.dataset={};}
+    addEventListener(name,fn){this.events[name]=fn}
+    get childNodes(){return this.children.slice()}
+    append(...nodes){for(const node of nodes){node.remove();node.parent=this;this.children.push(node)}}
+    remove(){if(this.parent){this.parent.children=this.parent.children.filter(node=>node!==this);this.parent=null}}
+    replaceWith(...nodes){const parent=this.parent,index=parent.children.indexOf(this);this.remove();for(const node of nodes)node.remove();parent.children.splice(index,0,...nodes);for(const node of nodes)node.parent=parent}
+    querySelector(selector){for(const node of this.children){if(selector==='.'+node.className)return node;const found=node.querySelector(selector);if(found)return found}return null}
+  }
+  const row=new Node(),cell=new Node(),sender=new Node('Alice');row.index=0;cell.className='sendercol-column';cell.append(sender);row.append(cell);
+  const head=new Node(),timers=new Map(),events={};let serial=0,listener,removed=false;const opened=[];
+  const draftFolder={URI:'drafts',getUriForMsg:header=>'drafts#'+header.messageId,isSpecialFolder:()=>false,messages:[{messageId:'draft',numReferences:1,getStringReference:()=>'<original>'}]};
+  const mail={compose:{OpenComposeWindow(...args){opened.push(args)}},accounts:{allIdentities:[{draftFolder:'drafts'}],allFolders:[draftFolder]},mfn:{addListener(value){listener=value},removeListener(value){assert.equal(value,listener);removed=true}}};
+  const interfaces={nsIMsgCompType:{Draft:9},nsIMsgCompFormat:{Default:0},nsMsgFolderFlags:{Drafts:1024},nsIMsgFolderNotificationService:{msgAdded:1,msgsDeleted:2}};
+  let header={messageId:'original',folder:{isSpecialFolder:()=>false}};
+  const win={document:{head,createElement:()=>new Node(),querySelectorAll:()=>[row]},navigator:{language:'it-IT'},gDBView:{getMsgHdrAt:()=>header},
+    setTimeout(fn){timers.set(++serial,fn);return serial},clearTimeout(id){timers.delete(id)},addEventListener(name,fn){events[name]=fn},removeEventListener(name){delete events[name]}};
+  const controller=scope.installSenderDraftLabels(win,mail,interfaces);
+  async function flush(){for(const header of draftFolder.messages)header.folder=draftFolder;for(const [id,fn] of [...timers]){timers.delete(id);await fn()}}
+  await flush();assert.equal(row.querySelector('.gm-sender-draft').textContent,'Bozza');
+  controller.render(row);assert.equal(cell.children.length,1,'refresh wraps the sender only once');
+  assert.deepEqual(row.querySelector('.gm-sender-draft').events,{},'draft label is plain text');
+  const click=()=>controller.openRow(row);
+  assert.equal(click(),true);assert.equal(opened.length,1);assert.equal(opened[0][1],draftFolder.messages[0]);assert.equal(opened[0][2],'drafts#draft');assert.equal(opened[0][3],9);
+  draftFolder.messages=[{messageId:'replacement',numReferences:1,getStringReference:()=>'<original>'}];listener.msgAdded();await flush();click();assert.equal(opened[1][2],'drafts#replacement','autosave opens the replacement draft');
+  win.navigator.language='en-US';controller.render(row);assert.equal(row.querySelector('.gm-sender-draft').textContent,'Draft');
+  header={messageId:'unrelated',folder:{isSpecialFolder:()=>false}};controller.render(row);
+  assert.equal(row.querySelector('.gm-sender-draft'),null);assert.equal(cell.children[0],sender);assert.equal(click(),false,'messages without drafts open normally');
+  header.messageId='original';controller.render(row);assert.ok(row.querySelector('.gm-sender-draft'));
+  draftFolder.messages=[];listener.msgsDeleted();await flush();assert.equal(row.querySelector('.gm-sender-draft'),null);
+  draftFolder.messages=[{messageId:'draft',numReferences:1,getStringReference:()=>'<original>'}];listener.msgAdded();await flush();
+  assert.ok(row.querySelector('.gm-sender-draft'));
+  row.dataset.properties='dummy';controller.render(row);assert.equal(row.querySelector('.gm-sender-draft'),null);
+  row.dataset.properties='';controller.render(row);listener.msgAdded();controller.close();
+  assert.equal(removed,true);assert.equal(timers.size,0);assert.equal(head.children.length,0);assert.equal(cell.children[0],sender);assert.equal(row.querySelector('.gm-sender-draft'),null);
+});

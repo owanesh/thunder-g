@@ -31,7 +31,8 @@
           {
             "name": "minutes",
             "type": "integer"
-          }
+          },
+          {"name":"mode","type":"string","optional":true}
         ]
       },
       {

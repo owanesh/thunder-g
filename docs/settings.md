@@ -36,11 +36,11 @@ open a message again from the list.
   open below the conversation. You can detach the reply into a floating panel and
   return it, or move it to a separate window.
 - **Automatically save drafts** *(on by default)* — Save unsent work to the
-  account’s configured Drafts folder. The in-window editor shows green **✓ Saved**
-  only after a successful save; further edits show **Unsaved changes**.
-- **Save every** *(default: 1 minute)* — Choose 1, 2, 5 or 10 minutes between
-  automatic saves. Available when autosave is on. Autosave changes apply to newly
-  opened composers.
+  account’s Drafts folder. **Auto** (default) saves after 1.5 seconds without
+  edits; alternatively choose a fixed interval of 1, 2, 5 or 10 minutes. In Auto,
+  typing, recipients, subject and attachments restart the pause. Applies to inline and classic
+  composers; an idle editor does not repeatedly save. Changes apply immediately.
+  The in-window editor confirms **✓ Saved** only after native save success.
 
 In-window writing uses Thunderbird’s editor, including your signatures,
 attachments and drafts. The folder sidebar stays visible. Navigating or turning

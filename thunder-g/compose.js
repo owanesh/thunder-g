@@ -42,6 +42,89 @@ function createComposeAutosave(prefs) {
   };
 }
 
+var changeAutosaveEnabled=true;
+var changeAutosaveInterval=0;
+var changeAutosaveControllers=new Set();
+function configureChangeAutosave(enabled,mode='auto',minutes=1) {
+  changeAutosaveInterval=mode==='fixed' && [1,2,5,10].includes(minutes)?minutes*60000:0;
+  changeAutosaveEnabled=enabled===true;
+  for(const controller of changeAutosaveControllers)controller.setEnabled(changeAutosaveEnabled);
+}
+var initialComposeText=new WeakMap();
+function composePlainText(native) {
+  const editor=native.GetCurrentEditor?.();
+  return editor?.outputToString?.('text/plain',0) ?? editor?.document?.body?.textContent ?? '';
+}
+function hasWrittenDraftText(before,after) {
+  let start=0,end=0;
+  while(start<before.length && start<after.length && before[start]===after[start])start++;
+  while(end<before.length-start && end<after.length-start && before[before.length-1-end]===after[after.length-1-end])end++;
+  return after.slice(start,after.length-end).trim().length>0;
+}
+function shouldSaveDraft(native) {
+  // Existing drafts must keep accepting deletions, including clearing the body.
+  if(native.gMsgCompose?.compFields?.draftId)return true;
+  return hasWrittenDraftText(initialComposeText.get(native) ?? composePlainText(native),composePlainText(native));
+}
+// Changes reset a one-shot idle delay; an untouched editor never schedules saves.
+function installChangeDrivenAutosave(native,clock,modes=Ci.nsIMsgCompDeliverMode,delay=1500) {
+  const compose=native.gMsgCompose,documents=[...new Set([native.document,native.GetCurrentEditor?.()?.document].filter(Boolean))];
+  let timer=null,closed=false,enabled=changeAutosaveEnabled,pending=false,composing=false,revision=0,savedRevision=0;
+  initialComposeText.set(native,composePlainText(native));
+  let originalInterval=native.gAutoSaveInterval;
+  function cancel(){if(timer!==null){clock.clearTimeout(timer);timer=null}}
+  function stopPeriodic(){if(native.gAutoSaveTimeout){native.clearTimeout(native.gAutoSaveTimeout);native.gAutoSaveTimeout=null}native.gAutoSaveInterval=0}
+  stopPeriodic();
+  function startupDone(){if(native.gAutoSaveInterval>0)originalInterval=native.gAutoSaveInterval;stopPeriodic()}
+  native.addEventListener('compose-startup-done',startupDone);
+  function schedule(){if(!changeAutosaveInterval)cancel();if(timer===null && !closed && enabled && !composing && revision>savedRevision)timer=clock.setTimeout(save,changeAutosaveInterval || delay)}
+  async function save(){
+    timer=null;
+    if(closed || !enabled || composing || revision<=savedRevision)return;
+    if(native.gSendOperationInProgress)return;
+    if(pending || native.gSaveOperationInProgress || native.gWindowLocked || native.gNumUploadingAttachments){schedule();return}
+    if(!native.gContentChanged && !compose.bodyModified){savedRevision=revision;return}
+    if(!shouldSaveDraft(native))return;
+    pending=true;const version=revision;
+    try {await native.GenericSendMessage(modes.AutoSaveAsDraft);native.gAutoSaveKickedIn=true}
+    catch(error){pending=false;console.warn('Thunder-G: automatic draft save failed.',error);return}
+    // ComposeProcessDone is the authority for completion, not invocation.
+    if(closed)return;
+    if(!pending && revision>version)schedule();
+  }
+  let savingRevision=0;
+  function sending(event){
+    if([modes.SaveAsDraft,modes.AutoSaveAsDraft].includes(event.detail?.msgType)){pending=true;savingRevision=revision;cancel()}
+    else cancel();
+  }
+  const listener={NotifyComposeFieldsReady(){},NotifyComposeBodyReady(){},SaveInFolderDone(){},ComposeProcessDone(result){
+    if(closed || !pending)return;pending=false;
+    if(result===0){savedRevision=savingRevision;schedule()}
+  }};
+  function edited(event){
+    if(closed || ((event.type==='input' || event.type==='change') && event.isTrusted===false))return;
+    revision++;if(event.isComposing)composing=true;schedule();
+  }
+  function compositionStart(){composing=true;cancel()}
+  function compositionEnd(){composing=false;schedule()}
+  const changes=['input','change','attachments-added','attachments-removed','attachment-renamed','compose-from-changed'];
+  for(const doc of documents){for(const name of changes)doc.addEventListener(name,edited,true);doc.addEventListener('compositionstart',compositionStart,true);doc.addEventListener('compositionend',compositionEnd,true)}
+  native.addEventListener('compose-send-message',sending);compose.RegisterStateListener(listener);
+  const controller={setEnabled(value){enabled=value===true;cancel();if(enabled)schedule()},close(){
+    if(closed)return;closed=true;cancel();changeAutosaveControllers.delete(controller);
+    for(const doc of documents){for(const name of changes)doc.removeEventListener(name,edited,true);doc.removeEventListener('compositionstart',compositionStart,true);doc.removeEventListener('compositionend',compositionEnd,true)}
+    native.removeEventListener('compose-startup-done',startupDone);native.removeEventListener('compose-send-message',sending);compose.UnregisterStateListener(listener);
+    if(!native.closed && originalInterval>0){native.gAutoSaveInterval=originalInterval;native.gAutoSaveTimeout=native.setTimeout(native.AutoSave,originalInterval)}
+  }};
+  changeAutosaveControllers.add(controller);return controller;
+}
+function installNativeChangeAutosave(native) {
+  let controller=null,closed=false;
+  function ready(){if(!closed && !controller && native.gMsgCompose && native.GetCurrentEditor?.())controller=installChangeDrivenAutosave(native,native)}
+  native.addEventListener('compose-startup-done',ready);ready();
+  return {close(){closed=true;native.removeEventListener('compose-startup-done',ready);controller?.close()}};
+}
+
 // Keep the full native compose document alive independently of conversation navigation.
 var inlineReplyEnabled=false;
 var inlineNewMessageEnabled=false;
@@ -430,14 +513,99 @@ function styleInlineComposeBody(native) {
   utils.loadSheetUsingURIString(uri,utils.USER_SHEET);
   return {close(){try{utils.removeSheetUsingURIString(uri,utils.USER_SHEET)}catch(_){}}};
 }
+// Parse the saved MIME directly: opening a native window merely to obtain its
+// arguments causes a visible flash and creates two editors for the same draft.
+async function inlineDraftParams(header,services=MailServices,interfaces=Ci,classes=Cc,modules=ChromeUtils) {
+  const {MsgHdrToMimeMessage}=modules.importESModule('resource:///modules/gloda/MimeMessage.sys.mjs');
+  const mime=await new Promise((resolve,reject)=>{
+    try {MsgHdrToMimeMessage(header,null,(_header,message)=>message?resolve(message):reject(new Error('Could not load the saved draft.')),true,{saneBodySize:false,examineEncryptedParts:true})}
+    catch(error){reject(error)}
+  });
+  const value=name=>(mime.headers?.[name] || []).join(', ');
+  const params=classes['@mozilla.org/messengercompose/composeparams;1'].createInstance(interfaces.nsIMsgComposeParams);
+  const fields=classes['@mozilla.org/messengercompose/composefields;1'].createInstance(interfaces.nsIMsgCompFields);
+  const uri=header.folder.getUriForMsg(header);
+  const bodies=[];
+  function visit(part,root=false) {
+    if(part.isEncrypted)throw new Error('This encrypted draft cannot be resumed inline. Open it from Drafts in the classic composer.');
+    if(!root && (part.url || part.contentType==='message/rfc822'))return;
+    if(['text/plain','text/html','text/enriched'].includes(part.contentType) && typeof part.body==='string')bodies.push(part);
+    for(const child of part.parts || [])visit(child);
+  }
+  visit(mime,true);
+  const body=bodies.find(part=>part.contentType==='text/html' || part.contentType==='text/enriched') || bodies[0];
+  if(!body)throw new Error('The saved draft has no readable body. Open it from Drafts in the classic composer.');
+  params.type=interfaces.nsIMsgCompType.Draft;
+  params.format=body.contentType==='text/plain'?interfaces.nsIMsgCompFormat.PlainText:interfaces.nsIMsgCompFormat.HTML;
+  params.originalMsgURI=uri;params.origMsgHdr=header;
+  const identityKey=value('x-identity-key');
+  params.identity=identityKey?services.accounts.getIdentity(identityKey):null;
+  if(!params.identity){const {MailUtils}=modules.importESModule('resource:///modules/MailUtils.sys.mjs');[params.identity]=MailUtils.getIdentityForHeader(header,params.type)}
+  if(!params.identity)throw new Error('The draft account identity is unavailable.');
+  for(const [name,property] of Object.entries({'from':'from','to':'to','cc':'cc','bcc':'bcc','reply-to':'replyTo','subject':'subject','references':'references','newsgroups':'newsgroups','followup-to':'followupTo','organization':'organization','priority':'priority','fcc':'fcc','x-mozilla-fcc2':'fcc2'})) {
+    const raw=value(name);if(raw)fields[property]=services.mimeConverter?.decodeMimeHeader(raw,null,false,true) || raw;
+  }
+  fields.draftId=uri;fields.body=body.body;
+  const info=value('x-mozilla-draft-info');
+  fields.attachVCard=/\bvcard=1\b/.test(info);fields.returnReceipt=/\breceipt=1\b/.test(info);
+  fields.DSN=/\bDSN=1\b/i.test(info);
+  const attachments=mime.allUserAttachments || [],seen=new Set();
+  for(const part of attachments) {
+    if(!part.url || seen.has(part.url))continue;seen.add(part.url);
+    const attachment=classes['@mozilla.org/messengercompose/attachment;1'].createInstance(interfaces.nsIMsgAttachment);
+    attachment.url=part.url;attachment.name=part.name || '';attachment.contentType=part.contentType;
+    if(Number.isFinite(part.size))attachment.size=part.size;
+    fields.addAttachment(attachment);
+  }
+  // Use local MIME-part URLs for embedded images; the native editor packages
+  // them on save/send, instead of requesting remote image content.
+  function inlineImages(part) {
+    const cid=part.headers?.['content-id']?.[0]?.replace(/^<|>$/g,'');
+    if(cid && part.url && body.contentType!=='text/plain')fields.body=fields.body.split('cid:'+cid).join(part.url.replaceAll('&','&amp;'));
+    for(const child of part.parts || [])inlineImages(child);
+  }
+  inlineImages(mime);params.composeFields=fields;return params;
+}
+var pendingInlineDrafts=new WeakMap();
+async function resumeInlineDraft(win,header,placement,load=inlineDraftParams) {
+  const existing=inlineComposeControllers.get(win);
+  if(existing?.active){existing.returnInline();return;}
+  const token={};pendingInlineDrafts.set(win,token);
+  try {
+    const params=await load(header);
+    if(pendingInlineDrafts.get(win)!==token || (placement.isCurrent && !placement.isCurrent()))return;
+    // Another reply may have been started while the draft was loading.
+    const current=inlineComposeControllers.get(win);
+    if(current?.active){current.returnInline();return;}
+    const composer=current || createInlineCompose(win);inlineComposeControllers.set(win,composer);
+    composer.open(header,'cmd_editDraft',{...placement,params});
+  }finally{if(pendingInlineDrafts.get(win)===token)pendingInlineDrafts.delete(win)}
+}
+// Wait for the embedded editor's final layout before positioning its header.
+function revealInlineDraft(win,panel,isCurrent) {
+  let stopped=false,observer=null,timer=null;
+  const stop=()=>{if(stopped)return;stopped=true;observer?.disconnect();if(timer!==null)win.clearTimeout(timer);for(const type of ['wheel','pointerdown','keydown'])win.removeEventListener?.(type,stop,true)};
+  const reveal=()=>{if(stopped)return;if(!isCurrent()){stop();return}panel.scrollIntoView?.({block:'start',inline:'nearest',behavior:'instant'})};
+  const schedule=()=>{if(win.requestAnimationFrame)win.requestAnimationFrame(reveal);else reveal()};
+  // Native message frames above the draft can finish sizing after the editor.
+  // Follow that layout briefly, but yield immediately to intentional user input.
+  if(win.ResizeObserver && panel.parentNode){
+    observer=new win.ResizeObserver(schedule);observer.observe(panel.parentNode);
+    for(const type of ['wheel','pointerdown','keydown'])win.addEventListener?.(type,stop,true);
+    timer=win.setTimeout(stop,3000);
+  }
+  schedule();
+}
 function createInlineCompose(win) {
   const doc=win.document;let browser=null,panel=null,originalHeader=null,originalCommand=null,ready=false,observer=null;
   let restoreChrome=null,loadingTimer=null,inlineContainer=null,scrollHost=null,presentation='inline',bar=null,title=null,floatButton=null,windowButton=null,transferBusy=false,attachmentPicker=null,draftStatus=null,floatingResize=null,sendStatus=null;
   let sendNotice=null,noticeTimer=null,scrim=null,minimized=false,minimizeButton=null,bodyReadyWatcher=null,bodySheet=null,composeContentBridge=null;
+  let changeAutosave=null;
   const main=win.browsingContext.topChromeWindow;
   function stopObserver(){if(observer){Services.obs.removeObserver(observer,'chrome-document-global-created');observer=null;}}
   function dispose(){
     bodyReadyWatcher?.close();bodyReadyWatcher=null;bodySheet?.close();bodySheet=null;
+    changeAutosave?.close();changeAutosave=null;
     sendStatus?.close();sendStatus=null;
     draftStatus?.close();draftStatus=null;floatingResize?.close();floatingResize=null;
     attachmentPicker?.close();attachmentPicker=null;
@@ -460,7 +628,7 @@ function createInlineCompose(win) {
     if(native.gSendOperationInProgress || native.gSaveOperationInProgress){title.textContent='Wait for the current send or save to finish.';return;}
     transferBusy=true;
     try{
-      if(native.gContentChanged || native.gMsgCompose.bodyModified || !native.gMsgCompose.compFields.draftId)await saveInlineReplyDraft(native,win);
+      if(shouldSaveDraft(native) && (native.gContentChanged || native.gMsgCompose.bodyModified || !native.gMsgCompose.compFields.draftId))await saveInlineReplyDraft(native,win);
       dispose();
     }catch(error){title.textContent=error.message || 'Could not save the draft. Your reply remains open.';}
     finally{transferBusy=false;}
@@ -562,7 +730,7 @@ function createInlineCompose(win) {
   function returnInline(){
     if(originalCommand==='cmd_newMessage'){setPresentation('full');return;}
     if(!inlineContainer?.isConnected || scrollHost?.hidden)return;
-    inlineContainer.moveBefore(panel,null);setPresentation('inline');panel.scrollIntoView({block:'nearest',behavior:'instant'});
+    inlineContainer.moveBefore(panel,null);setPresentation('inline');panel.scrollIntoView({block:originalCommand==='cmd_editDraft'?'start':'nearest',behavior:'instant'});
   }
   async function separateWindow(){
     if(!ready || transferBusy)return;
@@ -652,13 +820,13 @@ function createInlineCompose(win) {
         if(['sent','draft-saved','draft-error'].includes(state.state))noticeTimer=win.setTimeout(()=>{noticeTimer=null;hideSendNotice();},state.state==='sent'?6000:12000);
       };
       const isNew=command==='cmd_newMessage';
-      const params=isNew?inlineNewMessageParams(placement.folder):inlineReplyParams(header,command);originalHeader=header;originalCommand=command;
+      const params=placement.params || (isNew?inlineNewMessageParams(placement.folder):inlineReplyParams(header,command));originalHeader=header;originalCommand=command;
       inlineContainer=placement.container || doc.documentElement;scrollHost=placement.scrollHost || null;
       scrim=doc.createElement('div');scrim.className='gm-compose-scrim';scrim.hidden=true;scrim.style.cssText='position:fixed;inset:0;background:#0005;z-index:999;';doc.documentElement.append(scrim);
       panel=doc.createElement('section');panel.className='gm-inline-compose';panel.setAttribute('aria-label',isNew?'New message in this window':'Reply in this window');
       bar=doc.createElement('div');bar.style.cssText='display:flex;align-items:center;gap:2px;padding:6px 12px;min-height:40px;box-sizing:border-box;flex:none;background:light-dark(#f2f6fc,#292a2d);color:light-dark(#16345c,#e8eaed);';
       title=doc.createElement('strong');title.style.cssText='flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.9em;font-weight:500;';
-      title.textContent=isNew?'New Message':`${command==='cmd_forwardInline'?'Forward':command==='cmd_replyall'?'Reply all':'Reply'} · ${header.mime2DecodedSubject || '(No subject)'}`;
+      title.textContent=command==='cmd_editDraft'?`Draft · ${header.mime2DecodedSubject || '(No subject)'}`:isNew?'New Message':`${command==='cmd_forwardInline'?'Forward':command==='cmd_replyall'?'Reply all':'Reply'} · ${header.mime2DecodedSubject || '(No subject)'}`;
       const titleGroup=doc.createElement('div');titleGroup.style.cssText='display:flex;align-items:center;gap:10px;flex:1;min-width:100px;overflow:hidden;';
       const savedStatus=doc.createElement('span');savedStatus.className='gm-compose-draft-status';savedStatus.setAttribute('role','status');savedStatus.setAttribute('aria-live','polite');savedStatus.style.cssText='flex:none;font-size:12px;white-space:nowrap;';
       titleGroup.append(title,savedStatus);
@@ -750,7 +918,7 @@ function createInlineCompose(win) {
             if(replyRow && identity){
               try{const addresses=MailServices.headerParser.parseDecodedHeader(replyTo);replyRow.toggleAttribute('data-gm-redundant',addresses.length>0 && addresses.every(item=>item.email?.toLowerCase()===identity.toLowerCase()));}catch(_){}
             }
-            ready=true;save.disabled=false;windowButton.disabled=false;draftStatus=installComposeDraftStatus(native,savedStatus,win,Ci.nsIMsgCompDeliverMode,state=>{if(state==='saved')sendStatus?.draftSaved()});sendStatus=installInlineSendStatus(native,win,onSendState);if(loadingTimer!==null)win.clearTimeout(loadingTimer);loadingTimer=null;native.SetMsgBodyFrameFocus?.();return;}
+            ready=true;save.disabled=false;windowButton.disabled=false;changeAutosave=installChangeDrivenAutosave(native,win);draftStatus=installComposeDraftStatus(native,savedStatus,win,Ci.nsIMsgCompDeliverMode,state=>{if(state==='saved')sendStatus?.draftSaved()});sendStatus=installInlineSendStatus(native,win,onSendState);if(loadingTimer!==null)win.clearTimeout(loadingTimer);loadingTimer=null;native.SetMsgBodyFrameFocus?.();placement.onReady?.();if(command==='cmd_editDraft')revealInlineDraft(win,panel,()=>browser===frame && presentation==='inline' && (!placement.isCurrent || placement.isCurrent()));return;}
           if(Date.now()-started>20000){
             title.textContent='Editor could not finish starting. Close and use a classic reply.';restoreChrome?.();restoreChrome=null;return;
           }
