@@ -51,6 +51,7 @@ function readerFixture({photo=null,tagged=false,verifyIndependentDkim}={}) {
     createXULElement(tag){
       const browser=node(tag);browser.clientHeight=500;browser.docShell={allowDNSPrefetch:true};
       const content=node('content');content.bottom=1208;content.quotes=[];
+      content.createTreeWalker=()=>{let done=false;return {nextNode(){if(done)return null;done=true;return {textContent:'New answer',parentElement:{closest:()=>null},compareDocumentPosition:()=>4}}}};
       content.querySelectorAll=()=>content.quotes;content.createElement=node;content.documentElement=node();
       content.body={scrollHeight:2000,getBoundingClientRect:()=>({top:8})};
       content.createRange=()=>({selectNodeContents(){},getBoundingClientRect:()=>({bottom:content.bottom})});
@@ -596,4 +597,22 @@ test('position preservation compensates layout anchoring without overwriting sub
  const card={getBoundingClientRect:()=>({top})};
  scope.preserveReaderPosition(host,card,()=>{top=80;host.scrollTop=340});assert.equal(host.scrollTop,300);
  host.scrollTop=500;scope.preserveReaderPosition(host,card,()=>{});assert.equal(host.scrollTop,500);
+});
+
+test('bottom-posted and interleaved pending replies stay fully visible in their original order',()=>{
+ const scope=context();
+ for(const body of ['On Tuesday wrote:\n> Question\n\nEven better!','First answer\n> Question one\nInline answer\n> Question two\nSecond answer']){
+  const result=scope.pendingReplyText(body+'\n\n--\nSignature');
+  assert.equal(result.body,body+'\n');assert.equal(result.quote,'');assert.equal(result.signature,'--\nSignature');
+ }
+ const top=scope.pendingReplyText('Answer\n\nOn Tuesday wrote:\n> History');assert.equal(top.quote,'On Tuesday wrote:\n> History');
+});
+test('native quote folding is conservative for bottom replies, interleaved answers and signature-only headers',()=>{
+ const scope=context(),quote={};
+ function content(parts){return {body:{},createTreeWalker(){let index=0;return {nextNode(){const part=parts[index++];return part?{textContent:part.text || 'text',parentElement:{closest:()=>part.excluded?{}:null},compareDocumentPosition:()=>part.before?4:2}:null}}}};}
+ assert.equal(scope.foldableQuotedHistory(content([{before:true},{excluded:true}]),[quote]),true);
+ assert.equal(scope.foldableQuotedHistory(content([{before:true},{before:false}]),[quote]),false);
+ assert.equal(scope.foldableQuotedHistory(content([{excluded:true},{before:false}]),[quote]),false);
+ assert.equal(scope.foldableQuotedHistory(content([{excluded:true}]),[quote]),false);
+ assert.equal(scope.foldableQuotedHistory({body:{}},[quote]),false);
 });

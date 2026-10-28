@@ -273,7 +273,27 @@ function pendingReplyText(value) {
   const signature=text.search(/\n-- ?\n/);
   const main=signature<0?text:text.slice(0,signature),sig=signature<0?'':text.slice(signature+1);
   const quote=main.search(/(?:^|\n)(?:On [^\n]+wrote:\n(?=>)|>)/);
+  if(quote>=0){
+    const quoted=main.slice(quote).trimStart().split('\n');
+    if(/^On .+wrote:$/.test(quoted[0]))quoted.shift();
+    // A bottom-posted or interleaved answer must never disappear with history.
+    if(quoted.some(line=>line.trim() && !/^\s*>/.test(line)))return {body:main,quote:'',signature:sig};
+    if(!main.slice(0,quote).trim())return {body:main,quote:'',signature:sig};
+  }
   return {body:quote<0?main:main.slice(0,quote),quote:quote<0?'':main.slice(quote).trimStart(),signature:sig};
+}
+
+// Fold only unambiguous top-posted history. Keep bottom/inline replies and
+// uncertain layouts expanded; signature text is not evidence of a new answer.
+function foldableQuotedHistory(content,quotes) {
+  if(!quotes.length || !content.createTreeWalker || !content.body)return false;
+  const walker=content.createTreeWalker(content.body,4);let before=false,node;
+  while((node=walker.nextNode())){
+    if(!node.textContent?.trim() || node.parentElement?.closest('blockquote[type="cite"], .gmail_quote, .moz-cite-prefix, .moz-signature, script, style'))continue;
+    if(node.compareDocumentPosition(quotes[0]) & 4)before=true;
+    else return false;
+  }
+  return before;
 }
 
 function installIndependentReader(win) {
@@ -740,7 +760,9 @@ function installIndependentReader(win) {
             const quoteStyle=content.createElement('style');
             quoteStyle.textContent='@media screen { :root[data-gm-fold-quotes] :is(blockquote[type="cite"], .gmail_quote, .moz-cite-prefix) { display:none !important; } }';
             content.documentElement.append(quoteStyle);
-            content.documentElement.setAttribute('data-gm-fold-quotes','');
+            const folded=foldableQuotedHistory(content,quotes);
+            if(folded)content.documentElement.setAttribute('data-gm-fold-quotes','');
+            else {quoteButton.setAttribute('aria-expanded','true');quoteButton.setAttribute('aria-label','Hide quoted text');}
             quoteButton.hidden=false;
             toggleQuotes=()=>{
               const folded=quoteButton.getAttribute('aria-expanded')!=='true';
@@ -751,7 +773,7 @@ function installIndependentReader(win) {
               quoteButton.title=folded?'Hide quoted text':'Show quoted text';scheduleResize();
             };
           }
-          if(hydration?.quoteExpanded && toggleQuotes)toggleQuotes();
+          if(hydration?.quoteExpanded && toggleQuotes && quoteButton.getAttribute('aria-expanded')!=='true')toggleQuotes();
           bodyResize?.disconnect();
           bodyResize=new win.ResizeObserver(scheduleResize);
           bodyResize.observe(content.body);bodyResize.observe(pane);
