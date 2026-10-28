@@ -399,7 +399,7 @@ function installFloatingComposeResize(win,panel,prefs=typeof Services==='undefin
     const handle=doc.createElement('button');handle.type='button';handle.className=`gm-compose-resize gm-compose-resize-${kind}`;
     handle.setAttribute('aria-label','Resize compose panel');handle.title='Drag to resize; arrow keys resize, Shift makes larger steps';
     const rtl=doc.documentElement.dir==='rtl',side=rtl?'right':'left';
-    handle.style.cssText=`position:absolute;z-index:2;padding:0;margin:0;border:0;background:transparent;color:light-dark(#80868b,#9aa0a6);touch-action:none;${kind==='top'?'top:0;left:18px;right:0;height:6px;cursor:ns-resize;':kind==='side'?`${side}:0;top:18px;bottom:0;width:6px;cursor:ew-resize;`:`top:0;${side}:0;width:18px;height:18px;cursor:${rtl?'nesw':'nwse'}-resize;font-size:16px;line-height:18px;`}`;
+    handle.style.cssText=`position:absolute;z-index:2;box-sizing:border-box;min-width:0;min-height:0;min-inline-size:0;min-block-size:0;padding:0;margin:0;border:0;background:transparent;color:light-dark(#80868b,#9aa0a6);touch-action:none;${kind==='top'?'top:0;left:18px;right:0;height:6px;cursor:ns-resize;':kind==='side'?`${side}:0;top:18px;bottom:0;width:6px;cursor:ew-resize;`:`top:0;${side}:0;width:18px;height:18px;cursor:${rtl?'nesw':'nwse'}-resize;font-size:16px;line-height:18px;`}`;
     handle.tabIndex=kind==='corner'?0:-1;
     if(kind==='corner') {
       const icon=doc.createElementNS('http://www.w3.org/2000/svg','svg');icon.setAttribute('viewBox','0 0 18 18');icon.setAttribute('width','18');icon.setAttribute('height','18');icon.setAttribute('aria-hidden','true');
@@ -580,6 +580,27 @@ async function resumeInlineDraft(win,header,placement,load=inlineDraftParams) {
     const composer=current || createInlineCompose(win);inlineComposeControllers.set(win,composer);
     composer.open(header,'cmd_editDraft',{...placement,params});
   }finally{if(pendingInlineDrafts.get(win)===token)pendingInlineDrafts.delete(win)}
+}
+// Thunderbird 159 uses a subgrid for addressing; earlier releases use flex.
+// Keep native grid children in their slots instead of reparenting controls.
+function inlineComposeUsesHeaderGrid(native) {
+  const headers=native.document.getElementById?.('MsgHeadersToolbar');
+  return !!headers && native.getComputedStyle?.(headers).display==='grid';
+}
+function inlineComposeGridCSS() {
+  return `
+    #MsgHeadersToolbar { grid-template-columns:0 36px minmax(0,1fr)!important; }
+    #top-gradient-box,#recipientsContainer,.address-row,#subject-box { grid-column:1 / -1!important; grid-template-columns:subgrid!important; }
+    #identityLabel-box,.address-label-container { grid-column:2!important; justify-content:flex-start!important; }
+    #identity-container,.address-container,#msgSubjectContainer { grid-column:3!important; min-width:0!important; }
+    #identity-container { display:flex!important; align-items:center!important; }
+    #msgIdentity { flex:1 1 0!important; min-width:0!important; max-width:none!important; }
+    #addressRowTo:has(> #extraAddressRowsArea) { grid-template-columns:0 36px minmax(0,1fr) auto!important; }
+    #extraAddressRowsArea { grid-column:4!important; grid-row:1!important; flex:0 0 auto!important; margin-inline-start:8px!important; }
+    #subject-box > .aw-firstColBox { grid-column:1!important; }
+    #msgSubjectContainer { grid-column:2 / -1!important; }
+    #msgSubjectBox,#msgSubject { width:100%!important; min-width:0!important; }
+  `;
 }
 // Wait for the embedded editor's final layout before positioning its header.
 function revealInlineDraft(win,panel,isCurrent) {
@@ -789,7 +810,7 @@ function createInlineCompose(win) {
     const text=doc.createElement('span');text.textContent=label;control.append(svg,text);
     control.title=description;control.setAttribute('aria-label',description);
     text.style.display='none';
-    control.style.cssText='display:inline-flex;align-items:center;justify-content:center;flex:none;width:28px;height:28px;border:0;border-radius:4px;background:transparent;color:inherit;padding:5px;cursor:pointer;';
+    control.style.cssText='display:inline-flex;align-items:center;justify-content:center;flex:0 0 28px;box-sizing:border-box;min-width:0;min-height:0;min-inline-size:0;min-block-size:0;margin:0;width:28px;height:28px;border:0;border-radius:4px;background:transparent;color:inherit;padding:5px;cursor:pointer;';
   }
   function button(label,handler){const node=doc.createElement('button');node.type='button';node.textContent=label;node.addEventListener('click',handler);return node;}
   return {
@@ -853,6 +874,7 @@ function createInlineCompose(win) {
         attachmentPicker=installEmbeddedAttachmentPicker(native,main);
         // Restore the application's browser chrome after compose's native startup hook.
         restoreChrome?.();restoreChrome=null;
+        const headerGrid=inlineComposeUsesHeaderGrid(native);
         const style=frame.contentDocument.createElement('style');style.textContent=`
           #compose-toolbar-menubar2,#titlebar,#status-bar{display:none!important}
           html,body{box-sizing:border-box!important;min-width:0!important;min-height:0!important;width:100%!important;height:100%!important;margin:0!important;overflow:hidden!important;background:light-dark(#ffffff,#18181b)!important}
@@ -897,7 +919,7 @@ function createInlineCompose(win) {
           #extraAddressRowsArea{flex:0 0 auto!important;margin-inline-start:auto!important}
           #gm-discard-draft:hover{background:light-dark(#e8eaed,#3c4043)!important}
           #MsgHeadersToolbar{border:0!important;padding:4px 8px!important}
-        `;frame.contentDocument.documentElement.append(style);
+        `;if(headerGrid)style.textContent+=inlineComposeGridCSS();frame.contentDocument.documentElement.append(style);
         const subjectInput=frame.contentDocument.getElementById('msgSubject');if(subjectInput)subjectInput.placeholder='Subject';
         const extra=frame.contentDocument.getElementById('extraAddressRowsArea'),toRow=frame.contentDocument.getElementById('addressRowTo');
         if(extra && toRow)toRow.append(extra);

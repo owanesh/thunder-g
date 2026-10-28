@@ -46,8 +46,9 @@ Exchange cross-client tag synchronization is unsupported.
 
 ## Compatibility
 
-The extension declares support for Thunderbird **153–158.x**. The following
-combinations have been tested:
+The extension declares support for Thunderbird **153–159.x**. The following
+combinations have been tested. Thunderbird 159 is admitted by the version range;
+full feature testing on 159 is still pending:
 
 | Client | Version | macOS | Windows | Linux |
 | --- | --- | --- | --- | --- |

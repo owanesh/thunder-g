@@ -6,11 +6,19 @@
 
 - Do not create drafts for empty replies: automatic saves and closing the inline composer require new non-whitespace body text beyond the initial quote/signature. Existing drafts still save deletions.
 
+- Prevent native button minimum sizes from expanding composer resize handles over the close button and other title-bar actions.
+
+- Preserve the existing compact composer toolbar and Cc/Bcc placement on the recipients row when using Thunderbird 159’s grid layout.
+
 - Offer Auto draft saving after 1.5 seconds without edits, or fixed intervals of 1, 2, 5 or 10 minutes, in inline and classic composers. Include recipients, subject and attachment changes; defer during IME composition or an active save.
 
 - Load saved MIME drafts directly into the inline composer without opening a temporary native compose window.
 
 - Scroll directly to the resumed inline draft after its editor is ready; cancel the scroll when the user has already navigated elsewhere.
+
+- Adapt embedded composer addressing to Thunderbird 159’s native grid layout, keeping the existing flex layout on earlier releases.
+
+- Extend the supported Thunderbird range to 153–159.x, retaining the existing 153 minimum and compatibility with 154–158.
 
 - Show a red “Bozza” (Italian) or “Draft” beside the sender for saved drafts and conversations with a saved reply draft, including collapsed threads. Update the indicator after draft saves, sends, moves, and deletions. With inline replies enabled, clicking the message opens the conversation and resumes its saved draft below the last message; otherwise open the saved draft in the classic composer; when several drafts match, open the most recent. The red indicator remains plain text.
 
@@ -108,6 +116,7 @@
 
 - Add expandable nested native labels in the Tags sidebar and label picker, searchable by full path.
 - Add a New label panel with a parent selector; preserve existing tag keys, full-path chips and conversation-wide application.
+
 
 ### Added
 

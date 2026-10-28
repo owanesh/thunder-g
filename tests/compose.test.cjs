@@ -417,6 +417,19 @@ test('resuming a draft loads parameters directly without creating a native windo
   assert.equal(received,null,'navigation during parsing cancels the pending editor');
 });
 
+test('compose header layout detects native grid while retaining the earlier flex path',()=>{
+  const headers={};
+  assert.equal(scope.inlineComposeUsesHeaderGrid({document:{getElementById:()=>headers},getComputedStyle:()=>({display:'grid'})}),true);
+  assert.equal(scope.inlineComposeUsesHeaderGrid({document:{getElementById:()=>headers},getComputedStyle:()=>({display:'flex'})}),false);
+  assert.equal(scope.inlineComposeUsesHeaderGrid({document:{getElementById:()=>null}}),false);
+  const css=scope.inlineComposeGridCSS();
+  assert.match(css,/grid-template-columns:0 36px minmax\(0,1fr\)/);
+  assert.match(css,/#addressRowTo:has\(> #extraAddressRowsArea\)/);
+  assert.match(css,/#extraAddressRowsArea \{ grid-column:4!important; grid-row:1!important/);
+  assert.match(css,/#msgSubjectContainer \{ grid-column:2 \/ -1/);
+});
+
+
 test('resumed drafts scroll to the composer after layout and do not steal scroll after navigation',()=>{
   const frames=[],positions=[];
   const win={requestAnimationFrame:fn=>frames.push(fn)},panel={scrollIntoView:options=>positions.push(options)};
