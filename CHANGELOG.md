@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.19.1
+
 - Keep bottom-posted and interleaved replies visible instead of folding new answers with quoted history, in both immediate previews and saved conversation messages.
 
 - Keep Refresh and the neighboring toolbar action hover backgrounds circular by overriding native minimum button dimensions.
