@@ -230,7 +230,14 @@ function installInboxIdleActions(win,reader=null) {
   const more=button('More options (not available yet)','M12 5v.01 M12 12v.01 M12 19v.01');more.disabled=true;
   bar.append(group,refresh,more);host.prepend(bar);
   reader?.setSelectionControl?.(group,bar);
+  const labelBack=button('Back to previous message list','M14 5l-7 7 7 7',()=>returnFromNativeLabelView(win));
+  labelBack.className+=' gm-label-back';labelBack.hidden=!win._gmLabelHistory?.length;bar.append(labelBack);
+  const syncLabelBack=()=>{labelBack.hidden=!win._gmLabelHistory?.length;};
+  win.addEventListener?.('gm-label-navigation',syncLabelBack);
+
   const style=doc.createElement('style');style.textContent=`
+    .gm-inbox-action[hidden]{display:none!important;}
+    .gm-label-back{order:-1;}
     #threadPaneFolderName,#threadPaneFolderCountContainer{display:none!important}
     #threadPaneHeaderBar{box-sizing:border-box!important;block-size:44px!important;min-block-size:44px!important;max-block-size:44px!important;padding:3px 5px!important;margin-block:0!important;align-items:center!important;}
     #threadPaneHeaderBar > .list-header-bar-container-start{padding:0!important;margin-block:0!important;min-block-size:0!important;block-size:36px;align-items:center;}
@@ -290,7 +297,7 @@ function installInboxIdleActions(win,reader=null) {
   alignmentTree?.addEventListener?.('viewchange',alignCheckbox);
   alignmentTree?.addEventListener?.('scroll',alignCheckbox);
   alignCheckbox();
-  return {close(){closed=true;reader?.setSelectionControl?.(null);alignmentObserver?.disconnect();
+  return {close(){closed=true;win.removeEventListener?.('gm-label-navigation',syncLabelBack);reader?.setSelectionControl?.(null);alignmentObserver?.disconnect();
     for(const name of ['select','viewchange','rowcountchange','gm-page-changed'])alignmentTree?.removeEventListener?.(name,syncSelection);
     alignmentTree?.removeEventListener?.('viewchange',alignCheckbox);
     alignmentTree?.removeEventListener?.('scroll',alignCheckbox);

@@ -12,11 +12,17 @@ function openNativeLabelView(source,key,mail=MailServices,smart=null) {
   if(!pane.folderPane.activeModes.includes('tags'))pane.folderPane.activeModes=[...pane.folderPane.activeModes,'tags'];
   const folder=smart.getSmartMailbox().getTagFolder(tag);
   if(!folder)throw new Error('The label view is unavailable.');
+  const previousURI=pane.gFolder?.URI;
+  if(previousURI && previousURI!==folder.URI){
+    const history=pane._gmLabelHistory ||= [];
+    history.push({uri:previousURI,filters:{...pane.quickFilterBar?.filterer?.filterValues}});
+  }
   // Leave the reader even when clicking a chip while already in this tag's view.
   pane.dispatchEvent(new pane.CustomEvent('gm-open-label-view'));
   const bar=pane.quickFilterBar,filter=bar?.filterer;
   if(filter?.clear){const sticky=filter.filterValues?.sticky;filter.clear();if(sticky)filter.setFilterValue('sticky',sticky);bar.updateSearch();bar.reflectFiltererState();}
   pane.displayFolder(folder.URI);
+  pane.dispatchEvent(new pane.CustomEvent('gm-label-navigation'));
   return folder.URI;
 }
 function bindLabelNavigation(node,tag,win,navigate=openNativeLabelView) {
@@ -34,4 +40,19 @@ function bindLabelNavigation(node,tag,win,navigate=openNativeLabelView) {
   function keydown(event){if(event.target!==node || !['Enter',' '].includes(event.key))return;click(event);}
   node.addEventListener('click',click,true);node.addEventListener('keydown',keydown,true);
   return ()=>{node.removeEventListener('click',click,true);node.removeEventListener('keydown',keydown,true);for(const [attr,value] of Object.entries(previous)){if(value===null)node.removeAttribute(attr);else node.setAttribute(attr,value);}node.style.cursor=cursor;};
+}
+
+function returnFromNativeLabelView(pane){
+  const previous=pane._gmLabelHistory?.pop();
+  if(!previous)return false;
+  pane.dispatchEvent(new pane.CustomEvent('gm-open-label-view'));
+  pane.displayFolder(previous.uri);
+  const bar=pane.quickFilterBar,filter=bar?.filterer;
+  if(filter?.clear){
+    filter.clear();
+    for(const [key,value] of Object.entries(previous.filters))filter.setFilterValue(key,value);
+    bar.updateSearch();bar.reflectFiltererState();
+  }
+  pane.dispatchEvent(new pane.CustomEvent('gm-label-navigation'));
+  return true;
 }
