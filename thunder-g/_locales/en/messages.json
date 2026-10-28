@@ -1,0 +1,1698 @@
+{
+  "invalid_autosave_snapshot_751f880": {
+    "message": "Invalid autosave snapshot",
+    "description": "Invalid autosave snapshot"
+  },
+  "unsupported_inline_compose_action_2d050f5": {
+    "message": "Unsupported inline compose action",
+    "description": "Unsupported inline compose action"
+  },
+  "wait_for_the_current_save_or_send_to_finish_dfea3c3": {
+    "message": "Wait for the current save or send to finish.",
+    "description": "Wait for the current save or send to finish."
+  },
+  "draft_was_not_saved_f9d0213": {
+    "message": "Draft was not saved.",
+    "description": "Draft was not saved."
+  },
+  "could_not_save_the_draft_82b7178": {
+    "message": "Could not save the draft.",
+    "description": "Could not save the draft."
+  },
+  "draft_saving_timed_out_your_reply_remains_open_d91b6bd": {
+    "message": "Draft saving timed out; your reply remains open.",
+    "description": "Draft saving timed out; your reply remains open."
+  },
+  "saving_56a2285": {
+    "message": "Saving…",
+    "description": "Saving…"
+  },
+  "unsaved_changes_2926726": {
+    "message": "Unsaved changes",
+    "description": "Unsaved changes"
+  },
+  "save_failed_0a44446": {
+    "message": "Save failed",
+    "description": "Save failed"
+  },
+  "not_saved_3d56409": {
+    "message": "Not saved",
+    "description": "Not saved"
+  },
+  "saved_to_drafts_759dc9a": {
+    "message": "Saved to Drafts",
+    "description": "Saved to Drafts"
+  },
+  "saving_to_drafts_85398fa": {
+    "message": "Saving to Drafts",
+    "description": "Saving to Drafts"
+  },
+  "changes_have_not_been_saved_yet_efda6a7": {
+    "message": "Changes have not been saved yet",
+    "description": "Changes have not been saved yet"
+  },
+  "could_not_save_to_drafts_use_save_draft_to_retry_ee16ef2": {
+    "message": "Could not save to Drafts. Use Save draft to retry.",
+    "description": "Could not save to Drafts. Use Save draft to retry."
+  },
+  "draft_has_not_been_saved_yet_ba0905a": {
+    "message": "Draft has not been saved yet",
+    "description": "Draft has not been saved yet"
+  },
+  "thunderbird_error_0x_1_452866e": {
+    "message": "Thunderbird error 0x$1",
+    "description": "Thunderbird error 0x$1"
+  },
+  "thunderbird_did_not_provide_a_failure_reason_e9c2c47": {
+    "message": "Thunderbird did not provide a failure reason.",
+    "description": "Thunderbird did not provide a failure reason."
+  },
+  "composer_closed_3332c91": {
+    "message": "Composer closed.",
+    "description": "Composer closed."
+  },
+  "composer_is_still_busy_reply_remains_open_439207e": {
+    "message": "Composer is still busy; reply remains open.",
+    "description": "Composer is still busy; reply remains open."
+  },
+  "connection_security_error_check_thunderbird_s_securi_c56713b": {
+    "message": "Connection security error. Check Thunderbird’s security prompt.",
+    "description": "Connection security error. Check Thunderbird’s security prompt."
+  },
+  "resize_compose_panel_a39962f": {
+    "message": "Resize compose panel",
+    "description": "Resize compose panel"
+  },
+  "drag_to_resize_arrow_keys_resize_shift_makes_larger__9b91ef4": {
+    "message": "Drag to resize; arrow keys resize, Shift makes larger steps",
+    "description": "Drag to resize; arrow keys resize, Shift makes larger steps"
+  },
+  "thunder_g_could_not_open_the_attachment_picker_78bfea3": {
+    "message": "Thunder-G: could not open the attachment picker.",
+    "description": "Thunder-G: could not open the attachment picker."
+  },
+  "wait_for_the_current_send_or_save_to_finish_eeeea3c": {
+    "message": "Wait for the current send or save to finish.",
+    "description": "Wait for the current send or save to finish."
+  },
+  "the_saved_draft_could_not_be_found_ed22976": {
+    "message": "The saved draft could not be found.",
+    "description": "The saved draft could not be found."
+  },
+  "could_not_move_the_draft_to_trash_b45fa0e": {
+    "message": "Could not move the draft to Trash.",
+    "description": "Could not move the draft to Trash."
+  },
+  "could_not_save_the_draft_your_reply_remains_open_8b04193": {
+    "message": "Could not save the draft. Your reply remains open.",
+    "description": "Could not save the draft. Your reply remains open."
+  },
+  "could_not_discard_your_message_remains_open_0cb294a": {
+    "message": "Could not discard. Your message remains open.",
+    "description": "Could not discard. Your message remains open."
+  },
+  "minimize_1c5b768": {
+    "message": "Minimize",
+    "description": "Minimize"
+  },
+  "restore_composer_ee63c34": {
+    "message": "Restore composer",
+    "description": "Restore composer"
+  },
+  "detach_message_ca9d7f1": {
+    "message": "Detach message",
+    "description": "Detach message"
+  },
+  "expand_in_this_window_6dbf8e2": {
+    "message": "Expand in this window",
+    "description": "Expand in this window"
+  },
+  "detach_reply_into_a_floating_panel_8e705a3": {
+    "message": "Detach reply into a floating panel",
+    "description": "Detach reply into a floating panel"
+  },
+  "return_reply_below_the_message_8e686cd": {
+    "message": "Return reply below the message",
+    "description": "Return reply below the message"
+  },
+  "detach_reply_2164c27": {
+    "message": "Detach reply",
+    "description": "Detach reply"
+  },
+  "return_to_conversation_4fe5302": {
+    "message": "Return to conversation",
+    "description": "Return to conversation"
+  },
+  "state_preserving_panel_moves_are_unavailable_4047c67": {
+    "message": "State-preserving panel moves are unavailable.",
+    "description": "State-preserving panel moves are unavailable."
+  },
+  "saving_draft_before_opening_a_separate_window_b0873fd": {
+    "message": "Saving draft before opening a separate window…",
+    "description": "Saving draft before opening a separate window…"
+  },
+  "could_not_open_a_separate_window_the_draft_remains_h_44840c5": {
+    "message": "Could not open a separate window; the draft remains here.",
+    "description": "Could not open a separate window; the draft remains here."
+  },
+  "the_new_window_did_not_finish_loading_the_saved_repl_161c852": {
+    "message": "The new window did not finish loading; the saved reply remains here.",
+    "description": "The new window did not finish loading; the saved reply remains here."
+  },
+  "could_not_detach_your_reply_remains_open_b1a7b97": {
+    "message": "Could not detach; your reply remains open.",
+    "description": "Could not detach; your reply remains open."
+  },
+  "sending_cf76551": {
+    "message": "Sending…",
+    "description": "Sending…"
+  },
+  "sent_35f49dc": {
+    "message": "Sent",
+    "description": "Sent"
+  },
+  "sending_failed_saving_draft_62d38c7": {
+    "message": "Sending failed. Saving draft…",
+    "description": "Sending failed. Saving draft…"
+  },
+  "not_sent_saved_to_drafts_47ecaa2": {
+    "message": "Not sent. Saved to Drafts.",
+    "description": "Not sent. Saved to Drafts."
+  },
+  "not_sent_draft_could_not_be_saved_your_reply_is_stil_de96d18": {
+    "message": "Not sent. Draft could not be saved. Your reply is still open.",
+    "description": "Not sent. Draft could not be saved. Your reply is still open."
+  },
+  "dismiss_notification_dc83cd8": {
+    "message": "Dismiss notification",
+    "description": "Dismiss notification"
+  },
+  "dismiss_70afe9e": {
+    "message": "Dismiss",
+    "description": "Dismiss"
+  },
+  "thunder_g_could_not_update_send_feedback_143b192": {
+    "message": "Thunder-G: could not update send feedback.",
+    "description": "Thunder-G: could not update send feedback."
+  },
+  "new_message_in_this_window_6d0389d": {
+    "message": "New message in this window",
+    "description": "New message in this window"
+  },
+  "reply_in_this_window_9328ac7": {
+    "message": "Reply in this window",
+    "description": "Reply in this window"
+  },
+  "new_message_1c3b20d": {
+    "message": "New Message",
+    "description": "New Message"
+  },
+  "forward_ba4e722": {
+    "message": "Forward",
+    "description": "Forward"
+  },
+  "reply_all_84c27c0": {
+    "message": "Reply all",
+    "description": "Reply all"
+  },
+  "reply_6c2bb73": {
+    "message": "Reply",
+    "description": "Reply"
+  },
+  "no_subject_2f1f27d": {
+    "message": "(No subject)",
+    "description": "(No subject)"
+  },
+  "save_draft_4f25637": {
+    "message": "Save draft",
+    "description": "Save draft"
+  },
+  "separate_window_b64eccd": {
+    "message": "Separate window",
+    "description": "Separate window"
+  },
+  "open_message_in_a_separate_window_a4e5786": {
+    "message": "Open message in a separate window",
+    "description": "Open message in a separate window"
+  },
+  "open_reply_in_a_separate_window_379c8e8": {
+    "message": "Open reply in a separate window",
+    "description": "Open reply in a separate window"
+  },
+  "close_bbfa773": {
+    "message": "Close",
+    "description": "Close"
+  },
+  "close_message_67a95a1": {
+    "message": "Close message",
+    "description": "Close message"
+  },
+  "close_reply_e2dbe30": {
+    "message": "Close reply",
+    "description": "Close reply"
+  },
+  "subject_8d183db": {
+    "message": "Subject",
+    "description": "Subject"
+  },
+  "discard_draft_3a09ce0": {
+    "message": "Discard draft",
+    "description": "Discard draft"
+  },
+  "editor_could_not_finish_starting_close_and_use_a_cla_9215dfa": {
+    "message": "Editor could not finish starting. Close and use a classic reply.",
+    "description": "Editor could not finish starting. Close and use a classic reply."
+  },
+  "labels_on_this_message_dea100b": {
+    "message": "Labels on this message",
+    "description": "Labels on this message"
+  },
+  "remove_1_from_this_message_de8649c": {
+    "message": "Remove $1 from this message",
+    "description": "Remove $1 from this message"
+  },
+  "labels_in_this_conversation_c146b9c": {
+    "message": "Labels in this conversation",
+    "description": "Labels in this conversation"
+  },
+  "present_in_this_conversation_e8f5c4c": {
+    "message": " — present in this conversation",
+    "description": " — present in this conversation"
+  },
+  "remove_1_from_this_conversation_874dcd3": {
+    "message": "Remove $1 from this conversation",
+    "description": "Remove $1 from this conversation"
+  },
+  "conversation_label_removal_unavailable_ab7817c": {
+    "message": "Conversation label removal unavailable",
+    "description": "Conversation label removal unavailable"
+  },
+  "could_not_remove_label_from_every_message_try_again_2f683b6": {
+    "message": "Could not remove label from every message. Try again.",
+    "description": "Could not remove label from every message. Try again."
+  },
+  "compact_message_dates_92f3828": {
+    "message": "Compact message dates:",
+    "description": "Compact message dates:"
+  },
+  "the_gmail_import_operation_failed_f985fc3": {
+    "message": "The Gmail import operation failed.",
+    "description": "The Gmail import operation failed."
+  },
+  "preview_required_no_labels_have_been_created_99c5f68": {
+    "message": "Preview required. No labels have been created.",
+    "description": "Preview required. No labels have been created."
+  },
+  "create_6e157c5": {
+    "message": "Create",
+    "description": "Create"
+  },
+  "already_exists_skip_3e5c59b": {
+    "message": "Already exists — skip",
+    "description": "Already exists — skip"
+  },
+  "conflict_needs_attention_e4a29cc": {
+    "message": "Conflict — needs attention",
+    "description": "Conflict — needs attention"
+  },
+  "required_parent_5e83701": {
+    "message": "Required parent",
+    "description": "Required parent"
+  },
+  "1_2_labels_to_create_3_already_exist_4_conflicts_not_e23f3f6": {
+    "message": "$1: $2 labels to create, $3 already exist, $4 conflicts. Nothing has been imported.",
+    "description": "$1: $2 labels to create, $3 already exist, $4 conflicts. Nothing has been imported."
+  },
+  "checking_the_proposed_local_changes_bae7e1e": {
+    "message": "Checking the proposed local changes…",
+    "description": "Checking the proposed local changes…"
+  },
+  "exclude_conflicting_labels_or_change_the_destination_274c979": {
+    "message": "Exclude conflicting labels or change the destination, then preview again.",
+    "description": "Exclude conflicting labels or change the destination, then preview again."
+  },
+  "dry_run_complete_review_the_table_before_enabling_im_2e89679": {
+    "message": "Dry run complete. Review the table before enabling Import.",
+    "description": "Dry run complete. Review the table before enabling Import."
+  },
+  "not_connected_8b02f3d": {
+    "message": "Not connected",
+    "description": "Not connected"
+  },
+  "complete_google_sign_in_in_your_browser_no_local_lab_8c3f27d": {
+    "message": "Complete Google sign-in in your browser. No local labels will be created.",
+    "description": "Complete Google sign-in in your browser. No local labels will be created."
+  },
+  "connected_account_1_2_gmail_system_labels_excluded_588873f": {
+    "message": "Connected account: $1. $2 Gmail system labels excluded.",
+    "description": "Connected account: $1. $2 Gmail system labels excluded."
+  },
+  "disconnected_created_labels_if_any_are_kept_a6ebe5e": {
+    "message": "Disconnected. Created labels, if any, are kept.",
+    "description": "Disconnected. Created labels, if any, are kept."
+  },
+  "preview_cancelled_no_labels_were_created_cbcf6e6": {
+    "message": "Preview cancelled. No labels were created.",
+    "description": "Preview cancelled. No labels were created."
+  },
+  "creating_the_selected_local_labels_e33d25e": {
+    "message": "Creating the selected local labels…",
+    "description": "Creating the selected local labels…"
+  },
+  "created_1_skipped_2_failed_or_not_attempted_3_4_2d52dc2": {
+    "message": "Created $1, skipped $2, failed or not attempted $3. $4",
+    "description": "Created $1, skipped $2, failed or not attempted $3. $4"
+  },
+  "import_complete_cbb6705": {
+    "message": "Import complete.",
+    "description": "Import complete."
+  },
+  "choose_the_small_desktop_oauth_client_json_from_goog_9e11f07": {
+    "message": "Choose the small Desktop OAuth client JSON from Google Cloud.",
+    "description": "Choose the small Desktop OAuth client JSON from Google Cloud."
+  },
+  "this_is_not_a_google_desktop_client_configuration_2dc35b4": {
+    "message": "This is not a Google Desktop client configuration.",
+    "description": "This is not a Google Desktop client configuration."
+  },
+  "desktop_client_loaded_for_this_session_click_connect_3f13b69": {
+    "message": "Desktop client loaded for this session. Click Connect to continue.",
+    "description": "Desktop client loaded for this session. Click Connect to continue."
+  },
+  "connected_account_1_786ca8e": {
+    "message": "Connected account: $1",
+    "description": "Connected account: $1"
+  },
+  "use_label_paths_without_empty_segments_surrounding_s_b716664": {
+    "message": "Use label paths without empty segments, surrounding spaces or control characters (maximum 512 characters).",
+    "description": "Use label paths without empty segments, surrounding spaces or control characters (maximum 512 characters)."
+  },
+  "the_selection_contains_an_unknown_gmail_label_fetch__9d0d520": {
+    "message": "The selection contains an unknown Gmail label. Fetch labels again.",
+    "description": "The selection contains an unknown Gmail label. Fetch labels again."
+  },
+  "invalid_or_excessively_long_label_path_98572cc": {
+    "message": "Invalid or excessively long label path.",
+    "description": "Invalid or excessively long label path."
+  },
+  "selected_gmail_paths_differ_only_in_case_or_unicode__30b4f22": {
+    "message": "Selected Gmail paths differ only in case or Unicode normalization.",
+    "description": "Selected Gmail paths differ only in case or Unicode normalization."
+  },
+  "conflicts_with_an_existing_local_label_b066c1c": {
+    "message": "Conflicts with an existing local label: ",
+    "description": "Conflicts with an existing local label: "
+  },
+  "connect_to_gmail_first_30c8536": {
+    "message": "Connect to Gmail first.",
+    "description": "Connect to Gmail first."
+  },
+  "the_importer_has_closed_3739bf5": {
+    "message": "The importer has closed.",
+    "description": "The importer has closed."
+  },
+  "a_google_connection_is_already_in_progress_5f21e4b": {
+    "message": "A Google connection is already in progress.",
+    "description": "A Google connection is already in progress."
+  },
+  "connection_cancelled_c5b721c": {
+    "message": "Connection cancelled.",
+    "description": "Connection cancelled."
+  },
+  "google_did_not_provide_a_verified_account_email_e589163": {
+    "message": "Google did not provide a verified account email.",
+    "description": "Google did not provide a verified account email."
+  },
+  "google_returned_an_invalid_label_list_ad3dfec": {
+    "message": "Google returned an invalid label list.",
+    "description": "Google returned an invalid label list."
+  },
+  "wait_for_google_sign_in_to_finish_a54f829": {
+    "message": "Wait for Google sign-in to finish.",
+    "description": "Wait for Google sign-in to finish."
+  },
+  "choose_labels_and_a_destination_c2afabb": {
+    "message": "Choose labels and a destination.",
+    "description": "Choose labels and a destination."
+  },
+  "unknown_import_operation_199f5ff": {
+    "message": "Unknown import operation.",
+    "description": "Unknown import operation."
+  },
+  "preview_the_selected_labels_again_before_importing_e9e3551": {
+    "message": "Preview the selected labels again before importing.",
+    "description": "Preview the selected labels again before importing."
+  },
+  "local_labels_changed_since_the_preview_run_preview_a_530a023": {
+    "message": "Local labels changed since the preview. Run Preview again; nothing was imported.",
+    "description": "Local labels changed since the preview. Run Preview again; nothing was imported."
+  },
+  "resolve_conflicts_or_exclude_those_branches_then_pre_ba08f99": {
+    "message": "Resolve conflicts or exclude those branches, then preview again. Nothing was imported.",
+    "description": "Resolve conflicts or exclude those branches, then preview again. Nothing was imported."
+  },
+  "import_stopped_after_a_native_label_creation_failed__9d8a834": {
+    "message": "Import stopped after a native label creation failed. Created labels were kept; preview again to retry safely.",
+    "description": "Import stopped after a native label creation failed. Created labels were kept; preview again to retry safely."
+  },
+  "google_connection_cancelled_8655d98": {
+    "message": "Google connection cancelled.",
+    "description": "Google connection cancelled."
+  },
+  "configure_an_optional_google_desktop_oauth_client_fi_c2dc6e9": {
+    "message": "Configure an optional Google Desktop OAuth client first. See Gmail import setup.",
+    "description": "Configure an optional Google Desktop OAuth client first. See Gmail import setup."
+  },
+  "google_sign_in_requires_thunderbird_s_external_brows_1aaa82d": {
+    "message": "Google sign-in requires Thunderbird’s external-browser OAuth setting. No sign-in was opened.",
+    "description": "Google sign-in requires Thunderbird’s external-browser OAuth setting. No sign-in was opened."
+  },
+  "google_label_permission_was_not_granted_b916c0b": {
+    "message": "Google label permission was not granted.",
+    "description": "Google label permission was not granted."
+  },
+  "google_sign_in_failed_was_cancelled_or_timed_out_che_2fc89c5": {
+    "message": "Google sign-in failed, was cancelled, or timed out. Check the Desktop client configuration, Gmail API access and Google consent.",
+    "description": "Google sign-in failed, was cancelled, or timed out. Check the Desktop client configuration, Gmail API access and Google consent."
+  },
+  "open_a_thunderbird_mail_window_before_connecting_to__9e9f20a": {
+    "message": "Open a Thunderbird mail window before connecting to Gmail.",
+    "description": "Open a Thunderbird mail window before connecting to Gmail."
+  },
+  "google_authorization_expired_connect_again_69e24ce": {
+    "message": "Google authorization expired. Connect again.",
+    "description": "Google authorization expired. Connect again."
+  },
+  "google_could_not_fetch_account_or_label_information__852a81b": {
+    "message": "Google could not fetch account or label information (HTTP $1).",
+    "description": "Google could not fetch account or label information (HTTP $1)."
+  },
+  "google_request_timed_out_connect_again_to_retry_09bee66": {
+    "message": "Google request timed out. Connect again to retry.",
+    "description": "Google request timed out. Connect again to retry."
+  },
+  "message_list_actions_8fde50e": {
+    "message": "Message list actions",
+    "description": "Message list actions"
+  },
+  "select_all_messages_on_this_page_e198730": {
+    "message": "Select all messages on this page",
+    "description": "Select all messages on this page"
+  },
+  "refresh_56e3bad": {
+    "message": "Refresh",
+    "description": "Refresh"
+  },
+  "mail_refresh_is_unavailable_1308bff": {
+    "message": "Mail refresh is unavailable.",
+    "description": "Mail refresh is unavailable."
+  },
+  "could_not_refresh_mail_5eac7d3": {
+    "message": "Could not refresh mail.",
+    "description": "Could not refresh mail."
+  },
+  "select_messages_b436e59": {
+    "message": "Select messages",
+    "description": "Select messages"
+  },
+  "all_6a72085": {
+    "message": "All",
+    "description": "All"
+  },
+  "none_6eef664": {
+    "message": "None",
+    "description": "None"
+  },
+  "read_852b438": {
+    "message": "Read",
+    "description": "Read"
+  },
+  "unread_07b032b": {
+    "message": "Unread",
+    "description": "Unread"
+  },
+  "starred_e61561a": {
+    "message": "Starred",
+    "description": "Starred"
+  },
+  "unstarred_23a7963": {
+    "message": "Unstarred",
+    "description": "Unstarred"
+  },
+  "more_options_not_available_yet_e9b7db7": {
+    "message": "More options (not available yet)",
+    "description": "More options (not available yet)"
+  },
+  "back_to_previous_message_list_9836802": {
+    "message": "Back to previous message list",
+    "description": "Back to previous message list"
+  },
+  "compose_47da6f0": {
+    "message": "Compose",
+    "description": "Compose"
+  },
+  "compose_a_new_message_2e01ccc": {
+    "message": "Compose a new message",
+    "description": "Compose a new message"
+  },
+  "archive_conversation_b387b00": {
+    "message": "Archive conversation",
+    "description": "Archive conversation"
+  },
+  "delete_conversation_de43467": {
+    "message": "Delete conversation",
+    "description": "Delete conversation"
+  },
+  "mark_conversation_as_unread_a3cfb9b": {
+    "message": "Mark conversation as unread",
+    "description": "Mark conversation as unread"
+  },
+  "mark_conversation_as_read_16f2456": {
+    "message": "Mark conversation as read",
+    "description": "Mark conversation as read"
+  },
+  "dkim_verified_warning_b118fde": {
+    "message": "DKIM verified · warning",
+    "description": "DKIM verified · warning"
+  },
+  "dkim_verified_ca25a60": {
+    "message": "DKIM verified",
+    "description": "DKIM verified"
+  },
+  "dkim_failed_c2b7bf0": {
+    "message": "DKIM failed",
+    "description": "DKIM failed"
+  },
+  "dkim_temporary_error_586bfa6": {
+    "message": "DKIM temporary error",
+    "description": "DKIM temporary error"
+  },
+  "dkim_unsigned_59ded0d": {
+    "message": "DKIM unsigned",
+    "description": "DKIM unsigned"
+  },
+  "dkim_not_checked_383895d": {
+    "message": "DKIM not checked",
+    "description": "DKIM not checked"
+  },
+  "no_saved_dkim_verifier_result_is_available_for_this__e3d705b": {
+    "message": "No saved DKIM Verifier result is available for this message",
+    "description": "No saved DKIM Verifier result is available for this message"
+  },
+  "thunder_g_conversation_63ed9af": {
+    "message": "Thunder-G conversation",
+    "description": "Thunder-G conversation"
+  },
+  "reply_to_conversation_b17dc45": {
+    "message": "Reply to conversation",
+    "description": "Reply to conversation"
+  },
+  "to_19e9dab": {
+    "message": "To ",
+    "description": "To "
+  },
+  "show_quoted_text_84b7670": {
+    "message": "Show quoted text",
+    "description": "Show quoted text"
+  },
+  "hide_quoted_text_88fb39c": {
+    "message": "Hide quoted text",
+    "description": "Hide quoted text"
+  },
+  "could_not_remove_the_label_from_every_message_try_ag_bac8040": {
+    "message": "Could not remove the label from every message. Try again.",
+    "description": "Could not remove the label from every message. Try again."
+  },
+  "number_keys_label_this_message_l_labels_the_entire_c_7a91204": {
+    "message": "Number keys label this message. L labels the entire conversation.",
+    "description": "Number keys label this message. L labels the entire conversation."
+  },
+  "most_recent_message_2e3fccc": {
+    "message": "Most recent message",
+    "description": "Most recent message"
+  },
+  "unknown_sender_7f73fbc": {
+    "message": "Unknown sender",
+    "description": "Unknown sender"
+  },
+  "dns_published_bimi_logo_51d9b99": {
+    "message": "DNS-published BIMI logo",
+    "description": "DNS-published BIMI logo"
+  },
+  "dkim_checking_1da2bed": {
+    "message": "DKIM checking…",
+    "description": "DKIM checking…"
+  },
+  "dkim_unavailable_f658fb8": {
+    "message": "DKIM unavailable",
+    "description": "DKIM unavailable"
+  },
+  "dkim_verifier_integration_unavailable_f4b13fd": {
+    "message": "DKIM Verifier integration unavailable",
+    "description": "DKIM Verifier integration unavailable"
+  },
+  "could_not_remove_label_try_again_b78dd17": {
+    "message": "Could not remove label. Try again.",
+    "description": "Could not remove label. Try again."
+  },
+  "unable_to_display_this_message_close_and_reopen_it_t_ea7ded0": {
+    "message": "Unable to display this message. Close and reopen it to retry. ",
+    "description": "Unable to display this message. Close and reopen it to retry. "
+  },
+  "open_in_thunderbird_window_e3f170f": {
+    "message": "Open in Thunderbird window",
+    "description": "Open in Thunderbird window"
+  },
+  "sending_agent_from_the_message_s_sender_header_not_a_2809221": {
+    "message": "Sending agent from the message’s Sender header (not an authentication result)",
+    "description": "Sending agent from the message’s Sender header (not an authentication result)"
+  },
+  "show_1_earlier_messages_0077b3b": {
+    "message": "Show $1 earlier messages",
+    "description": "Show $1 earlier messages"
+  },
+  "could_not_update_the_label_on_this_message_try_again_61dab09": {
+    "message": "Could not update the label on this message. Try again.",
+    "description": "Could not update the label on this message. Try again."
+  },
+  "loading_conversation_6a8bebb": {
+    "message": "Loading conversation…",
+    "description": "Loading conversation…"
+  },
+  "conversation_assembled_from_this_folder_and_locally__cbe1cb3": {
+    "message": "Conversation assembled from this folder and locally available sent messages",
+    "description": "Conversation assembled from this folder and locally available sent messages"
+  },
+  "unknown_label_visibility_3e5503c": {
+    "message": "Unknown label visibility.",
+    "description": "Unknown label visibility."
+  },
+  "this_label_no_longer_exists_cfe0b1a": {
+    "message": "This label no longer exists.",
+    "description": "This label no longer exists."
+  },
+  "enter_a_name_without_empty_path_segments_bde7322": {
+    "message": "Enter a name without empty path segments.",
+    "description": "Enter a name without empty path segments."
+  },
+  "a_label_cannot_be_nested_under_itself_79cd1c8": {
+    "message": "A label cannot be nested under itself.",
+    "description": "A label cannot be nested under itself."
+  },
+  "a_label_with_that_path_already_exists_4fc92f5": {
+    "message": "A label with that path already exists.",
+    "description": "A label with that path already exists."
+  },
+  "a_selected_label_no_longer_exists_c07fe78": {
+    "message": "A selected label no longer exists.",
+    "description": "A selected label no longer exists."
+  },
+  "the_parent_label_no_longer_exists_8af67b7": {
+    "message": "The parent label no longer exists.",
+    "description": "The parent label no longer exists."
+  },
+  "a_label_cannot_be_nested_under_itself_or_its_descend_2c0f698": {
+    "message": "A label cannot be nested under itself or its descendants.",
+    "description": "A label cannot be nested under itself or its descendants."
+  },
+  "choose_a_valid_label_color_4249607": {
+    "message": "Choose a valid label color.",
+    "description": "Choose a valid label color."
+  },
+  "1_some_changes_could_not_be_restored_check_the_selec_2b8cbc1": {
+    "message": "$1 Some changes could not be restored; check the selected labels.",
+    "description": "$1 Some changes could not be restored; check the selected labels."
+  },
+  "label_options_0f44f71": {
+    "message": "Label options",
+    "description": "Label options"
+  },
+  "the_label_could_not_be_updated_402fd5e": {
+    "message": "The label could not be updated.",
+    "description": "The label could not be updated."
+  },
+  "options_for_1_selected_labels_09b045c": {
+    "message": "Options for $1 selected labels",
+    "description": "Options for $1 selected labels"
+  },
+  "options_for_1_31462a8": {
+    "message": "Options for $1",
+    "description": "Options for $1"
+  },
+  "1_selected_labels_e44141a": {
+    "message": "$1 selected labels",
+    "description": "$1 selected labels"
+  },
+  "label_color_604ae19": {
+    "message": "Label color  ›",
+    "description": "Label color  ›"
+  },
+  "in_label_list_4156d5a": {
+    "message": "In label list",
+    "description": "In label list"
+  },
+  "show_d97d1ee": {
+    "message": "Show",
+    "description": "Show"
+  },
+  "show_if_unread_4310f87": {
+    "message": "Show if unread",
+    "description": "Show if unread"
+  },
+  "hide_34d8b60": {
+    "message": "Hide",
+    "description": "Hide"
+  },
+  "1_in_label_list_5f389f4": {
+    "message": "$1 in label list",
+    "description": "$1 in label list"
+  },
+  "in_message_list_6164b8d": {
+    "message": "In message list",
+    "description": "In message list"
+  },
+  "edit_selected_labels_61a5e06": {
+    "message": "Edit selected labels…",
+    "description": "Edit selected labels…"
+  },
+  "edit_5301648": {
+    "message": "Edit",
+    "description": "Edit"
+  },
+  "remove_label_e8f51d8": {
+    "message": "Remove label",
+    "description": "Remove label"
+  },
+  "remove_1_emails_and_sublabels_will_be_kept_c821266": {
+    "message": "Remove “$1”? Emails and sublabels will be kept.",
+    "description": "Remove “$1”? Emails and sublabels will be kept."
+  },
+  "add_sublabel_1d2ed68": {
+    "message": "Add sublabel",
+    "description": "Add sublabel"
+  },
+  "label_color_c51b6d8": {
+    "message": "Label color",
+    "description": "Label color"
+  },
+  "label_colors_8e223a9": {
+    "message": "Label colors",
+    "description": "Label colors"
+  },
+  "label_color_1_a1251f1": {
+    "message": "Label color $1",
+    "description": "Label color $1"
+  },
+  "set_label_color_1_882bfac": {
+    "message": "Set label color $1",
+    "description": "Set label color $1"
+  },
+  "custom_label_color_e724f78": {
+    "message": "Custom label color",
+    "description": "Custom label color"
+  },
+  "add_custom_color_8ba529e": {
+    "message": "Add custom color",
+    "description": "Add custom color"
+  },
+  "remove_color_13b6a13": {
+    "message": "Remove color",
+    "description": "Remove color"
+  },
+  "unchanged_fields_keep_each_label_s_current_value_mov_bb15a1b": {
+    "message": "Unchanged fields keep each label’s current value. Moving a parent also moves its descendants; color and visibility affect only selected labels.",
+    "description": "Unchanged fields keep each label’s current value. Moving a parent also moves its descendants; color and visibility affect only selected labels."
+  },
+  "parent_label_7548818": {
+    "message": "Parent label",
+    "description": "Parent label"
+  },
+  "keep_current_parents_47263ec": {
+    "message": "Keep current parents",
+    "description": "Keep current parents"
+  },
+  "no_parent_top_level_4b59c9d": {
+    "message": "No parent (top level)",
+    "description": "No parent (top level)"
+  },
+  "keep_current_colors_35d9865": {
+    "message": "Keep current colors",
+    "description": "Keep current colors"
+  },
+  "set_the_same_color_08b6af2": {
+    "message": "Set the same color",
+    "description": "Set the same color"
+  },
+  "bulk_label_color_8d9ed11": {
+    "message": "Bulk label color",
+    "description": "Bulk label color"
+  },
+  "keep_current_visibility_424f30b": {
+    "message": "Keep current visibility",
+    "description": "Keep current visibility"
+  },
+  "cancel_77dfd21": {
+    "message": "Cancel",
+    "description": "Cancel"
+  },
+  "apply_to_selected_labels_f4aa2cc": {
+    "message": "Apply to selected labels",
+    "description": "Apply to selected labels"
+  },
+  "label_paths_will_stay_unchanged_fdb9b08": {
+    "message": "Label paths will stay unchanged.",
+    "description": "Label paths will stay unchanged."
+  },
+  "new_sublabel_8a7cdd7": {
+    "message": "New sublabel",
+    "description": "New sublabel"
+  },
+  "edit_label_84e1c43": {
+    "message": "Edit label",
+    "description": "Edit label"
+  },
+  "nest_label_under_1_e2cc9bf": {
+    "message": "Nest label under: $1",
+    "description": "Nest label under: $1"
+  },
+  "changing_this_path_also_updates_its_sublabels_df7e1fd": {
+    "message": "Changing this path also updates its sublabels.",
+    "description": "Changing this path also updates its sublabels."
+  },
+  "label_name_936da4b": {
+    "message": "Label name",
+    "description": "Label name"
+  },
+  "full_label_path_12b7140": {
+    "message": "Full label path",
+    "description": "Full label path"
+  },
+  "sublabel_name_884adea": {
+    "message": "Sublabel name",
+    "description": "Sublabel name"
+  },
+  "save_efc007a": {
+    "message": "Save",
+    "description": "Save"
+  },
+  "the_mail_window_is_unavailable_317ef15": {
+    "message": "The mail window is unavailable.",
+    "description": "The mail window is unavailable."
+  },
+  "open_a_mail_tab_first_bdf939e": {
+    "message": "Open a mail tab first.",
+    "description": "Open a mail tab first."
+  },
+  "the_label_view_is_unavailable_6265371": {
+    "message": "The label view is unavailable.",
+    "description": "The label view is unavailable."
+  },
+  "show_all_messages_with_label_1_12722ab": {
+    "message": "Show all messages with label $1",
+    "description": "Show all messages with label $1"
+  },
+  "open_label_view_228aa03": {
+    "message": "Open label view:",
+    "description": "Open label view:"
+  },
+  "inline_labels_9cf060a": {
+    "message": "Inline labels:",
+    "description": "Inline labels:"
+  },
+  "enter_a_label_name_without_empty_path_segments_f952426": {
+    "message": "Enter a label name without empty path segments.",
+    "description": "Enter a label name without empty path segments."
+  },
+  "the_parent_label_no_longer_exists_choose_another_lab_9e2d6d8": {
+    "message": "The parent label no longer exists. Choose another label.",
+    "description": "The parent label no longer exists. Choose another label."
+  },
+  "a_label_with_this_name_already_exists_c892bd6": {
+    "message": "A label with this name already exists.",
+    "description": "A label with this name already exists."
+  },
+  "less_526cb74": {
+    "message": "Less",
+    "description": "Less"
+  },
+  "more_4bab2d8": {
+    "message": "More",
+    "description": "More"
+  },
+  "show_fewer_labels_f20dc23": {
+    "message": "Show fewer labels",
+    "description": "Show fewer labels"
+  },
+  "show_more_labels_bff4cb4": {
+    "message": "Show more labels",
+    "description": "Show more labels"
+  },
+  "labels_2228985": {
+    "message": "Labels",
+    "description": "Labels"
+  },
+  "create_new_label_162fa3b": {
+    "message": "Create new label",
+    "description": "Create new label"
+  },
+  "message_pages_2c4fdc8": {
+    "message": "Message pages",
+    "description": "Message pages"
+  },
+  "previous_page_81f5471": {
+    "message": "Previous page",
+    "description": "Previous page"
+  },
+  "next_page_4bfc194": {
+    "message": "Next page",
+    "description": "Next page"
+  },
+  "scroll_current_message_page_de9c66c": {
+    "message": "Scroll current message page",
+    "description": "Scroll current message page"
+  },
+  "conversation_navigation_018b9a6": {
+    "message": "Conversation navigation",
+    "description": "Conversation navigation"
+  },
+  "clear_selection_247fd63": {
+    "message": "Clear selection",
+    "description": "Clear selection"
+  },
+  "back_to_message_list_1a92a6f": {
+    "message": "Back to message list",
+    "description": "Back to message list"
+  },
+  "archive_2621c6f": {
+    "message": "Archive",
+    "description": "Archive"
+  },
+  "mark_as_spam_1c547bf": {
+    "message": "Mark as spam",
+    "description": "Mark as spam"
+  },
+  "delete_f6fdbe4": {
+    "message": "Delete",
+    "description": "Delete"
+  },
+  "mark_as_read_c1ee860": {
+    "message": "Mark as read",
+    "description": "Mark as read"
+  },
+  "mark_as_unread_5eeffe7": {
+    "message": "Mark as unread",
+    "description": "Mark as unread"
+  },
+  "snooze_follow_up_7cee0a2": {
+    "message": "Snooze / Follow-Up…",
+    "description": "Snooze / Follow-Up…"
+  },
+  "move_to_c0a3ef6": {
+    "message": "Move to…",
+    "description": "Move to…"
+  },
+  "label_as_f091e8c": {
+    "message": "Label as",
+    "description": "Label as"
+  },
+  "includes_sent_replies_in_this_conversation_bb113a1": {
+    "message": "Includes sent replies in this conversation.",
+    "description": "Includes sent replies in this conversation."
+  },
+  "search_labels_d0b7b1a": {
+    "message": "Search labels",
+    "description": "Search labels"
+  },
+  "no_matching_labels_ee5e170": {
+    "message": "No matching labels",
+    "description": "No matching labels"
+  },
+  "create_new_5477033": {
+    "message": "Create new",
+    "description": "Create new"
+  },
+  "manage_labels_9241029": {
+    "message": "Manage labels",
+    "description": "Manage labels"
+  },
+  "expand_or_collapse_1_22355a9": {
+    "message": "Expand or collapse $1",
+    "description": "Expand or collapse $1"
+  },
+  "could_not_update_every_message_check_labels_and_try__ed1a334": {
+    "message": "Could not update every message. Check labels and try again.",
+    "description": "Could not update every message. Check labels and try again."
+  },
+  "conversation_label_update_failed_e35132d": {
+    "message": "Conversation label update failed:",
+    "description": "Conversation label update failed:"
+  },
+  "label_as_d9722e1": {
+    "message": "Label as:",
+    "description": "Label as:"
+  },
+  "label_as_entire_conversation_1_messages_includes_sen_2303960": {
+    "message": "Label as — entire conversation, $1 messages, includes sent replies",
+    "description": "Label as — entire conversation, $1 messages, includes sent replies"
+  },
+  "label_as_1_selected_messages_ae70b60": {
+    "message": "Label as — $1 selected messages",
+    "description": "Label as — $1 selected messages"
+  },
+  "conversation_is_still_loading_close_this_panel_and_t_046f656": {
+    "message": "Conversation is still loading. Close this panel and try again.",
+    "description": "Conversation is still loading. Close this panel and try again."
+  },
+  "new_label_8a881f8": {
+    "message": "New label",
+    "description": "New label"
+  },
+  "please_enter_a_new_label_name_8e07ea3": {
+    "message": "Please enter a new label name:",
+    "description": "Please enter a new label name:"
+  },
+  "new_label_name_48ba815": {
+    "message": "New label name",
+    "description": "New label name"
+  },
+  "nest_label_under_c2cd549": {
+    "message": "Nest label under:",
+    "description": "Nest label under:"
+  },
+  "choose_a_parent_label_1e6f6c9": {
+    "message": "Choose a parent label",
+    "description": "Choose a parent label"
+  },
+  "message_selection_changed_close_this_panel_and_try_a_b0aefb6": {
+    "message": "Message selection changed. Close this panel and try again.",
+    "description": "Message selection changed. Close this panel and try again."
+  },
+  "could_not_create_or_apply_this_label_30da18c": {
+    "message": "Could not create or apply this label.",
+    "description": "Could not create or apply this label."
+  },
+  "labels_l_31e630e": {
+    "message": "Labels… (L)",
+    "description": "Labels… (L)"
+  },
+  "print_conversation_fca1364": {
+    "message": "Print conversation",
+    "description": "Print conversation"
+  },
+  "previous_message_93261bd": {
+    "message": "Previous message",
+    "description": "Previous message"
+  },
+  "next_message_e3960a5": {
+    "message": "Next message",
+    "description": "Next message"
+  },
+  "selected_message_actions_c42228b": {
+    "message": "Selected message actions",
+    "description": "Selected message actions"
+  },
+  "print_message_50ed5f1": {
+    "message": "Print message",
+    "description": "Print message"
+  },
+  "unable_2cef4f1": {
+    "message": "Unable",
+    "description": "Unable"
+  },
+  "unable_to_load_settings_09ac96e": {
+    "message": "Unable to load settings.",
+    "description": "Unable to load settings."
+  },
+  "saved_9d4af69": {
+    "message": "Saved.",
+    "description": "Saved."
+  },
+  "unable_to_save_please_try_again_3c289d3": {
+    "message": "Unable to save. Please try again.",
+    "description": "Unable to save. Please try again."
+  },
+  "saved_applies_to_newly_opened_compose_windows_9997dbe": {
+    "message": "Saved. Applies to newly opened compose windows.",
+    "description": "Saved. Applies to newly opened compose windows."
+  },
+  "saved_open_a_message_from_the_list_to_use_the_select_9ab1cc5": {
+    "message": "Saved. Open a message from the list to use the selected reader.",
+    "description": "Saved. Open a message from the list to use the selected reader."
+  },
+  "saved_applies_to_new_replies_an_open_reply_stays_ava_4648f66": {
+    "message": "Saved. Applies to new replies; an open reply stays available.",
+    "description": "Saved. Applies to new replies; an open reply stays available."
+  },
+  "saved_applies_to_new_messages_an_open_message_stays__5f4d7ef": {
+    "message": "Saved. Applies to new messages; an open message stays available.",
+    "description": "Saved. Applies to new messages; an open message stays available."
+  },
+  "saved_applies_to_new_searches_26f138a": {
+    "message": "Saved. Applies to new searches.",
+    "description": "Saved. Applies to new searches."
+  },
+  "saved_applies_when_opening_a_conversation_eb03e73": {
+    "message": "Saved. Applies when opening a conversation.",
+    "description": "Saved. Applies when opening a conversation."
+  },
+  "dkim_verification_timed_out_19cab11": {
+    "message": "DKIM verification timed out",
+    "description": "DKIM verification timed out"
+  },
+  "dkim_bridge_unavailable_f2efba9": {
+    "message": "DKIM bridge unavailable",
+    "description": "DKIM bridge unavailable"
+  },
+  "dkim_popup_integration_unavailable_929524a": {
+    "message": "DKIM popup integration unavailable",
+    "description": "DKIM popup integration unavailable"
+  },
+  "conversation_is_still_loading_3b7528c": {
+    "message": "Conversation is still loading",
+    "description": "Conversation is still loading"
+  },
+  "reader_closed_61232f1": {
+    "message": "Reader closed",
+    "description": "Reader closed"
+  },
+  "extension_has_closed_2dcae88": {
+    "message": "Extension has closed.",
+    "description": "Extension has closed."
+  },
+  "invalid_importer_request_59b65e9": {
+    "message": "Invalid importer request.",
+    "description": "Invalid importer request."
+  },
+  "thunder_g_settings_16c175c": {
+    "message": "Thunder-G settings",
+    "description": "Thunder-G settings"
+  },
+  "settings_c7f73bb": {
+    "message": "Settings",
+    "description": "Settings"
+  },
+  "repository_3123868": {
+    "message": "Repository",
+    "description": "Repository"
+  },
+  "settings_sections_2e7109b": {
+    "message": "Settings sections",
+    "description": "Settings sections"
+  },
+  "inbox_44caf74": {
+    "message": "Inbox",
+    "description": "Inbox"
+  },
+  "conversations_07c59b4": {
+    "message": "Conversations",
+    "description": "Conversations"
+  },
+  "writing_2dabb83": {
+    "message": "Writing",
+    "description": "Writing"
+  },
+  "sender_logos_f3c497a": {
+    "message": "Sender logos",
+    "description": "Sender logos"
+  },
+  "changes_save_automatically_b3fdb8c": {
+    "message": "Changes save automatically.",
+    "description": "Changes save automatically."
+  },
+  "your_choices_stay_after_restart_8057221": {
+    "message": "Your choices stay after restart.",
+    "description": "Your choices stay after restart."
+  },
+  "a_little_more_room_for_your_messages_c21d065": {
+    "message": "A little more room for your messages.",
+    "description": "A little more room for your messages."
+  },
+  "show_column_headers_fc67495": {
+    "message": "Show column headers",
+    "description": "Show column headers"
+  },
+  "hidden_by_default_for_a_gmail_style_list_show_header_ed5b98c": {
+    "message": "Hidden by default for a Gmail-style list. Show headers to sort, resize, or choose columns. Applies immediately.",
+    "description": "Hidden by default for a Gmail-style list. Show headers to sort, resize, or choose columns. Applies immediately."
+  },
+  "messages_per_page_61199bd": {
+    "message": "Messages per page",
+    "description": "Messages per page"
+  },
+  "choose_a_page_size_or_keep_one_continuous_list_d930684": {
+    "message": "Choose a page size or keep one continuous list.",
+    "description": "Choose a page size or keep one continuous list."
+  },
+  "all_messages_29207df": {
+    "message": "All messages",
+    "description": "All messages"
+  },
+  "25_messages_2a7f71e": {
+    "message": "25 messages",
+    "description": "25 messages"
+  },
+  "50_messages_c1e5e08": {
+    "message": "50 messages",
+    "description": "50 messages"
+  },
+  "100_messages_3104187": {
+    "message": "100 messages",
+    "description": "100 messages"
+  },
+  "hide_today_pane_ad209bb": {
+    "message": "Hide Today Pane",
+    "description": "Hide Today Pane"
+  },
+  "hide_the_calendar_pane_and_its_toggle_to_leave_more__42013ed": {
+    "message": "Hide the calendar pane and its toggle to leave more room for mail.",
+    "description": "Hide the calendar pane and its toggle to leave more room for mail."
+  },
+  "show_thread_connection_lines_419dbd7": {
+    "message": "Show thread connection lines",
+    "description": "Show thread connection lines"
+  },
+  "a_subtle_line_connects_messages_in_expanded_threads__34c9431": {
+    "message": "A subtle line connects messages in expanded threads. Enabled by default; applies immediately.",
+    "description": "A subtle line connects messages in expanded threads. Enabled by default; applies immediately."
+  },
+  "always_show_search_results_as_a_list_56b900d": {
+    "message": "Always show search results as a list",
+    "description": "Always show search results as a list"
+  },
+  "open_global_searches_in_the_styled_message_list_enab_d158989": {
+    "message": "Open global searches in the styled message list. Enabled by default. Turn off for Thunderbird’s timeline and faceted results. Applies to new searches.",
+    "description": "Open global searches in the styled message list. Enabled by default. Turn off for Thunderbird’s timeline and faceted results. Applies to new searches."
+  },
+  "about_your_existing_layout_5cd284f": {
+    "message": "About your existing layout",
+    "description": "About your existing layout"
+  },
+  "your_columns_density_and_interface_font_size_stay_na_9ade245": {
+    "message": "Your columns, density and interface font size stay native. Page totals include messages inside collapsed threads; scrolling follows visible rows.",
+    "description": "Your columns, density and interface font size stay native. Page totals include messages inside collapsed threads; scrolling follows visible rows."
+  },
+  "hiding_today_pane_applies_immediately_turning_it_off_0fc7cd6": {
+    "message": "Hiding Today Pane applies immediately. Turning it off restores Thunderbird’s existing visibility setting without changing calendar preferences.",
+    "description": "Hiding Today Pane applies immediately. Turning it off restores Thunderbird’s existing visibility setting without changing calendar preferences."
+  },
+  "experimental_b718f8c": {
+    "message": "Experimental",
+    "description": "Experimental"
+  },
+  "read_the_conversation_together_including_your_sent_r_f74cc40": {
+    "message": "Read the conversation together, including your sent replies.",
+    "description": "Read the conversation together, including your sent replies."
+  },
+  "using_thunderbird_conversations_00a360c": {
+    "message": "Using Thunderbird Conversations?",
+    "description": "Using Thunderbird Conversations?"
+  },
+  "disable_that_add_on_before_enabling_thunder_g_s_conv_b28942f": {
+    "message": "Disable that add-on before enabling Thunder-G’s conversation reader or in-window replies. Thunder-G provides its own conversation handling.",
+    "description": "Disable that add-on before enabling Thunder-G’s conversation reader or in-window replies. Thunder-G provides its own conversation handling."
+  },
+  "use_thunder_g_s_conversation_reader_b0bea38": {
+    "message": "Use Thunder-G’s conversation reader",
+    "description": "Use Thunder-G’s conversation reader"
+  },
+  "expandable_message_cards_attachments_and_reply_actio_7fb60d4": {
+    "message": "Expandable message cards, attachments and reply actions in one view. Off by default.",
+    "description": "Expandable message cards, attachments and reply actions in one view. Off by default."
+  },
+  "compact_long_conversations_7ac58c3": {
+    "message": "Compact long conversations",
+    "description": "Compact long conversations"
+  },
+  "for_conversations_with_6_or_more_messages_keep_the_f_4650dcb": {
+    "message": "For conversations with 6 or more messages, keep the first and last two visible. Click the counter to show the messages in between. Applies to Thunder-G’s reader when opening a conversation.",
+    "description": "For conversations with 6 or more messages, keep the first and last two visible. Click the counter to show the messages in between. Applies to Thunder-G’s reader when opening a conversation."
+  },
+  "how_conversations_work_b782f81": {
+    "message": "How conversations work",
+    "description": "How conversations work"
+  },
+  "messages_are_grouped_using_thunderbird_s_local_index_d236247": {
+    "message": "Messages are grouped using Thunderbird’s local index, with a folder-thread fallback when indexing is unavailable. Message bodies, attachments, Reply, Forward and Print use Thunderbird’s native viewer and commands.",
+    "description": "Messages are grouped using Thunderbird’s local index, with a folder-thread fallback when indexing is unavailable. Message bodies, attachments, Reply, Forward and Print use Thunderbird’s native viewer and commands."
+  },
+  "changing_readers_returns_to_the_list_the_conversatio_601190b": {
+    "message": "Changing readers returns to the list. The conversation toolbar acts on messages selected in the list, even when the reader finds additional messages in other folders.",
+    "description": "Changing readers returns to the list. The conversation toolbar acts on messages selected in the list, even when the reader finds additional messages in other folders."
+  },
+  "import_labels_from_gmail_646acdc": {
+    "message": "Import labels from Gmail",
+    "description": "Import labels from Gmail"
+  },
+  "optional_one_time_import_of_label_names_and_nesting__1dcd19b": {
+    "message": "Optional, one-time import of label names and nesting. No emails are downloaded or assigned labels.",
+    "description": "Optional, one-time import of label names and nesting. No emails are downloaded or assigned labels."
+  },
+  "nothing_connects_to_google_until_you_choose_connect__91a5778": {
+    "message": "Nothing connects to Google until you choose Connect. Google sign-in opens in your browser and supports 2FA. Google asks to see and edit labels; this importer only reads them. Account identity and label names are fetched directly from Google, with no intermediary server.",
+    "description": "Nothing connects to Google until you choose Connect. Google sign-in opens in your browser and supports 2FA. Google asks to see and edit labels; this importer only reads them. Account identity and label names are fetched directly from Google, with no intermediary server."
+  },
+  "optional_google_connection_setup_46786e3": {
+    "message": "Optional Google connection setup",
+    "description": "Optional Google connection setup"
+  },
+  "a_google_cloud_desktop_oauth_client_with_gmail_api_e_6dc8b88": {
+    "message": "A Google Cloud Desktop OAuth client with Gmail API enabled is required. Thunder-G does not yet ship a shared Google client. This feature is optional; other settings work without it.",
+    "description": "A Google Cloud Desktop OAuth client with Gmail API enabled is required. Thunder-G does not yet ship a shared Google client. This feature is optional; other settings work without it."
+  },
+  "create_a_desktop_app_client_configure_its_consent_sc_1f8adb7": {
+    "message": "Create a Desktop app client, configure its consent screen and (in Testing mode) add your account as a test user. Request only OpenID email and Gmail labels. See",
+    "description": "Create a Desktop app client, configure its consent screen and (in Testing mode) add your account as a test user. Request only OpenID email and Gmail labels. See"
+  },
+  "google_s_desktop_oauth_setup_e14b930": {
+    "message": "Google’s Desktop OAuth setup",
+    "description": "Google’s Desktop OAuth setup"
+  },
+  "workspace_accounts_may_require_administrator_approva_7be1375": {
+    "message": ". Workspace accounts may require administrator approval.",
+    "description": ". Workspace accounts may require administrator approval."
+  },
+  "load_downloaded_desktop_client_json_optional_384cd12": {
+    "message": "Load downloaded Desktop client JSON (optional)",
+    "description": "Load downloaded Desktop client JSON (optional)"
+  },
+  "google_desktop_client_id_b722762": {
+    "message": "Google Desktop client ID",
+    "description": "Google Desktop client ID"
+  },
+  "desktop_client_secret_if_supplied_by_google_b9cf3bd": {
+    "message": "Desktop client secret (if supplied by Google)",
+    "description": "Desktop client secret (if supplied by Google)"
+  },
+  "credentials_and_google_access_tokens_are_not_saved_t_b3ed3f7": {
+    "message": "Credentials and Google access tokens are not saved to extension storage. The downloaded configuration is used only for this connection. Import credentials are separate from your Thunderbird mail accounts.",
+    "description": "Credentials and Google access tokens are not saved to extension storage. The downloaded configuration is used only for this connection. Import credentials are separate from your Thunderbird mail accounts."
+  },
+  "connect_google_account_and_fetch_labels_ec5638b": {
+    "message": "Connect Google account and fetch labels",
+    "description": "Connect Google account and fetch labels"
+  },
+  "disconnect_cancel_sign_in_b90c1a2": {
+    "message": "Disconnect / cancel sign-in",
+    "description": "Disconnect / cancel sign-in"
+  },
+  "destination_parent_971732b": {
+    "message": "Destination parent",
+    "description": "Destination parent"
+  },
+  "required_parent_tags_are_included_automatically_pare_1f23b65": {
+    "message": "Required parent tags are included automatically. Parent and child assignments remain independent. Colors and email assignments are not imported.",
+    "description": "Required parent tags are included automatically. Parent and child assignments remain independent. Colors and email assignments are not imported."
+  },
+  "select_all_913afff": {
+    "message": "Select all",
+    "description": "Select all"
+  },
+  "select_none_618cfb0": {
+    "message": "Select none",
+    "description": "Select none"
+  },
+  "gmail_labels_to_import_ed2aefe": {
+    "message": "Gmail labels to import",
+    "description": "Gmail labels to import"
+  },
+  "dry_run_preview_only_no_local_labels_created_d5c4bda": {
+    "message": "Dry run — preview only (no local labels created)",
+    "description": "Dry run — preview only (no local labels created)"
+  },
+  "preview_selected_labels_9c73f64": {
+    "message": "Preview selected labels",
+    "description": "Preview selected labels"
+  },
+  "import_selected_labels_913eacc": {
+    "message": "Import selected labels",
+    "description": "Import selected labels"
+  },
+  "cancel_preview_6ea314a": {
+    "message": "Cancel preview",
+    "description": "Cancel preview"
+  },
+  "proposed_local_changes_dae99de": {
+    "message": "Proposed local changes",
+    "description": "Proposed local changes"
+  },
+  "local_label_path_e4b1711": {
+    "message": "Local label path",
+    "description": "Local label path"
+  },
+  "action_97c89a4": {
+    "message": "Action",
+    "description": "Action"
+  },
+  "details_dc3decb": {
+    "message": "Details",
+    "description": "Details"
+  },
+  "your_native_composer_with_a_place_in_the_current_win_f65c26f": {
+    "message": "Your native composer, with a place in the current window.",
+    "description": "Your native composer, with a place in the current window."
+  },
+  "write_new_messages_in_this_window_e4d5bf5": {
+    "message": "Write new messages in this window",
+    "description": "Write new messages in this window"
+  },
+  "start_in_a_floating_panel_resize_it_expand_it_beside_11127a6": {
+    "message": "Start in a floating panel. Resize it, expand it beside the sidebar, or open a separate window. Off by default.",
+    "description": "Start in a floating panel. Resize it, expand it beside the sidebar, or open a separate window. Off by default."
+  },
+  "reply_and_reply_all_start_below_the_conversation_det_8f4541f": {
+    "message": "Reply and Reply all start below the conversation. Detach when you need more room. Disable Thunderbird Conversations first. Off by default.",
+    "description": "Reply and Reply all start below the conversation. Detach when you need more room. Disable Thunderbird Conversations first. Off by default."
+  },
+  "automatically_save_drafts_89a125c": {
+    "message": "Automatically save drafts",
+    "description": "Automatically save drafts"
+  },
+  "use_your_account_s_drafts_folder_enabled_by_default__09a3bd0": {
+    "message": "Use your account’s Drafts folder. Enabled by default, every minute.",
+    "description": "Use your account’s Drafts folder. Enabled by default, every minute."
+  },
+  "save_every_265e739": {
+    "message": "Save every",
+    "description": "Save every"
+  },
+  "1_minute_62957ec": {
+    "message": "1 minute",
+    "description": "1 minute"
+  },
+  "2_minutes_1dd3e66": {
+    "message": "2 minutes",
+    "description": "2 minutes"
+  },
+  "5_minutes_3aa5819": {
+    "message": "5 minutes",
+    "description": "5 minutes"
+  },
+  "10_minutes_a6f1518": {
+    "message": "10 minutes",
+    "description": "10 minutes"
+  },
+  "the_editor_shows_saving_then_saved_after_confirmatio_056f02a": {
+    "message": "The editor shows “Saving…”, then “✓ Saved” after confirmation. New edits show “Unsaved changes”; errors show “Save failed”.",
+    "description": "The editor shows “Saving…”, then “✓ Saved” after confirmation. New edits show “Unsaved changes”; errors show “Save failed”."
+  },
+  "editor_and_draft_behavior_b738bee": {
+    "message": "Editor and draft behavior",
+    "description": "Editor and draft behavior"
+  },
+  "signatures_account_identity_recipients_formatting_at_29c9ff0": {
+    "message": "Signatures, account identity, recipients, formatting, attachments and draft saving use Thunderbird’s native composer. Forward keeps its usual window. The floating panel resizes from its top or side edge and marked corner; the corner also supports arrow keys. Your chosen size is remembered across messages and restarts, adapting to the available space beside the sidebar.",
+    "description": "Signatures, account identity, recipients, formatting, attachments and draft saving use Thunderbird’s native composer. Forward keeps its usual window. The floating panel resizes from its top or side edge and marked corner; the corner also supports arrow keys. Your chosen size is remembered across messages and restarts, adapting to the available space beside the sidebar."
+  },
+  "an_open_message_is_kept_when_you_navigate_or_start_a_3ae9163": {
+    "message": "An open message is kept when you navigate or start another one. Closing follows native Save, Discard and Cancel prompts. Separate window saves a native draft first. Turning off an in-window option affects new messages and keeps existing work open.",
+    "description": "An open message is kept when you navigate or start another one. Closing follows native Save, Discard and Cancel prompts. Separate window saves a native draft first. Turning off an in-window option affects new messages and keeps existing work open."
+  },
+  "autosave_changes_apply_to_newly_opened_composers_dis_d6e1a89": {
+    "message": "Autosave changes apply to newly opened composers. Disabling Thunder-G restores prior native autosave settings unless they were changed independently.",
+    "description": "Autosave changes apply to newly opened composers. Disabling Thunder-G restores prior native autosave settings unless they were changed independently."
+  },
+  "optional_domain_logos_alongside_your_messages_c4f6e1c": {
+    "message": "Optional domain logos alongside your messages.",
+    "description": "Optional domain logos alongside your messages."
+  },
+  "show_sender_logos_with_bimi_f5ad9b1": {
+    "message": "Show sender logos with BIMI",
+    "description": "Show sender logos with BIMI"
+  },
+  "looks_up_the_sender_s_bimi_dns_record_and_downloads__5b7736e": {
+    "message": "Looks up the sender’s BIMI DNS record and downloads its advertised HTTPS SVG logo. Off by default.",
+    "description": "Looks up the sender’s BIMI DNS record and downloads its advertised HTTPS SVG logo. Off by default."
+  },
+  "this_downloads_remote_images_fbbfd71": {
+    "message": "This downloads remote images.",
+    "description": "This downloads remote images."
+  },
+  "the_logo_host_can_see_your_ip_address_only_the_adver_88651c5": {
+    "message": "The logo host can see your IP address. Only the advertised logo is downloaded; no logo lookup service, favicon or certificate download is used.",
+    "description": "The logo host can see your IP address. Only the advertised logo is downloaded; no logo lookup service, favicon or certificate download is used."
+  },
+  "checks_caching_and_fallback_480dec9": {
+    "message": "Checks, caching and fallback",
+    "description": "Checks, caching and fallback"
+  },
+  "requires_a_successful_aligned_dkim_check_through_the_5ff90e3": {
+    "message": "Requires a successful aligned DKIM check through the optional integration. A DNS-published logo is not a certified identity badge. Contact photos take priority; missing or invalid records keep the usual avatar.",
+    "description": "Requires a successful aligned DKIM check through the optional integration. A DNS-published logo is not a certified identity badge. Contact photos take priority; missing or invalid records keep the usual avatar."
+  },
+  "logos_and_missing_results_are_cached_for_one_hour_du_dffd837": {
+    "message": "Logos and missing results are cached for one hour during this session. Turning this off stops new downloads and restores the usual avatars immediately.",
+    "description": "Logos and missing results are cached for one hour during this session. Turning this off stops new downloads and restores the usual avatars immediately."
+  },
+  "settings_save_automatically_6b09ded": {
+    "message": "Settings save automatically",
+    "description": "Settings save automatically"
+  },
+  "interface_language_9407e9c": {
+    "message": "Interface language",
+    "description": "Interface language"
+  },
+  "automatically_follow_thunderbird_s_language_choose_e_560b31b": {
+    "message": "Automatically follow Thunderbird’s language, or choose English or Italian for Thunder-G. Changes apply immediately, independently of Thunderbird’s language.",
+    "description": "Automatically follow Thunderbird’s language, or choose English or Italian for Thunder-G. Changes apply immediately, independently of Thunderbird’s language."
+  },
+  "automatic_thunderbird_language_6ebf246": {
+    "message": "Automatic (Thunderbird language)",
+    "description": "Automatic (Thunderbird language)"
+  },
+  "english_649df08": {
+    "message": "English",
+    "description": "English"
+  },
+  "italiano_21df739": {
+    "message": "Italiano",
+    "description": "Italiano"
+  },
+  "saved_restart_thunderbird_to_apply_the_language_to_e_535d27e": {
+    "message": "Saved. Thunder-G’s language has been updated.",
+    "description": "Saved. Thunder-G’s language has been updated."
+  },
+  "1_message_e03bb2c": {
+    "message": "$1 message",
+    "description": "$1 message"
+  },
+  "1_messages_f3fdbb7": {
+    "message": "$1 messages",
+    "description": "$1 messages"
+  },
+  "1_selected_8383f86": {
+    "message": "$1 selected",
+    "description": "$1 selected"
+  },
+  "1_2_of_3_9ab3250": {
+    "message": "$1–$2 of $3",
+    "description": "$1–$2 of $3"
+  },
+  "0_of_0_6b81c87": {
+    "message": "0 of 0",
+    "description": "0 of 0"
+  },
+  "show_1_earlier_message_128cff1": {
+    "message": "Show $1 earlier message",
+    "description": "Show $1 earlier message"
+  },
+  "saved_499dc62": {
+    "message": "✓ Saved",
+    "description": "✓ Saved"
+  },
+  "draft_1_77cd8ea": {
+    "message": "Draft: $1",
+    "description": "Draft: $1"
+  },
+  "light_blue_d87c6d5": {
+    "message": "Light blue",
+    "description": "Light blue"
+  },
+  "blue_7d44bc4": {
+    "message": "Blue",
+    "description": "Blue"
+  },
+  "dark_blue_b7b6953": {
+    "message": "Dark blue",
+    "description": "Dark blue"
+  },
+  "light_green_12294ab": {
+    "message": "Light green",
+    "description": "Light green"
+  },
+  "green_933bf21": {
+    "message": "Green",
+    "description": "Green"
+  },
+  "dark_green_d486103": {
+    "message": "Dark green",
+    "description": "Dark green"
+  },
+  "yellow_3526f60": {
+    "message": "Yellow",
+    "description": "Yellow"
+  },
+  "orange_09fb6aa": {
+    "message": "Orange",
+    "description": "Orange"
+  },
+  "red_cc9db3a": {
+    "message": "Red",
+    "description": "Red"
+  },
+  "pink_5407635": {
+    "message": "Pink",
+    "description": "Pink"
+  },
+  "purple_32576f4": {
+    "message": "Purple",
+    "description": "Purple"
+  },
+  "gray_4f9beff": {
+    "message": "Gray",
+    "description": "Gray"
+  },
+  "default_808d7dc": {
+    "message": "Default",
+    "description": "Default"
+  },
+  "gmail_inspired_interface_for_thunderbird_with_native_ef84227": {
+    "message": "Gmail-inspired interface for Thunderbird with native tag chips, message previews, quick actions, and conversation styling.",
+    "description": "Gmail-inspired interface for Thunderbird with native tag chips, message previews, quick actions, and conversation styling."
+  },
+  "me_94563ec": {
+    "message": "Me",
+    "description": "Me"
+  },
+  "cc_1_28f64c0": {
+    "message": " · Cc $1",
+    "description": " · Cc $1"
+  },
+  "back_dc381ae": {
+    "message": "‹ Back",
+    "description": "‹ Back"
+  },
+  "back_3b79003": {
+    "message": "‹  Back",
+    "description": "‹  Back"
+  },
+  "edit_1_labels_73493dc": {
+    "message": "Edit $1 labels",
+    "description": "Edit $1 labels"
+  },
+  "labels_1_21c4806": {
+    "message": "Labels: $1",
+    "description": "Labels: $1"
+  },
+  "draft_1_4ca355d": {
+    "message": " Draft: $1",
+    "description": " Draft: $1"
+  },
+  "1_selected_message_2c142ec": {
+    "message": "$1 selected message",
+    "description": "$1 selected message"
+  },
+  "label_as_1_selected_message_e6131a9": {
+    "message": "Label as — $1 selected message",
+    "description": "Label as — $1 selected message"
+  }
+}

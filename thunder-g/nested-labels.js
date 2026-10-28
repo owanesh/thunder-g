@@ -29,10 +29,10 @@ function nestedLabelRows(tags,query='',collapsed=new Set()) {
 }
 function nestedLabelName(name,parent,tags) {
   name=name.trim();parent=parent || '';
-  if(!name || name.split('/').some(part=>!part.trim()))throw new Error('Enter a label name without empty path segments.');
-  if(parent && !tags.some(tag=>tag.tag===parent))throw new Error('The parent label no longer exists. Choose another label.');
+  if(!name || name.split('/').some(part=>!part.trim()))throw new Error(gmText("Enter a label name without empty path segments."));
+  if(parent && !tags.some(tag=>tag.tag===parent))throw new Error(gmText("The parent label no longer exists. Choose another label."));
   const path=parent?`${parent}/${name}`:name;
-  if(tags.some(tag=>tag.tag.normalize('NFKC').toLocaleLowerCase()===path.normalize('NFKC').toLocaleLowerCase()))throw new Error('A label with this name already exists.');
+  if(tags.some(tag=>tag.tag.normalize('NFKC').toLocaleLowerCase()===path.normalize('NFKC').toLocaleLowerCase()))throw new Error(gmText("A label with this name already exists."));
   return path;
 }
 // Visibility propagates upward so shown children retain their parent path.
@@ -60,8 +60,8 @@ function installNestedLabelSidebar(win,mailServices=MailServices,prefs=Services.
     const attributes=['data-l10n-id','data-l10n-args','title','aria-label','tooltiptext'];
     if(!vocabulary.has(node))vocabulary.set(node,{text:node.textContent,tooltip,attributes:attributes.map(name=>[name,node.getAttribute(name)])});
     node.removeAttribute('data-l10n-id');node.removeAttribute('data-l10n-args');
-    if(tooltip){node.setAttribute('title',text);node.setAttribute('tooltiptext',text);node.setAttribute('aria-label',text);}
-    else if(node.textContent!==text)node.textContent=text;
+    if(tooltip){gmBindAction(node,'title',text,true);gmBindAction(node,'tooltiptext',text,true);gmBindAction(node,'aria-label',text,true);}
+    else if(node.textContent!==text)gmBindAction(node,'textContent',text);
   }
   function ensureMore(mode){
     if(!more){
@@ -97,16 +97,16 @@ function installNestedLabelSidebar(win,mailServices=MailServices,prefs=Services.
     if(!more)return;
     if(!hiddenCount)expanded=false;
     more.hidden=hiddenCount===0;
-    const label=expanded?'Less':'More';
+    const label=expanded?gmText("Less"):gmText("More");
     const text=`${expanded?'⌃':'⌄'}  ${label}`;
-    if(more.textContent!==text)more.textContent=text;
-    more.setAttribute('aria-label',expanded?'Show fewer labels':'Show more labels');more.setAttribute('aria-expanded',String(expanded));
+    gmBindValue(more,'textContent',()=>`${expanded?'⌃':'⌄'}  ${gmText(expanded?'Less':'More')}`);
+    gmBindAttribute(more, 'aria-label', () => expanded?gmText("Show fewer labels"):gmText("Show more labels"));more.setAttribute('aria-expanded',String(expanded));
   }
   function refresh(){
     timer=null;if(closed)return;
     const mode=win.folderPane?._modes?.tags;
-    rename(mode?.containerHeader?.querySelector('.mode-name'),'Labels');
-    const createButton=mode?.container?.querySelector('.mode-button');rename(createButton,'Create new label',true);
+    rename(mode?.containerHeader?.querySelector('.mode-name'),gmText("Labels"));
+    const createButton=mode?.container?.querySelector('.mode-button');rename(createButton,gmText("Create new label"),true);
     if(createButton && !createButtons.has(createButton)){
       const createLabel=event=>{const handled=!win.dispatchEvent(new win.CustomEvent('gm-create-sidebar-label',{cancelable:true,detail:{anchor:createButton}}));if(handled){event.preventDefault();event.stopImmediatePropagation();}};
       createButton.addEventListener('click',createLabel,true);createButtons.set(createButton,createLabel);

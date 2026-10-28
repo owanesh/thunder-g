@@ -8,7 +8,7 @@ function createComposeAutosave(prefs) {
     const values = JSON.parse(saved);
     if (!Array.isArray(values) || values.length !== 2 || values.some((item,index) =>
       item[0] !== names[index] || typeof item[1]?.user !== 'boolean' ||
-      typeof item[1]?.value !== (index === 0 ? 'boolean' : 'number'))) throw new Error('Invalid autosave snapshot');
+      typeof item[1]?.value !== (index === 0 ? 'boolean' : 'number'))) throw new Error(gmText("Invalid autosave snapshot"));
     for (const [name,value] of values) originals.set(name,value);
   }
   let closed = false;
@@ -48,7 +48,7 @@ var inlineNewMessageEnabled=false;
 var inlineComposeControllers=new WeakMap();
 function inlineReplyParams(header,command,services=MailServices,interfaces=Ci,classes=Cc,utils=null) {
   const types={cmd_replySender:interfaces.nsIMsgCompType.ReplyToSender,cmd_replyall:interfaces.nsIMsgCompType.ReplyAll,cmd_forwardInline:interfaces.nsIMsgCompType.ForwardInline};
-  if(!(command in types))throw new Error('Unsupported inline compose action');
+  if(!(command in types))throw new Error(gmText("Unsupported inline compose action"));
   utils ||= ChromeUtils.importESModule('resource:///modules/MailUtils.sys.mjs').MailUtils;
   const params=classes['@mozilla.org/messengercompose/composeparams;1'].createInstance(interfaces.nsIMsgComposeParams);
   params.type=types[command];params.format=interfaces.nsIMsgCompFormat.Default;
@@ -88,16 +88,16 @@ function installInlineNewMessage(win,create=createInlineCompose) {
 }
 function saveInlineReplyDraft(native,clock,timeoutMs=60000) {
   return new Promise((resolve,reject)=>{
-    if(native.gSaveOperationInProgress || native.gSendOperationInProgress){reject(new Error('Wait for the current save or send to finish.'));return;}
+    if(native.gSaveOperationInProgress || native.gSendOperationInProgress){reject(new Error(gmText("Wait for the current save or send to finish.")));return;}
     const compose=native.gMsgCompose;let finished=false;
     const finish=(error)=>{
       if(finished)return;finished=true;clock.clearTimeout(timer);compose.UnregisterStateListener(listener);
       const uri=compose.compFields.draftId;
-      if(error || !uri)reject(error || new Error('Draft was not saved.'));else resolve(uri);
+      if(error || !uri)reject(error || new Error(gmText("Draft was not saved.")));else resolve(uri);
     };
     const listener={NotifyComposeFieldsReady(){},NotifyComposeBodyReady(){},SaveInFolderDone(){},
-      ComposeProcessDone(result){clock.setTimeout(()=>finish(result===0?null:new Error('Could not save the draft.')),0);}};
-    const timer=clock.setTimeout(()=>finish(new Error('Draft saving timed out; your reply remains open.')),timeoutMs);
+      ComposeProcessDone(result){clock.setTimeout(()=>finish(result===0?null:new Error(gmText("Could not save the draft."))),0);}};
+    const timer=clock.setTimeout(()=>finish(new Error(gmText("Draft saving timed out; your reply remains open."))),timeoutMs);
     compose.RegisterStateListener(listener);
     Promise.resolve().then(()=>native.GenericSendMessage(Ci.nsIMsgCompDeliverMode.SaveAsDraft)).catch(error=>finish(error));
   });
@@ -111,8 +111,8 @@ function installComposeDraftStatus(native,status,clock,modes=Ci.nsIMsgCompDelive
   function show(next) {
     if(closed || state===next)return;
     state=next;status.dataset.state=next;
-    status.textContent={saved:'✓ Saved',saving:'Saving…',dirty:'Unsaved changes',error:'Save failed',initial:'Not saved'}[next];
-    status.title={saved:'Saved to Drafts',saving:'Saving to Drafts',dirty:'Changes have not been saved yet',error:'Could not save to Drafts. Use Save draft to retry.',initial:'Draft has not been saved yet'}[next];
+    gmBindValue(status, "textContent", () => ({saved:gmText("✓ Saved"),saving:gmText("Saving…"),dirty:gmText("Unsaved changes"),error:gmText("Save failed"),initial:gmText("Not saved")}[next]));
+    gmBindValue(status, "title", () => ({saved:gmText("Saved to Drafts"),saving:gmText("Saving to Drafts"),dirty:gmText("Changes have not been saved yet"),error:gmText("Could not save to Drafts. Use Save draft to retry."),initial:gmText("Draft has not been saved yet")}[next]));
     status.style.color=next==='saved'?'light-dark(#137333,#81c995)':next==='error'?'light-dark(#b3261e,#f2b8b5)':'light-dark(#5f6368,#bdc1c6)';
     onState(next);
   }
@@ -188,9 +188,9 @@ function inlineSendFailure(status,message) {
   if(detail)return detail;
   if(typeof status==='number' && status!==0) {
     const name=typeof Components==='undefined'?null:Object.keys(Components.results).find(key=>Components.results[key]===status);
-    return name || `Thunderbird error 0x${(status>>>0).toString(16).padStart(8,'0')}`;
+    return name || gmText("Thunderbird error 0x$1", (status>>>0).toString(16).padStart(8,'0'));
   }
-  return 'Thunderbird did not provide a failure reason.';
+  return gmText("Thunderbird did not provide a failure reason.");
 }
 function installInlineSendStatus(native,clock,onState,saveDraft=()=>saveInlineReplyDraft(native,clock),modes=Ci.nsIMsgCompDeliverMode) {
   const original=native.GenericSendMessage,compose=native.gMsgCompose;
@@ -200,11 +200,11 @@ function installInlineSendStatus(native,clock,onState,saveDraft=()=>saveInlineRe
     return new Promise((resolve,reject)=>{
       let checks=0;
       const finish=error=>{if(idleTimer!==null)clock.clearTimeout(idleTimer);idleTimer=null;idleCancel=null;error?reject(error):resolve()};
-      idleCancel=()=>finish(new Error('Composer closed.'));
+      idleCancel=()=>finish(new Error(gmText("Composer closed.")));
       const check=()=>{
-        if(closed)return finish(new Error('Composer closed.'));
+        if(closed)return finish(new Error(gmText("Composer closed.")));
         if(!native.gSendOperationInProgress && !native.gSaveOperationInProgress)return finish();
-        if(++checks>=300)return finish(new Error('Composer is still busy; reply remains open.'));
+        if(++checks>=300)return finish(new Error(gmText("Composer is still busy; reply remains open.")));
         idleTimer=clock.setTimeout(check,100);
       };check();
     });
@@ -241,7 +241,7 @@ function installInlineSendStatus(native,clock,onState,saveDraft=()=>saveInlineRe
   const listener={onStartSending(){if(job)job.transportStarted=true},onSendProgress(){},onStatus(){},onGetDraftFolderURI(){},
     onSendNotPerformed(id,status){if(job){job.transportStopped=true;job.error=inlineSendFailure(status);recoverLater()}},
     onStopSending(id,status,message){if(job)job.transportStopped=true;if(job && id)job.messageId=id;if(status===0)sent();else if(job){job.error=inlineSendFailure(status,message);recoverLater()}},
-    onTransportSecurityError(id,status){if(job)job.error=inlineSendFailure(status,'Connection security error. Check Thunderbird’s security prompt.')}};
+    onTransportSecurityError(id,status){if(job)job.error=inlineSendFailure(status,gmText("Connection security error. Check Thunderbird’s security prompt."))}};
   async function send(mode,...args) {
     const sending=[modes.Now,modes.Background].includes(mode),before=sequence;
     const restoreProgress=sending?suppressInlineSendProgress():()=>{};
@@ -314,7 +314,7 @@ function installFloatingComposeResize(win,panel,prefs=typeof Services==='undefin
   }
   for(const kind of ['corner','top','side']) {
     const handle=doc.createElement('button');handle.type='button';handle.className=`gm-compose-resize gm-compose-resize-${kind}`;
-    handle.setAttribute('aria-label','Resize compose panel');handle.title='Drag to resize; arrow keys resize, Shift makes larger steps';
+    gmBindAttribute(handle, 'aria-label', () => gmText("Resize compose panel"));gmBindValue(handle, "title", () => gmText("Drag to resize; arrow keys resize, Shift makes larger steps"));
     const rtl=doc.documentElement.dir==='rtl',side=rtl?'right':'left';
     handle.style.cssText=`position:absolute;z-index:2;padding:0;margin:0;border:0;background:transparent;color:light-dark(#80868b,#9aa0a6);touch-action:none;${kind==='top'?'top:0;left:18px;right:0;height:6px;cursor:ns-resize;':kind==='side'?`${side}:0;top:18px;bottom:0;width:6px;cursor:ew-resize;`:`top:0;${side}:0;width:18px;height:18px;cursor:${rtl?'nesw':'nwse'}-resize;font-size:16px;line-height:18px;`}`;
     handle.tabIndex=kind==='corner'?0:-1;
@@ -373,7 +373,7 @@ function installEmbeddedAttachmentPicker(native,main,classes=Cc,interfaces=Ci) {
         native.AddAttachments(files.map(file=>native.FileToAttachment(file)));
         if(files.length)native.SetLastAttachDirectory(files.at(-1));
       });
-    }catch(error){busy=false;console.error('Thunder-G: could not open the attachment picker.',error);}
+    }catch(error){busy=false;console.error(gmText("Thunder-G: could not open the attachment picker."),error);}
   }
   native.AttachFile=attach;
   return {close(){closed=true;if(native.AttachFile===attach)native.AttachFile=original;}};
@@ -381,16 +381,16 @@ function installEmbeddedAttachmentPicker(native,main,classes=Cc,interfaces=Ci) {
 // A saved draft is discarded through Thunderbird's recoverable Trash path.
 // Never use RemoveDraft(), which can permanently delete/expunge the copy.
 function trashInlineDraft(native,services=MailServices,msgWindow=null) {
-  if(native.gSendOperationInProgress || native.gSaveOperationInProgress)return Promise.reject(new Error('Wait for the current send or save to finish.'));
+  if(native.gSendOperationInProgress || native.gSaveOperationInProgress)return Promise.reject(new Error(gmText("Wait for the current send or save to finish.")));
   const uri=native.gMsgCompose?.compFields.draftId;
   if(!uri)return Promise.resolve();
   return new Promise((resolve,reject)=>{
     try {
       const header=services.messageServiceFromURI(uri).messageURIToMsgHdr(uri);
-      if(!header?.folder)throw new Error('The saved draft could not be found.');
+      if(!header?.folder)throw new Error(gmText("The saved draft could not be found."));
       header.folder.deleteMessages([header],msgWindow,false,false,{
         onStartCopy(){},onProgress(){},setMessageKey(){},getMessageId(){return null;},
-        onStopCopy(status){if(status===0)resolve();else reject(new Error('Could not move the draft to Trash.'));}
+        onStopCopy(status){if(status===0)resolve();else reject(new Error(gmText("Could not move the draft to Trash.")));}
       },true);
     }catch(error){reject(error)}
   });
@@ -457,34 +457,34 @@ function createInlineCompose(win) {
     if(!browser || transferBusy)return;
     const native=browser.contentWindow;
     if(!native.gMsgCompose){dispose();return;}
-    if(native.gSendOperationInProgress || native.gSaveOperationInProgress){title.textContent='Wait for the current send or save to finish.';return;}
+    if(native.gSendOperationInProgress || native.gSaveOperationInProgress){gmBindValue(title, "textContent", () => gmText("Wait for the current send or save to finish."));return;}
     transferBusy=true;
     try{
       if(native.gContentChanged || native.gMsgCompose.bodyModified || !native.gMsgCompose.compFields.draftId)await saveInlineReplyDraft(native,win);
       dispose();
-    }catch(error){title.textContent=error.message || 'Could not save the draft. Your reply remains open.';}
+    }catch(error){gmBindValue(title, "textContent", () => error.message || gmText("Could not save the draft. Your reply remains open."));}
     finally{transferBusy=false;}
   }
   async function discard(){
     if(!ready || transferBusy || !browser)return;
     const native=browser.contentWindow;
-    if(native.gSendOperationInProgress || native.gSaveOperationInProgress){title.textContent='Wait for the current send or save to finish.';return;}
+    if(native.gSendOperationInProgress || native.gSaveOperationInProgress){gmBindValue(title, "textContent", () => gmText("Wait for the current send or save to finish."));return;}
     transferBusy=true;
     // Pause autosave while the saved copy is moved; restore it if Trash fails.
     if(native.gAutoSaveTimeout)native.clearTimeout(native.gAutoSaveTimeout);
     try{await trashInlineDraft(native,MailServices,main.msgWindow);hideSendNotice();dispose();}
-    catch(error){title.textContent=error.message || 'Could not discard. Your message remains open.';
+    catch(error){gmBindValue(title, "textContent", () => error.message || gmText("Could not discard. Your message remains open."));
       if(native.gAutoSaveInterval)native.gAutoSaveTimeout=native.setTimeout(native.AutoSave,native.gAutoSaveInterval);
     }finally{transferBusy=false;}
   }
   function minimize(){
     if(!panel)return;
-    if(minimized){minimized=false;panel.style.transform='';labelControl(minimizeButton,'minimize','Minimize');browser?.focus();return;}
+    if(minimized){minimized=false;panel.style.transform='';labelControl(minimizeButton,'minimize',gmText("Minimize"));browser?.focus();return;}
     float();minimized=true;
     // Translate the intact panel below the viewport, retaining editor layout,
     // signature, undo history and attachment state. Never display:none it.
     panel.style.transform='translateY(calc(100% - 40px))';
-    labelControl(minimizeButton,'maximize','Restore composer');
+    labelControl(minimizeButton,'maximize',gmText("Restore composer"));
   }
   function parentClose(event){if(browser && !requestClose())event.preventDefault();}
   main.addEventListener('close',parentClose,true);
@@ -537,24 +537,24 @@ function createInlineCompose(win) {
     const common='display:flex;flex-direction:column;min-height:320px;box-sizing:border-box;isolation:isolate;contain:paint;background:light-dark(#ffffff,#18181b);border:1px solid var(--layout-border-0,#dadce0);border-radius:12px;overflow:hidden;';
     panel.style.cssText=common+(next==='inline'?'position:relative;height:460px;margin:16px 0 20px 56px;box-shadow:none;':next==='full'?'position:fixed;z-index:1000;inset:12px;width:auto;height:calc(100% - 24px);min-height:0;border:0;border-radius:12px;box-shadow:0 8px 32px #0004;':'position:fixed;z-index:1000;inset:auto 16px 12px auto;width:min(600px,calc(100vw - 32px));height:min(640px,80vh);box-shadow:0 4px 22px #0003;');
     if(originalCommand==='cmd_newMessage') {
-      labelControl(floatButton,next==='full'?'detach':'window',next==='full'?'Detach message':'Expand in this window');
+      labelControl(floatButton,next==='full'?'detach':'window',next==='full'?gmText("Detach message"):gmText("Expand in this window"));
       floatButton.hidden=false;
     }else{
-      const label=next==='inline'?'Detach reply into a floating panel':'Return reply below the message';
-      labelControl(floatButton,next==='inline'?'detach':'inline',next==='inline'?'Detach reply':'Return to conversation',label);
+      const label=next==='inline'?gmText("Detach reply into a floating panel"):gmText("Return reply below the message");
+      labelControl(floatButton,next==='inline'?'detach':'inline',next==='inline'?gmText("Detach reply"):gmText("Return to conversation"),label);
       floatButton.hidden=next!=='inline' && (!inlineContainer?.isConnected || scrollHost?.hidden);
     }
     windowButton.hidden=next==='inline' || originalCommand==='cmd_newMessage';
     windowButton.style.display=windowButton.hidden?'none':'inline-flex';
     floatButton.style.display=floatButton.hidden?'none':'inline-flex';
-    if(minimizeButton){labelControl(minimizeButton,'minimize','Minimize');minimizeButton.style.order='-1';}
+    if(minimizeButton){labelControl(minimizeButton,'minimize',gmText("Minimize"));minimizeButton.style.order='-1';}
     fitComposeToContent();
   }
   function float(){
     if(!panel)return;
     // An atomic move keeps the browser/editor and its undo/attachments alive.
     if(panel.parentNode!==doc.documentElement){
-      if(typeof doc.documentElement.moveBefore!=='function')throw new Error('State-preserving panel moves are unavailable.');
+      if(typeof doc.documentElement.moveBefore!=='function')throw new Error(gmText("State-preserving panel moves are unavailable."));
       doc.documentElement.moveBefore(panel,null);
     }
     setPresentation('floating');
@@ -569,7 +569,7 @@ function createInlineCompose(win) {
     transferBusy=true;windowButton.disabled=true;floatButton.disabled=true;
     const native=browser.contentWindow;
     try {
-      title.textContent='Saving draft before opening a separate window…';
+      gmBindValue(title, "textContent", () => gmText("Saving draft before opening a separate window…"));
       const subject=native.document.getElementById('msgSubject').value;
       const uri=await saveInlineReplyDraft(native,win);
       // Drafts must go through the compose service so their MIME body and attachments
@@ -579,7 +579,7 @@ function createInlineCompose(win) {
         const opened={observe(subject,topic){if(topic!=='domwindowopened')return;
           Services.ww.unregisterNotification(opened);win.clearTimeout(timer);resolve(subject);}};
         Services.ww.registerNotification(opened);
-        timer=win.setTimeout(()=>{Services.ww.unregisterNotification(opened);reject(new Error('Could not open a separate window; the draft remains here.'));},15000);
+        timer=win.setTimeout(()=>{Services.ww.unregisterNotification(opened);reject(new Error(gmText("Could not open a separate window; the draft remains here.")));},15000);
         try {
           const draftHeader=MailServices.messageServiceFromURI(uri).messageURIToMsgHdr(uri);
           MailServices.compose.OpenComposeWindow(null,draftHeader,uri,Ci.nsIMsgCompType.Draft,
@@ -589,7 +589,7 @@ function createInlineCompose(win) {
       await new Promise((resolve,reject)=>{
         let listener=null,compose=null;
         const cleanup=()=>{win.clearTimeout(timer);newWindow.removeEventListener('compose-window-init',init,true);if(listener)compose.UnregisterStateListener(listener);};
-        const timer=win.setTimeout(()=>{cleanup();reject(new Error('The new window did not finish loading; the saved reply remains here.'));},30000);
+        const timer=win.setTimeout(()=>{cleanup();reject(new Error(gmText("The new window did not finish loading; the saved reply remains here.")));},30000);
         function init(){
           compose=newWindow.gMsgCompose;
           listener={NotifyComposeFieldsReady(){},ComposeProcessDone(){},SaveInFolderDone(){},NotifyComposeBodyReady(){
@@ -602,7 +602,7 @@ function createInlineCompose(win) {
       });
       // Release the old editor only after the native draft has loaded in its successor.
       dispose();newWindow.focus();
-    }catch(error){title.textContent=error.message || 'Could not detach; your reply remains open.';}
+    }catch(error){gmBindValue(title, "textContent", () => error.message || gmText("Could not detach; your reply remains open."));}
     finally{transferBusy=false;if(windowButton)windowButton.disabled=!ready;if(floatButton)floatButton.disabled=false;}
   }
   function labelControl(control,kind,label,description=label){
@@ -618,12 +618,12 @@ function createInlineCompose(win) {
     svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('width','18');svg.setAttribute('height','18');svg.setAttribute('aria-hidden','true');
     const path=doc.createElementNS('http://www.w3.org/2000/svg','path');
     path.setAttribute('d',paths[kind]);path.setAttribute('fill','none');path.setAttribute('stroke','currentColor');path.setAttribute('stroke-width','1.6');path.setAttribute('stroke-linejoin','round');svg.append(path);
-    const text=doc.createElement('span');text.textContent=label;control.append(svg,text);
-    control.title=description;control.setAttribute('aria-label',description);
+    const text=doc.createElement('span');gmBindAction(text,'textContent',label);control.append(svg,text);
+    gmBindAction(control,'title',description);gmBindAction(control,'aria-label',description,true);
     text.style.display='none';
     control.style.cssText='display:inline-flex;align-items:center;justify-content:center;flex:none;width:28px;height:28px;border:0;border-radius:4px;background:transparent;color:inherit;padding:5px;cursor:pointer;';
   }
-  function button(label,handler){const node=doc.createElement('button');node.type='button';node.textContent=label;node.addEventListener('click',handler);return node;}
+  function button(label,handler){const node=doc.createElement('button');node.type='button';gmBindAction(node,'textContent',label);node.addEventListener('click',handler);return node;}
   return {
     open(header,command,placement={}){
       if(browser){
@@ -637,17 +637,17 @@ function createInlineCompose(win) {
           doc.documentElement.append(sendNotice);
         }
         if(noticeTimer!==null)win.clearTimeout(noticeTimer);noticeTimer=null;sendNotice.hidden=false;sendNotice.style.display='flex';
-        const labels={sending:'Sending…',sent:'Sent', 'saving-draft':'Sending failed. Saving draft…','draft-saved':'Not sent. Saved to Drafts.','draft-error':'Not sent. Draft could not be saved. Your reply is still open.'};
-        const message=doc.createElement('span');message.textContent=labels[state.state];
+        const labels={sending:gmText("Sending…"),sent:gmText("Sent"), 'saving-draft':gmText("Sending failed. Saving draft…"),'draft-saved':gmText("Not sent. Saved to Drafts."),'draft-error':gmText("Not sent. Draft could not be saved. Your reply is still open.")};
+        const message=doc.createElement('span');gmBindAction(message,'textContent',labels[state.state]);
         if(state.error && !['sending','sent'].includes(state.state))message.textContent+=` ${state.error}`;
-        if(state.state==='draft-error' && state.draftError)message.textContent+=` Draft: ${state.draftError}`;
-        const dismiss=button('×',hideSendNotice);dismiss.setAttribute('aria-label','Dismiss notification');dismiss.title='Dismiss';
+        if(state.state==='draft-error' && state.draftError)message.textContent+=gmText(" Draft: $1", state.draftError);
+        const dismiss=button('×',hideSendNotice);gmBindAttribute(dismiss, 'aria-label', () => gmText("Dismiss notification"));gmBindValue(dismiss, "title", () => gmText("Dismiss"));
         dismiss.style.cssText='flex:none;border:0;padding:0 2px;background:transparent;color:#fff;font:18px/1 sans-serif;cursor:pointer;';
         sendNotice.replaceChildren(message,dismiss);
         // display:none destroys the embedded editor. Thunderbird serializes
         // that editor AFTER compose-send-message, so keep its layout alive.
         if(panel){panel.hidden=false;panel.style.opacity=state.state==='sending'?'.65':'';}
-        try{placement.onSendState?.(state)}catch(error){console.error('Thunder-G: could not update send feedback.',error)}
+        try{placement.onSendState?.(state)}catch(error){console.error(gmText("Thunder-G: could not update send feedback."),error)}
         positionSendNotice();
         if(['sent','draft-saved','draft-error'].includes(state.state))noticeTimer=win.setTimeout(()=>{noticeTimer=null;hideSendNotice();},state.state==='sent'?6000:12000);
       };
@@ -655,18 +655,18 @@ function createInlineCompose(win) {
       const params=isNew?inlineNewMessageParams(placement.folder):inlineReplyParams(header,command);originalHeader=header;originalCommand=command;
       inlineContainer=placement.container || doc.documentElement;scrollHost=placement.scrollHost || null;
       scrim=doc.createElement('div');scrim.className='gm-compose-scrim';scrim.hidden=true;scrim.style.cssText='position:fixed;inset:0;background:#0005;z-index:999;';doc.documentElement.append(scrim);
-      panel=doc.createElement('section');panel.className='gm-inline-compose';panel.setAttribute('aria-label',isNew?'New message in this window':'Reply in this window');
+      panel=doc.createElement('section');panel.className='gm-inline-compose';gmBindAttribute(panel, 'aria-label', () => isNew?gmText("New message in this window"):gmText("Reply in this window"));
       bar=doc.createElement('div');bar.style.cssText='display:flex;align-items:center;gap:2px;padding:6px 12px;min-height:40px;box-sizing:border-box;flex:none;background:light-dark(#f2f6fc,#292a2d);color:light-dark(#16345c,#e8eaed);';
       title=doc.createElement('strong');title.style.cssText='flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.9em;font-weight:500;';
-      title.textContent=isNew?'New Message':`${command==='cmd_forwardInline'?'Forward':command==='cmd_replyall'?'Reply all':'Reply'} · ${header.mime2DecodedSubject || '(No subject)'}`;
+      gmBindValue(title, "textContent", () => isNew?gmText("New Message"):`${command==='cmd_forwardInline'?gmText("Forward"):command==='cmd_replyall'?gmText("Reply all"):gmText("Reply")} · ${header.mime2DecodedSubject || gmText("(No subject)")}`);
       const titleGroup=doc.createElement('div');titleGroup.style.cssText='display:flex;align-items:center;gap:10px;flex:1;min-width:100px;overflow:hidden;';
       const savedStatus=doc.createElement('span');savedStatus.className='gm-compose-draft-status';savedStatus.setAttribute('role','status');savedStatus.setAttribute('aria-live','polite');savedStatus.style.cssText='flex:none;font-size:12px;white-space:nowrap;';
       titleGroup.append(title,savedStatus);
-      const save=button('',()=>browser?.contentWindow.goDoCommand('cmd_saveAsDraft'));save.disabled=true;labelControl(save,'save','Save draft');
+      const save=button('',()=>browser?.contentWindow.goDoCommand('cmd_saveAsDraft'));save.disabled=true;labelControl(save,'save',gmText("Save draft"));
       floatButton=button('',()=>{if(presentation!=='floating')float();else returnInline();});
-      windowButton=button('',separateWindow);labelControl(windowButton,'window','Separate window',isNew?'Open message in a separate window':'Open reply in a separate window');windowButton.disabled=true;
-      const close=button('',saveAndClose);labelControl(close,'close','Close',isNew?'Close message':'Close reply');
-      minimizeButton=button('',minimize);labelControl(minimizeButton,'minimize','Minimize');
+      windowButton=button('',separateWindow);labelControl(windowButton,'window',gmText("Separate window"),isNew?gmText("Open message in a separate window"):gmText("Open reply in a separate window"));windowButton.disabled=true;
+      const close=button('',saveAndClose);labelControl(close,'close',gmText("Close"),isNew?gmText("Close message"):gmText("Close reply"));
+      minimizeButton=button('',minimize);labelControl(minimizeButton,'minimize',gmText("Minimize"));
       bar.append(titleGroup,save,floatButton,windowButton,close,minimizeButton);
       minimizeButton.style.order='-1';titleGroup.style.order='-2';close.style.order='2';panel.append(bar);floatingResize=installFloatingComposeResize(win,panel);setPresentation(placement.container?'inline':'floating');
       browser=doc.createXULElement('browser');browser.setAttribute('type','content');browser.setAttribute('maychangeremoteness','false');browser.setAttribute('disablehistory','true');browser.setAttribute('flex','1');browser.style.cssText='display:block;flex:1 1 0;min-height:0;min-width:0;width:100%;height:0;border:0;background:light-dark(#ffffff,#18181b);';
@@ -730,12 +730,12 @@ function createInlineCompose(win) {
           #gm-discard-draft:hover{background:light-dark(#e8eaed,#3c4043)!important}
           #MsgHeadersToolbar{border:0!important;padding:4px 8px!important}
         `;frame.contentDocument.documentElement.append(style);
-        const subjectInput=frame.contentDocument.getElementById('msgSubject');if(subjectInput)subjectInput.placeholder='Subject';
+        const subjectInput=frame.contentDocument.getElementById('msgSubject');if(subjectInput)subjectInput.placeholder=gmText("Subject");
         const extra=frame.contentDocument.getElementById('extraAddressRowsArea'),toRow=frame.contentDocument.getElementById('addressRowTo');
         if(extra && toRow)toRow.append(extra);
         const footer=frame.contentDocument.getElementById('composeToolbar2');
         if(footer){
-          const trash=frame.contentDocument.createElement('button');trash.id='gm-discard-draft';trash.type='button';trash.title='Discard draft';trash.setAttribute('aria-label','Discard draft');
+          const trash=frame.contentDocument.createElement('button');trash.id='gm-discard-draft';trash.type='button';gmBindValue(trash, "title", () => gmText("Discard draft"));gmBindAttribute(trash, 'aria-label', () => gmText("Discard draft"));
           const icon=frame.contentDocument.createElementNS('http://www.w3.org/2000/svg','svg');icon.setAttribute('viewBox','0 0 24 24');icon.setAttribute('width','18');icon.setAttribute('height','18');icon.setAttribute('aria-hidden','true');
           const path=frame.contentDocument.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d','M4 7h16 M9 7V4h6v3 M6 7l1 14h10l1-14 M10 10v8 M14 10v8');path.setAttribute('fill','none');path.setAttribute('stroke','currentColor');path.setAttribute('stroke-width','1.6');icon.append(path);trash.append(icon);trash.addEventListener('click',discard);footer.append(trash);
         }
@@ -752,7 +752,7 @@ function createInlineCompose(win) {
             }
             ready=true;save.disabled=false;windowButton.disabled=false;draftStatus=installComposeDraftStatus(native,savedStatus,win,Ci.nsIMsgCompDeliverMode,state=>{if(state==='saved')sendStatus?.draftSaved()});sendStatus=installInlineSendStatus(native,win,onSendState);if(loadingTimer!==null)win.clearTimeout(loadingTimer);loadingTimer=null;native.SetMsgBodyFrameFocus?.();return;}
           if(Date.now()-started>20000){
-            title.textContent='Editor could not finish starting. Close and use a classic reply.';restoreChrome?.();restoreChrome=null;return;
+            gmBindValue(title, "textContent", () => gmText("Editor could not finish starting. Close and use a classic reply."));restoreChrome?.();restoreChrome=null;return;
           }
           loadingTimer=win.setTimeout(check,100);
         };check();

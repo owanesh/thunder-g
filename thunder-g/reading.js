@@ -167,7 +167,7 @@ function installReadingMode(win) {
   toolbar.className = 'gm-reading-toolbar';
   toolbar.hidden = true;
   toolbar.setAttribute('role', 'toolbar');
-  toolbar.setAttribute('aria-label', 'Conversation navigation');
+  gmBindAttribute(toolbar, 'aria-label', () => gmText("Conversation navigation"));
   const back = doc.createElement('button');
   back.className = 'gm-reading-back';
   back.type = 'button';
@@ -187,7 +187,7 @@ function installReadingMode(win) {
     return svg;
   }
   function setBackIcon(selection) {
-    const label = selection ? 'Clear selection' : 'Back to message list';
+    const label = selection ? gmText("Clear selection") : gmText("Back to message list");
     back.textContent = '';
     back.title = label;
     back.setAttribute('aria-label', label);
@@ -203,8 +203,8 @@ function installReadingMode(win) {
   function action(label, path, handler) {
     const button = doc.createElement('button');
     button.className = 'gm-reading-back gm-reading-action';
-    button.type = 'button'; button.title = label;
-    button.setAttribute('aria-label', label);
+    button.type = 'button'; gmBindAction(button,'title',label);
+    gmBindAction(button,'aria-label',label,true);
     button.append(icon(path));
     button.addEventListener('click', () => handler(button));
     toolbar.append(button); return button;
@@ -214,37 +214,37 @@ function installReadingMode(win) {
     win.commandController.doCommand(name);
     if (returnToList) { if (active) leave(true); else clearBulk(); }
   }
-  action('Archive', 'M4 8h16v13H4z M3 3h18v5H3z M9 12h6 M12 10v7 m-3-3 3 3 3-3',
+  action(gmText("Archive"), 'M4 8h16v13H4z M3 3h18v5H3z M9 12h6 M12 10v7 m-3-3 3 3 3-3',
     () => command('cmd_archive', true));
-  action('Mark as spam', 'M8 3h8l5 5v8l-5 5H8l-5-5V8z M12 7v7 M12 17v1',
+  action(gmText("Mark as spam"), 'M8 3h8l5 5v8l-5 5H8l-5-5V8z M12 7v7 M12 17v1',
     () => command('cmd_markAsJunk', true));
-  action('Delete', 'M5 6h14 M9 6V3h6v3 M7 6l1 15h8l1-15 M10 9v9 M14 9v9',
+  action(gmText("Delete"), 'M5 6h14 M9 6V3h6v3 M7 6l1 15h8l1-15 M10 9v9 M14 9v9',
     () => command('cmd_deleteMessage', true));
   separator();
   function readAction() {
     const messages = win.gDBView?.getSelectedMsgHdrs() || [];
     return messages.some(message => !message.isRead)
-      ? {name:'cmd_markAsRead', label:'Mark as read'}
-      : {name:'cmd_markAsUnread', label:'Mark as unread'};
+      ? {name:'cmd_markAsRead', label:gmText("Mark as read")}
+      : {name:'cmd_markAsUnread', label:gmText("Mark as unread")};
   }
   // Google Material Icons: mark_email_unread (outlined), Apache-2.0.
   // See icons/LICENSE-material-icons.txt.
   const unreadIconPath='M22,8.98V18c0,1.1-0.9,2-2,2H4c-1.1,0-2-0.9-2-2L2.01,6C2.01,4.9,2.9,4,4,4h10.1C14.04,4.32,14,4.66,14,5s0.04,0.68,0.1,1 H4l8,5l3.67-2.29c0.47,0.43,1.02,0.76,1.63,0.98L12,13L4,8v10h16V9.9C20.74,9.75,21.42,9.42,22,8.98z M16,5c0,1.66,1.34,3,3,3 s3-1.34,3-3s-1.34-3-3-3S16,3.34,16,5z';
   function syncReadAction() {
-    const {label} = readAction();
-    readButton.title = label;
-    readButton.setAttribute('aria-label', label);
-    const unread=label==='Mark as unread';
+    const {label,name} = readAction();
+    gmBindValue(readButton,'title',()=>readAction().label);
+    gmBindAttribute(readButton,'aria-label',()=>readAction().label);
+    const unread=name==='cmd_markAsUnread';
     const svg=icon(unread ? unreadIconPath : 'M4 6h16v14H4z M4 7l8 6 8-6');
     if(unread){svg.setAttribute('fill','currentColor');svg.setAttribute('stroke','none');}
     readButton.replaceChildren(svg);
   }
-  const readButton = action('Mark as unread', unreadIconPath,
+  const readButton = action(gmText("Mark as unread"), unreadIconPath,
     // Reading can change flags after opening (including delayed auto-read).
     // Resolve the operation at click time, not from the initial button label.
     () => command(readAction().name, true));
   syncReadAction();
-  const snoozeButton = action('Snooze / Follow-Up…', 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18 M12 6v6l4 3', () => {
+  const snoozeButton = action(gmText("Snooze / Follow-Up…"), 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18 M12 6v6l4 3', () => {
     const { ExtensionParent } = ChromeUtils.importESModule('resource://gre/modules/ExtensionParent.sys.mjs');
     const extension = ExtensionParent.GlobalManager.extensionMap.get('mailmindr@arndissler.net');
     if (extension?.shortcuts) extension.shortcuts.onCommand('mailmindr_set_follow_up');
@@ -263,31 +263,31 @@ function installReadingMode(win) {
       if (active) leave(true); else clearBulk();
     }
   });
-  action('Move to…', 'M3 6h7l2 2h9v12H3z M12 10v7 m-3-3 3 3 3-3',
+  action(gmText("Move to…"), 'M3 6h7l2 2h9v12H3z M12 10v7 m-3-3 3 3 3-3',
     button => movePopup.openPopup(button, 'after_start', 0, 0, false, false));
   const tagPopup = doc.createXULElement('panel');
   tagPopup.classList.add('gm-label-panel');
   tagPopup.setAttribute('noautofocus', 'true');
-  tagPopup.setAttribute('aria-label', 'Label as');
+  gmBindAttribute(tagPopup, 'aria-label', () => gmText("Label as"));
   doc.documentElement.append(tagPopup); popups.push(tagPopup);
   const picker = doc.createElement('div');
   picker.className = 'gm-label-picker';
   const heading = doc.createElement('div');
   const scopeNote = doc.createElement('p'); scopeNote.className = 'gm-label-scope';
-  scopeNote.textContent = 'Includes sent replies in this conversation.';
+  gmBindValue(scopeNote, "textContent", () => gmText("Includes sent replies in this conversation."));
   scopeNote.hidden = true;
   const search = doc.createElement('input');
   search.type = 'search';
   const searchBox = doc.createElement('div'); searchBox.className = 'gm-label-search';
   const searchIcon = icon('M10.5 3a7.5 7.5 0 1 0 0 15 7.5 7.5 0 0 0 0-15 M16 16l5 5');
   searchBox.append(search, searchIcon);
-  search.setAttribute('aria-label', 'Search labels');
+  gmBindAttribute(search, 'aria-label', () => gmText("Search labels"));
   const tagList = doc.createElement('div'); tagList.className = 'gm-label-list';
-  const empty = doc.createElement('div'); empty.textContent = 'No matching labels';
+  const empty = doc.createElement('div'); gmBindValue(empty, "textContent", () => gmText("No matching labels"));
   empty.setAttribute('role', 'status');
   const footer = doc.createElement('div'); footer.className = 'gm-label-footer';
-  for (const [title, command] of [['Create new', 'cmd_addTag'], ['Manage labels', 'cmd_manageTags']]) {
-    const button = doc.createElement('button'); button.type = 'button'; button.textContent = title;
+  for (const [title, command] of [[gmText("Create new"), 'cmd_addTag'], [gmText("Manage labels"), 'cmd_manageTags']]) {
+    const button = doc.createElement('button'); button.type = 'button'; gmBindAction(button,'textContent',title);
     button.addEventListener('click', () => {
       if (command === 'cmd_addTag' && !sameSelection()) { tagPopup.hidePopup(); return; }
       tagPopup.hidePopup();
@@ -343,7 +343,7 @@ function installReadingMode(win) {
       row.title=tag.tag;row.style.paddingInlineStart=`${20+entry.depth*16}px`;
       const toggle=doc.createElement('button');toggle.type='button';toggle.className='gm-label-disclosure';
       toggle.textContent=entry.children.length?(collapsedLabels.has(entry.path)?'▸':'▾'):'';
-      toggle.disabled=!entry.children.length;toggle.setAttribute('aria-label',`Expand or collapse ${tag.tag}`);
+      toggle.disabled=!entry.children.length;gmBindAttribute(toggle, 'aria-label', () => gmText("Expand or collapse $1", tag.tag));
       if(entry.children.length)toggle.setAttribute('aria-expanded',String(!collapsedLabels.has(entry.path)));
       toggle.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();if(collapsedLabels.has(entry.path))collapsedLabels.delete(entry.path);else collapsedLabels.add(entry.path);renderTags();});
       row.append(toggle,checkbox, name); tagList.append(row);
@@ -357,8 +357,8 @@ function installReadingMode(win) {
           // failure instead of implying that every message was updated.
           const state = labelAssignmentState(tag, pickerMessages);
           checkbox.checked = state.checked; checkbox.indeterminate = state.mixed;
-          empty.hidden = false; empty.textContent = 'Could not update every message. Check labels and try again.';
-          console.error('Conversation label update failed:', error);
+          empty.hidden = false; gmBindValue(empty, "textContent", () => gmText("Could not update every message. Check labels and try again."));
+          console.error(gmText("Conversation label update failed:"), error);
         }
       });
     }
@@ -373,35 +373,35 @@ function installReadingMode(win) {
     if (pickerConversation && pickerMessages && !pickerSelection.every(selected =>
       pickerMessages.some(message => message.messageKey === selected.messageKey && message.folder.URI === selected.folder?.URI))) pickerMessages = null;
     const count = pickerMessages?.length;
-    heading.textContent = 'Label as:';
+    gmBindValue(heading, "textContent", () => gmText("Label as:"));
     scopeNote.hidden = true;
-    tagPopup.setAttribute('aria-label', pickerConversation
-      ? `Label as — entire conversation, ${count ?? 'loading'} messages, includes sent replies`
-      : `Label as — ${count} selected messages`);
+    gmBindAttribute(tagPopup, 'aria-label', () => pickerConversation
+      ? gmText("Label as — entire conversation, $1 messages, includes sent replies", count ?? 'loading')
+      : gmText("Label as — $1 selected messages", count));
     if (!pickerMessages) {
       pickerTags = []; pickerMessages = []; search.disabled = true;
       returnFocus = doc.activeElement; search.value = ''; renderTags();
-      empty.hidden = false; empty.textContent = 'Conversation is still loading. Close this panel and try again.';
+      empty.hidden = false; gmBindValue(empty, "textContent", () => gmText("Conversation is still loading. Close this panel and try again."));
       tagPopup.openPopup(anchor, 'after_start', 0, 0, false, false); return;
     }
-    search.disabled = false; empty.textContent = 'No matching labels';
+    search.disabled = false; gmBindValue(empty, "textContent", () => gmText("No matching labels"));
     pickerTags = MailServices.tags.getAllTags();
     returnFocus = doc.activeElement; search.value = ''; renderTags();
     tagPopup.openPopup(anchor, 'after_start', 0, 0, false, false);
   }
   const createPopup=doc.createXULElement('panel');createPopup.classList.add('gm-label-panel');
-  createPopup.setAttribute('aria-label','New label');doc.documentElement.append(createPopup);popups.push(createPopup);
+  gmBindAttribute(createPopup, 'aria-label', () => gmText("New label"));doc.documentElement.append(createPopup);popups.push(createPopup);
   const form=doc.createElement('form');form.className='gm-new-label';
-  const title=doc.createElement('h2');title.textContent='New label';
-  const nameLabel=doc.createElement('label');nameLabel.textContent='Please enter a new label name:';
-  const newName=doc.createElement('input');newName.type='text';newName.setAttribute('aria-label','New label name');nameLabel.append(newName);
+  const title=doc.createElement('h2');gmBindValue(title, "textContent", () => gmText("New label"));
+  const nameLabel=doc.createElement('label');gmBindValue(nameLabel, "textContent", () => gmText("Please enter a new label name:"));
+  const newName=doc.createElement('input');newName.type='text';gmBindAttribute(newName, 'aria-label', () => gmText("New label name"));nameLabel.append(newName);
   const nestLabel=doc.createElement('label');nestLabel.className='gm-nest-label';
-  const nest=doc.createElement('input');nest.type='checkbox';const nestText=doc.createElement('span');nestText.textContent='Nest label under:';nestLabel.append(nest,nestText);
-  const parent=doc.createElement('select');parent.setAttribute('aria-label','Parent label');parent.disabled=true;
+  const nest=doc.createElement('input');nest.type='checkbox';const nestText=doc.createElement('span');gmBindValue(nestText, "textContent", () => gmText("Nest label under:"));nestLabel.append(nest,nestText);
+  const parent=doc.createElement('select');gmBindAttribute(parent, 'aria-label', () => gmText("Parent label"));parent.disabled=true;
   const error=doc.createElement('p');error.setAttribute('role','alert');error.hidden=true;
   const buttons=doc.createElement('div');buttons.className='gm-new-label-buttons';
-  const cancel=doc.createElement('button');cancel.type='button';cancel.textContent='Cancel';
-  const create=doc.createElement('button');create.type='submit';create.textContent='Create';
+  const cancel=doc.createElement('button');cancel.type='button';gmBindValue(cancel, "textContent", () => gmText("Cancel"));
+  const create=doc.createElement('button');create.type='submit';gmBindValue(create, "textContent", () => gmText("Create"));
   buttons.append(cancel,create);form.append(title,nameLabel,nestLabel,parent,error,buttons);createPopup.append(form);
   function validateNewLabel(){
     create.disabled=!newName.value.trim() || (nest.checked && !parent.value);
@@ -411,7 +411,7 @@ function installReadingMode(win) {
   function showNewLabel(anchor,apply=true){
     applyNewLabel=apply;
     newName.value='';nest.checked=false;parent.replaceChildren();error.hidden=true;
-    const placeholder=doc.createElement('option');placeholder.value='';placeholder.textContent='Choose a parent label';parent.append(placeholder);
+    const placeholder=doc.createElement('option');placeholder.value='';gmBindValue(placeholder, "textContent", () => gmText("Choose a parent label"));parent.append(placeholder);
     for(const entry of nestedLabelRows(MailServices.tags.getAllTags())){
       const option=doc.createElement('option');option.value=entry.path;option.textContent=entry.path;parent.append(option);
     }
@@ -423,17 +423,17 @@ function installReadingMode(win) {
   form.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();createPopup.hidePopup();}});
   form.addEventListener('submit',event=>{
     event.preventDefault();
-    if(applyNewLabel && !sameSelection()){error.hidden=false;error.textContent='Message selection changed. Close this panel and try again.';return;}
+    if(applyNewLabel && !sameSelection()){error.hidden=false;gmBindValue(error, "textContent", () => gmText("Message selection changed. Close this panel and try again."));return;}
     try {
       const path=nestedLabelName(newName.value,nest.checked?parent.value:'',MailServices.tags.getAllTags());
       MailServices.tags.addTag(path,'','');
       if(applyNewLabel)applyPickerLabel(MailServices.tags.getKeyForTag(path),true);
       createPopup.hidePopup();
-    }catch(failure){error.hidden=false;error.textContent=failure.message || 'Could not create or apply this label.';}
+    }catch(failure){error.hidden=false;gmBindValue(error, "textContent", () => failure.message || gmText("Could not create or apply this label."));}
   });
   function createSidebarLabel(event){event.preventDefault();showNewLabel(event.detail.anchor,false);}
   win.addEventListener('gm-create-sidebar-label',createSidebarLabel);
-  const labelsButton = action('Labels… (L)', 'M3 4h9l9 8-9 8H3z M7 10v4', showLabels);
+  const labelsButton = action(gmText("Labels… (L)"), 'M3 4h9l9 8-9 8H3z M7 10v4', showLabels);
   search.addEventListener('input', renderTags);
   tagPopup.addEventListener('popupshown', () => { pickerOpen = true; search.focus(); });
   tagPopup.addEventListener('popuphidden', () => {
@@ -527,7 +527,7 @@ function installReadingMode(win) {
       color:inherit; background:transparent; border:0; border-radius:0; margin:0;
       padding:4px 12px 4px 48px; height:26px; min-height:26px; box-sizing:border-box; cursor:pointer; }
     `;
-  const printButton = action('Print conversation', 'M6 8V3h12v5 M3 17V9h18v8h-3 M6 14h12v7H6z M17 11h1', () => {
+  const printButton = action(gmText("Print conversation"), 'M6 8V3h12v5 M3 17V9h18v8h-3 M6 14h12v7H6z M17 11h1', () => {
     if(useIndependent) {independent?.print();return}
     const conversationDoc = doc.getElementById('multiMessageBrowser')?.contentDocument;
     const print = conversationDoc?.querySelector('conversation-footer')?.shadowRoot?.querySelector('.print');
@@ -546,8 +546,8 @@ function installReadingMode(win) {
     tree.scrollToIndex?.(index);
     open({index, dataset:{}});
   }
-  const previousButton = action('Previous message', 'M15 5l-7 7 7 7', () => navigate(-1));
-  const nextButton = action('Next message', 'M9 5l7 7-7 7', () => navigate(1));
+  const previousButton = action(gmText("Previous message"), 'M15 5l-7 7 7 7', () => navigate(-1));
+  const nextButton = action(gmText("Next message"), 'M9 5l7 7-7 7', () => navigate(1));
   previousButton.hidden = nextButton.hidden = true;
   layout.append(toolbar);
   function syncBulk() {
@@ -562,8 +562,8 @@ function installReadingMode(win) {
     if (!toolbar.hidden) {
       threadPane.prepend(toolbar);
       setBackIcon(true);
-      selectionLabel.textContent = `${count} selected`;
-      toolbar.setAttribute('aria-label', 'Selected message actions');
+      gmBindValue(selectionLabel, "textContent", () => gmText("$1 selected", count));
+      gmBindAttribute(toolbar, 'aria-label', () => gmText("Selected message actions"));
       snoozeButton.disabled = count !== 1;
     }
   }
@@ -640,13 +640,13 @@ function installReadingMode(win) {
     setBackIcon(false);
     selectionLabel.textContent = '';
     snoozeButton.disabled = false;
-    toolbar.setAttribute('aria-label', 'Conversation navigation');
+    gmBindAttribute(toolbar, 'aria-label', () => gmText("Conversation navigation"));
     toolbar.hidden = false;
     syncReadAction();
     previousButton.hidden = nextButton.hidden = false;
     printButton.hidden = false;
-    printButton.title = useIndependent ? 'Print message' : 'Print conversation';
-    printButton.setAttribute('aria-label',printButton.title);
+    gmBindValue(printButton, "title", () => useIndependent ? gmText("Print message") : gmText("Print conversation"));
+    gmBindAttribute(printButton,'aria-label',()=>printButton.title);
     previousButton.disabled = adjacentMessageIndex(win.gDBView, row.index, -1) < 0;
     nextButton.disabled = adjacentMessageIndex(win.gDBView, row.index, 1) < 0;
     layout.classList.add('gm-reading');

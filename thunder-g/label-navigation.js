@@ -1,17 +1,17 @@
 /* Resolve the stable native key, never Gmail's lossy slash-to-hyphen query syntax. */
 function openNativeLabelView(source,key,mail=MailServices,smart=null) {
   const tag=mail.tags.getAllTags().find(tag=>tag.key===key);
-  if(!tag)throw new Error('This label no longer exists.');
+  if(!tag)throw new Error(gmText("This label no longer exists."));
   const main=source.browsingContext?.topChromeWindow || source;
   const tabmail=main.document.getElementById('tabmail');
-  if(!tabmail)throw new Error('The mail window is unavailable.');
+  if(!tabmail)throw new Error(gmText("The mail window is unavailable."));
   let pane=tabmail.currentAbout3Pane;
   if(!pane){const tab=tabmail.tabInfo.find(tab=>tab.chromeBrowser?.contentWindow?.document?.documentURI==='about:3pane');if(tab){tabmail.switchToTab(tab);pane=tab.chromeBrowser.contentWindow;}}
-  if(!pane)throw new Error('Open a mail tab first.');
+  if(!pane)throw new Error(gmText("Open a mail tab first."));
   smart ||= ChromeUtils.importESModule('resource:///modules/SmartMailboxUtils.sys.mjs').SmartMailboxUtils;
   if(!pane.folderPane.activeModes.includes('tags'))pane.folderPane.activeModes=[...pane.folderPane.activeModes,'tags'];
   const folder=smart.getSmartMailbox().getTagFolder(tag);
-  if(!folder)throw new Error('The label view is unavailable.');
+  if(!folder)throw new Error(gmText("The label view is unavailable."));
   // Leave the reader even when clicking a chip while already in this tag's view.
   pane.dispatchEvent(new pane.CustomEvent('gm-open-label-view'));
   const bar=pane.quickFilterBar,filter=bar?.filterer;
@@ -25,11 +25,11 @@ function bindLabelNavigation(node,tag,win,navigate=openNativeLabelView) {
   const previous={};for(const attr of ['role','tabindex','title','data-gm-label-link'])previous[attr]=node.getAttribute?.(attr) ?? null;
   const cursor=node.style.cursor;
   node.setAttribute('data-gm-label-link',tag.key);node.setAttribute('role','link');node.setAttribute('tabindex','0');
-  node.title=`Show all messages with label ${name}`;node.style.cursor='pointer';
+  gmBindValue(node, "title", () => gmText("Show all messages with label $1", name));node.style.cursor='pointer';
   function click(event){
     if(event.target?.closest?.('button,.tag-x,.tag-remove,.gm-remove-message-tag'))return;
     event.preventDefault();event.stopImmediatePropagation?.();event.stopPropagation();
-    try{navigate(win,tag.key);}catch(error){console.error('Open label view:',error);}
+    try{navigate(win,tag.key);}catch(error){console.error(gmText("Open label view:"),error);}
   }
   function keydown(event){if(event.target!==node || !['Enter',' '].includes(event.key))return;click(event);}
   node.addEventListener('click',click,true);node.addEventListener('keydown',keydown,true);

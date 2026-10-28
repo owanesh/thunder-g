@@ -1,5 +1,5 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs'),path=require('node:path');
-const scope=vm.createContext({});vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/nested-labels.js'),'utf8'),scope);
+const scope=require('./localization-context.cjs').createContext({});vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/nested-labels.js'),'utf8'),scope);
 const tags=['Other','Work/PhD/Project','Work','Work/PhD','Workshops/2026','Work/Teaching'].map((tag,i)=>({key:`key${i}`,tag}));
 test('hierarchy uses whole path segments and preserves native keys and full paths',()=>{
  const rows=scope.nestedLabelRows(tags);
@@ -50,7 +50,7 @@ test('More/Less uses native unread notifications without rebuilding definitions 
  const services={tags:{getAllTags(){reads++;return definitions}},mailSession:{AddFolderListener(listener){folderListener=listener},RemoveFolderListener(listener){assert.equal(listener,folderListener);removed=true}}};
  const win={document:{head,getElementById:()=>tree,createElement:node},folderPane:{_modes:{tags:{container,containerHeader:header,containerList:list}}},
   MutationObserver:class{observe(){}disconnect(){}},setTimeout(fn){timers.set(++seq,fn);return seq},clearTimeout:id=>timers.delete(id)};
- const local=vm.createContext({Ci:{nsIFolderListener:{intPropertyChanged:1}}});
+ const local=require('./localization-context.cjs').createContext({Ci:{nsIFolderListener:{intPropertyChanged:1}}});
  vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/label-menu.js'),'utf8'),local);
  local.installSidebarLabelMenu=()=>({decorate(){},close(){},prune(){}});
  vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/nested-labels.js'),'utf8'),local);

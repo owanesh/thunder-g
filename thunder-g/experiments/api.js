@@ -99,18 +99,18 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
     const dkimRequests = new Map();let dkimSequence=0,dkimFire=null;
     verifyIndependentDkim = (header,details=false,popupContext=0) => new Promise((resolve,reject) => {
       const provider=ExtensionParent.GlobalManager.extensionMap.get('dkim_verifier@pl');
-      if(!provider || !dkimFire){reject(new Error('DKIM Verifier integration unavailable'));return;}
+      if(!provider || !dkimFire){reject(new Error(gmText("DKIM Verifier integration unavailable")));return;}
       const message=typeof header==='string'?{id:0}:provider.messageManager.convert(header),request=++dkimSequence;
-      const timer=setTimeout(()=>{dkimRequests.delete(request);reject(new Error('DKIM verification timed out'));},60000);
+      const timer=setTimeout(()=>{dkimRequests.delete(request);reject(new Error(gmText("DKIM verification timed out")));},60000);
       dkimRequests.set(request,{resolve,reject,timer});
-      dkimFire.async(request,message.id,typeof header==='string'?header:'',typeof header==='string'?Services.eTLD.getBaseDomainFromHost(header):'',details,popupContext).catch(()=>{clearTimeout(timer);dkimRequests.delete(request);reject(new Error('DKIM bridge unavailable'));});
+      dkimFire.async(request,message.id,typeof header==='string'?header:'',typeof header==='string'?Services.eTLD.getBaseDomainFromHost(header):'',details,popupContext).catch(()=>{clearTimeout(timer);dkimRequests.delete(request);reject(new Error(gmText("DKIM bridge unavailable")));});
     });
     const dkimPopups=new Set();
     openIndependentDkimPopup=async(header,button)=>{
       for(const close of [...dkimPopups])close();
       const result=await verifyIndependentDkim(header,true);
       const provider=ExtensionParent.GlobalManager.extensionMap.get('dkim_verifier@pl');
-      if(!provider || !Number.isInteger(result.contextId) || result.contextId>=-1000)throw new Error('DKIM popup integration unavailable');
+      if(!provider || !Number.isInteger(result.contextId) || result.contextId>=-1000)throw new Error(gmText("DKIM popup integration unavailable"));
       if(!button.isConnected){await verifyIndependentDkim(header,false,result.contextId);return;}
       const {ViewPopup}=ChromeUtils.importESModule('resource:///modules/ExtensionPopups.sys.mjs');
       const url=provider.baseURI.resolve('content/displayAction.html')+'?thunderGContext='+result.contextId;
@@ -264,7 +264,7 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
       gmailImporter?.close(); gmailImporter=null;
       for(const close of [...dkimPopups])close();openIndependentDkimPopup=null;
       verifyIndependentDkim=null;
-      for(const pending of dkimRequests.values()){clearTimeout(pending.timer);pending.reject(new Error('Reader closed'));}dkimRequests.clear();
+      for(const pending of dkimRequests.values()){clearTimeout(pending.timer);pending.reject(new Error(gmText("Reader closed")));}dkimRequests.clear();
       closed = true;
       try { autosaveController?.close(); } catch (_) { console.warn('Thunder-G: could not restore draft autosave settings.'); }
       if (!started) return;
@@ -288,16 +288,16 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
     return { inlineLabels: {
       async gmailLabelImport(action, data) {
         try {
-          if (closed) throw new Error('Extension has closed.');
+          if (closed) throw new Error(gmText("Extension has closed."));
           let payload;
-          try { payload=JSON.parse(data || '{}'); } catch (_) { throw new Error('Invalid importer request.'); }
-          if (!payload || typeof payload!=='object' || Array.isArray(payload)) throw new Error('Invalid importer request.');
+          try { payload=JSON.parse(data || '{}'); } catch (_) { throw new Error(gmText("Invalid importer request.")); }
+          if (!payload || typeof payload!=='object' || Array.isArray(payload)) throw new Error(gmText("Invalid importer request."));
           gmailImporter ||= createNativeGmailImporter(MailServices.tags);
           return JSON.stringify({ok:true,result:await gmailImporter.run(action,payload)});
         } catch (error) {
           // Privileged exceptions otherwise become an unhelpful generic error at
           // the extension boundary. Return only the controlled user-facing text.
-          return JSON.stringify({ok:false,error:error.message || 'The Gmail import operation failed.'});
+          return JSON.stringify({ok:false,error:error.message || gmText("The Gmail import operation failed.")});
         }
       },
       async setSearchResultsAsList(enabled){searchResultsAsList=enabled!==false;},
@@ -315,6 +315,7 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
         clearTimeout(pending.timer);dkimRequests.delete(request);
         try {const value=JSON.parse(payload);if(value.error)pending.reject(new Error(value.error));else pending.resolve(value);}catch(error){pending.reject(error);}
       },
+      async setLanguage(language){gmSetLanguage(language);for(const controller of documents.values())controller.refresh();},
       async setIndependentReader(enabled) {
         independentReader = enabled === true;
         for (const reader of readers.values()) reader.setIndependent(independentReader);

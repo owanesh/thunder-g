@@ -1,7 +1,7 @@
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const vm=require('node:vm'),fs=require('node:fs'),path=require('node:path');
-const scope=vm.createContext({Ci:{nsMsgViewCommandType:{expandAll:1}}});
+const scope=require('./localization-context.cjs').createContext({Ci:{nsMsgViewCommandType:{expandAll:1}}});
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/pagination.js'),'utf8'),scope);
 test('native page bounds handle empty, short last pages and deletion on last page',()=>{
   const bounds=(...args)=>JSON.parse(JSON.stringify(scope.nativePageBounds(...args)));

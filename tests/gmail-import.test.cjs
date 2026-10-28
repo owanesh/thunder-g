@@ -1,6 +1,6 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs'),path=require('node:path');
 const code=fs.readFileSync(path.join(__dirname,'../thunder-g/gmail-import.js'),'utf8');
-const scope=vm.createContext({});vm.runInContext(code,scope);
+const scope=require('./localization-context.cjs').createContext({});vm.runInContext(code,scope);
 const plain=x=>JSON.parse(JSON.stringify(x));
 const remote=[{id:'INBOX',name:'INBOX',type:'system'},{id:'a',name:'Work',type:'user'},{id:'b',name:'Work/Projects',type:'user'},{id:'c',name:'Conferences/Middleware',type:'user'}];
 const plan=(selected=['a','b','c'],local=[],root='GMAIL-Labels')=>plain(scope.planGmailLabelImport(remote,selected,root,local));
@@ -90,7 +90,7 @@ test('failed verification or malformed remote data never creates labels',async()
  const f=fixture({fetchJSON:async()=>({email:'spoof@b.invalid',email_verified:false})});await assert.rejects(f.importer.run('connect'),/verified/);
 });
 test('native adapter is dormant without explicit client configuration and requires external-browser auth',async()=>{
- const local=vm.createContext({Services:{prefs:{getBoolPref:()=>false}},ChromeUtils:{importESModule(){throw Error('must not import OAuth')}},clearTimeout,setTimeout});vm.runInContext(code,local);
+ const local=require('./localization-context.cjs').createContext({Services:{prefs:{getBoolPref:()=>false}},ChromeUtils:{importESModule(){throw Error('must not import OAuth')}},clearTimeout,setTimeout});vm.runInContext(code,local);
  const f=local.createNativeGmailImporter({getAllTags:()=>[]});
  assert.equal((await f.run('status')).connected,false);
  await assert.rejects(f.run('connect',{clientId:''}),/optional Google Desktop/);
@@ -103,7 +103,7 @@ test('native OAuth adapter requests only identity/label scope with PKCE and forg
   async connect(withUI,refresh){assert.equal(withUI,true);assert.equal(refresh,false)}
   finishAuthorizationRequest(){throw Error('observer already removed')} onAuthorizationFailed(){}
  }
- const local=vm.createContext({Services:{prefs:{getBoolPref:()=>true},uuid:{generateUUID:()=>'{preview}'}},ChromeUtils:{importESModule:()=>({OAuth2})},clearTimeout,setTimeout,
+ const local=require('./localization-context.cjs').createContext({Services:{prefs:{getBoolPref:()=>true},uuid:{generateUUID:()=>'{preview}'}},ChromeUtils:{importESModule:()=>({OAuth2})},clearTimeout,setTimeout,
   fetch:async(url,options)=>{requests.push([url,options]);return {ok:true,json:async()=>url.includes('userinfo')?{email:'real-choice@example.invalid',email_verified:true}:{labels:remote}}}});
  local.Services.wm={getMostRecentWindow:()=>({AbortController,fetch:local.fetch})};
  vm.runInContext(code,local);const importer=local.createNativeGmailImporter({getAllTags:()=>[]});
@@ -116,7 +116,7 @@ test('native OAuth adapter requests only identity/label scope with PKCE and forg
 });
 test('privileged API returns usable setup errors instead of exposing exceptions or losing their message',async()=>{
  const module={setTimeout,clearTimeout,ExtensionCommon:{ExtensionAPI:class{},EventManager:class{api(){return {}}}},ExtensionParent:{},ExtensionSupport:{},MailServices:{tags:{getAllTags:()=>[]}},UIFontSize:{}};
- const local=vm.createContext({ChromeUtils:{importESModule:()=>module},Services:{},GMAIL_SKIN_CSS:'',GMAIL_CONVERSATIONS_CSS:''});
+ const local=require('./localization-context.cjs').createContext({ChromeUtils:{importESModule:()=>module},Services:{},GMAIL_SKIN_CSS:'',GMAIL_CONVERSATIONS_CSS:''});
  vm.runInContext(code,local);vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/experiments/api.js'),'utf8'),local);
  const api=new local.inlineLabels().getAPI({extension:{id:'test'},callOnClose(){}}).inlineLabels;
  const before=JSON.parse(await api.gmailLabelImport('status','{}'));assert.equal(before.ok,true);assert.equal(before.result.connected,false);

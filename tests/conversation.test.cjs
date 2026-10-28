@@ -1,7 +1,7 @@
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const vm=require('node:vm'),fs=require('node:fs'),path=require('node:path');
-const scope=vm.createContext({});
+const scope=require('./localization-context.cjs').createContext({});
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/label-navigation.js'),'utf8'),scope);
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/labels.js'),'utf8'),scope);
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/conversation.js'),'utf8'),scope);

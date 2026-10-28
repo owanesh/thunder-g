@@ -15,7 +15,7 @@ test('DKIM provider bridge authenticates the caller and verifies the exact reque
 });
 test('original popup contexts keep exact messages isolated and release their results without opening windows',async()=>{
  let listener;const cache=new Map(),timers=new Map();let sequence=0;
- const scope=vm.createContext({
+ const scope=require('./localization-context.cjs').createContext({
  browser:{runtime:{onMessageExternal:{addListener(fn){listener=fn}}},messages:{async get(id){return {id}}},messageDisplay:{getDisplayedMessage(){throw Error('must not use the selected native message')}}},
  isInitialized:Promise.resolve(),displayedResultsCache:cache,
  verifier:{async verify(message){return {dkim:[{result:'SUCCESS',sdid:`message-${message.id}.example`}]}}},

@@ -18,7 +18,7 @@ function fixture(){
   if(action==='import'){writes.push(...selected);return JSON.stringify({created:selected,skipped:[],failed:[]})}
   return '{}';
  };
- const scope=vm.createContext({document:{getElementById:el,createElement:()=>new Element()},window:{addEventListener(){}},browser:{inlineLabels:{gmailLabelImport:async(...args)=>JSON.stringify({ok:true,result:JSON.parse(await api(...args))})}}});
+ const scope=require('./localization-context.cjs').createContext({document:{getElementById:el,createElement:()=>new Element()},window:{addEventListener(){}},browser:{inlineLabels:{gmailLabelImport:async(...args)=>JSON.stringify({ok:true,result:JSON.parse(await api(...args))})}}});
  vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/gmail-import-options.js'),'utf8'),scope);
  return {el:id=>el('gmail-'+id),writes,actions};
 }

@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Thunder-G",
-  "description": "Gmail-inspired interface for Thunderbird with native tag chips, message previews, quick actions, and conversation styling.",
+  "description": "__MSG_gmail_inspired_interface_for_thunderbird_with_native_ef84227__",
   "version": "0.19.1",
   "browser_specific_settings": {
     "gecko": {
@@ -13,6 +13,7 @@
   },
   "background": {
     "scripts": [
+      "localization.js",
       "background.js"
     ]
   },
@@ -44,5 +45,6 @@
     "page": "options.html",
     "open_in_tab": true
   },
-  "homepage_url": "https://github.com/vschiavoni/thunderbird-gmail-skin"
+  "homepage_url": "https://github.com/vschiavoni/thunderbird-gmail-skin",
+  "default_locale": "en"
 }

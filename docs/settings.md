@@ -3,6 +3,16 @@
 Open **Add-ons Manager → Thunder-G → Preferences**. Changes save automatically
 and stay after restart.
 
+## Interface language
+
+**Interface language** defaults to **Automatic (Thunderbird language)**. Italian
+Thunderbird locales use Italian; other locales fall back to English. Choose
+**English** or **Italiano** to override the application language for Thunder-G.
+The preference stays after restart. Thunder-G controls translate immediately in existing mail windows, including
+selection menus, label dialogs and reply actions. Open drafts stay open.
+Native Thunderbird controls keep Thunderbird’s own language. User label names,
+message subjects and message bodies are never translated.
+
 ## Inbox
 
 - **Show column headers** *(off by default)* — Restore clickable headers, column resizing and the column picker. Applies immediately without changing the sort order or saved widths.

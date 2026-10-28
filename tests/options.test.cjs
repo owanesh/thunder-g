@@ -8,7 +8,7 @@ test('settings confirmations expire, newer feedback replaces timers, and errors 
     if(!elements.has(id))elements.set(id,{dataset:{},textContent:'',addEventListener(){}});
     return elements.get(id);
   };
-  const scope=vm.createContext({
+  const scope=require('./localization-context.cjs').createContext({
     document:{getElementById:element},window:{addEventListener:(name,fn)=>events[name]=fn},
     browser:{runtime:{getManifest:()=>({version:'test'})},storage:{local:{get:()=>new Promise(()=>{})}}},
     setTimeout(fn,delay){timers.set(++sequence,{fn,delay});return sequence},
