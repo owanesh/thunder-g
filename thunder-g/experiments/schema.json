@@ -46,6 +46,12 @@
         ]
       },
       {
+        "name": "setCompactConversations",
+        "type": "function",
+        "async": true,
+        "parameters": [{"name":"enabled","type":"boolean"}]
+      },
+      {
         "name": "setIndependentReader",
         "type": "function",
         "async": true,

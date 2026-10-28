@@ -1,5 +1,6 @@
 var { setTimeout, clearTimeout } = ChromeUtils.importESModule("resource://gre/modules/Timer.sys.mjs");
 var verifyIndependentDkim = null,openIndependentDkimPopup=null;
+var compactConversationsEnabled=true;
 var independentBimiEnabled=false,independentBimiListeners=new Set();
 var { ExtensionParent } = ChromeUtils.importESModule("resource://gre/modules/ExtensionParent.sys.mjs");
 var { ExtensionCommon } = ChromeUtils.importESModule("resource://gre/modules/ExtensionCommon.sys.mjs");
@@ -321,6 +322,7 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
         clearTimeout(pending.timer);dkimRequests.delete(request);
         try {const value=JSON.parse(payload);if(value.error)pending.reject(new Error(value.error));else pending.resolve(value);}catch(error){pending.reject(error);}
       },
+      async setCompactConversations(enabled){compactConversationsEnabled=enabled!==false;},
       async setIndependentReader(enabled) {
         independentReader = enabled === true;
         for (const reader of readers.values()) reader.setIndependent(independentReader);

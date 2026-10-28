@@ -65,6 +65,10 @@
             <div class="setting-copy"><label for="independent-reader">Use Thunder-G’s conversation reader</label><p id="reader-help">Expandable message cards, attachments and reply actions in one view. Off by default.</p></div>
             <input class="switch" id="independent-reader" type="checkbox" role="switch" aria-describedby="reader-help">
           </div>
+          <div class="setting-row">
+            <div class="setting-copy"><label for="compact-conversations">Compact long conversations</label><p id="compact-help">For conversations with 6 or more messages, keep the first and last two visible. Click the counter to show the messages in between. Applies to Thunder-G’s reader when opening a conversation.</p></div>
+            <input class="switch" id="compact-conversations" type="checkbox" role="switch" aria-describedby="compact-help">
+          </div>
           <details><summary>How conversations work</summary><div class="details-content"><p>Messages are grouped using Thunderbird’s local index, with a folder-thread fallback when indexing is unavailable. Message bodies, attachments, Reply, Forward and Print use Thunderbird’s native viewer and commands.</p><p>Changing readers returns to the list. The conversation toolbar acts on messages selected in the list, even when the reader finds additional messages in other folders.</p></div></details>
         </section>
 

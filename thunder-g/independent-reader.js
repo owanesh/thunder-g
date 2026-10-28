@@ -379,6 +379,13 @@ function installIndependentReader(win) {
     .quote-toggle { align-self:flex-start; min-inline-size:22px; block-size:16px;
       padding:0 5px; margin:4px 0 8px; border:0; border-radius:3px;
       background:var(--treeitem-background-hover,#e8eaed); color:inherit; font:bold 14px/12px sans-serif; cursor:pointer; }
+    .history-gap { position:relative; display:flex; align-items:center; min-block-size:48px; margin:8px 0; }
+    .history-gap::before { content:''; position:absolute; inset-inline:0; inset-block-start:50%; border-block-start:1px solid var(--layout-border-0,#e8eaed); }
+    .history-expand { position:relative; display:inline-flex; align-items:center; justify-content:center;
+      inline-size:40px; block-size:40px; margin:0; padding:0; border:1px solid var(--layout-border-0,#dadce0);
+      border-radius:50%; background:var(--layout-background-0,#fff); color:inherit; font:600 .9em/1 Arial,sans-serif; cursor:pointer; }
+    .history-expand:hover { background:var(--treeitem-background-hover,#e9eef6); }
+    .history-expand:focus-visible { outline:2px solid Highlight; outline-offset:2px; }
     .action-icon { display:inline-block; inline-size:20px; block-size:20px; background:currentColor; flex:none; }
     .action-icon.reply { mask:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22M9%205%203%2011l6%206%20M3%2011h9a7%207%200%200%201%207%207%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linejoin%3D%22round%22%20stroke-linecap%3D%22round%22%2F%3E%3C%2Fsvg%3E") center/contain no-repeat; }
     .action-icon.reply-all { mask:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22M7%205%201%2011l6%206%20M12%205l-6%206%206%206%20M6%2011h8a7%207%200%200%201%207%207%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linejoin%3D%22round%22%20stroke-linecap%3D%22round%22%2F%3E%3C%2Fsvg%3E") center/contain no-repeat; }
@@ -399,7 +406,7 @@ function installIndependentReader(win) {
   status.className='status';status.setAttribute('role','status');cards.className='cards';
   conversation.append(title,scope,status,cards);root.append(style,conversation);
   const titleTags=doc.createElement('span');titleTags.className='title-tags';titleTags.setAttribute('aria-label','Labels in this conversation');
-  const cleanups=new Set(),tagRenderers=new Set(),securityRenderers=new Set(),frames=new Map(),messageDocs=new Map(),messageCards=new Map();let currentHeaders=[],actionHeader=null,activeHeader=null,activeCard=null;
+  const cleanups=new Set(),tagRenderers=new Set(),securityRenderers=new Set(),frames=new Map(),messageDocs=new Map(),messageCards=new Map();let currentHeaders=[],actionHeader=null,activeHeader=null,activeCard=null,historyExpanded=false;
   const zoomResizers=new Map();
   let messageZoom=null;
   function zoomConversation(action) {
@@ -884,6 +891,24 @@ function installIndependentReader(win) {
       const card=buildCard(header,header===selected || header===actionHeader,token);
       if(header===selected)selectedCard=card;
     }
+    if((typeof compactConversationsEnabled==='undefined' || compactConversationsEnabled) && headers.length>=6 && !historyExpanded){
+      const hidden=headers.slice(1,-2).filter(header=>header!==selected).map(header=>messageCards.get(header)).filter(Boolean);
+      if(hidden.length){
+        const gap=text('div','history-gap',''),expand=text('button','history-expand',String(hidden.length));
+        expand.type='button';expand.setAttribute('aria-label',`Show ${hidden.length} earlier messages`);expand.title=`Show ${hidden.length} earlier messages`;
+        expand.setAttribute('aria-expanded','false');
+        for(const card of hidden)card.hidden=true;
+        gap.append(expand);cards.insertBefore(gap,hidden[0]);
+        expand.addEventListener('click',()=>{
+          if(closed || token!==ticket)return;
+          historyExpanded=true;
+          const scroll=host.scrollTop;
+          for(const card of hidden)card.hidden=false;
+          expand.setAttribute('aria-expanded','true');gap.remove();host.scrollTop=scroll;
+          hidden[0].querySelector?.('.toggle')?.focus();
+        });
+      }
+    }
     activateMessage(selected);
     for(const [id,entry] of pending){cards.append(entry.card);pendingReplies.set(id,entry);}
     updateActions();refreshTags();reconcilePendingReplies();
@@ -924,7 +949,7 @@ function installIndependentReader(win) {
     },
     async open(header,{focusMessage=false}={}){
       if(closed)return;if(typeof inlineComposeControllers!=='undefined')inlineComposeControllers.get(win)?.float();const token=++ticket;query?.cancel();
-      resolving=true;host.hidden=false;layout.classList.add('gm-independent-open');host.scrollTop=0;
+      historyExpanded=false;resolving=true;host.hidden=false;layout.classList.add('gm-independent-open');host.scrollTop=0;
       title.textContent=header.mime2DecodedSubject || '(No subject)';title.append(titleTags);status.hidden=false;status.textContent='Loading conversation…';
       // Start the native viewer immediately. Index/Sent lookups enrich the
       // conversation asynchronously rather than holding the body behind them.

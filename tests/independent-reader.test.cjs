@@ -647,3 +647,28 @@ test('header Reply uses the same in-window compose setting as the footer on the 
  assert.deepEqual(f.commands.at(-1),['cmd_replySender','mailbox://inbox/1']);
  f.reader.close();
 });
+
+test('long conversations compact only intermediate cards and expand them without losing message scope',async()=>{
+ const f=readerFixture(),messages=[f.anchor,...Array.from({length:5},(_,i)=>f.prepare(message(i+2,`reply-${i}`,'sent',i+2)))];
+ f.anchor.folder.msgDatabase={getThreadContainingMsgHdr:()=>({numChildren:messages.length,getChildHdrAt:i=>messages[i]})};
+ await f.reader.open(f.anchor);f.flush();
+ const gap=f.cards.children.find(card=>card.className==='history-gap');
+ assert.ok(gap);assert.equal(gap.children[0].textContent,'3');
+ assert.equal(f.reader.getMessages().length,6,'hidden messages remain in conversation-wide actions');
+ const cards=f.cards.children.filter(card=>card.tag==='article');
+ assert.deepEqual(cards.map(card=>card.hidden),[false,true,true,true,false,false]);
+ assert.equal(f.browsers.length,1,'compacting does not load the hidden message bodies');
+ gap.children[0].emit('click');assert.equal(gap.removed,true);
+ assert.ok(cards.every(card=>!card.hidden));assert.equal(f.browsers.length,1);
+ f.reader.close();
+});
+
+test('disabling compaction keeps every message card visible in a long conversation',async()=>{
+ const f=readerFixture();f.scope.compactConversationsEnabled=false;
+ const messages=[f.anchor,...Array.from({length:5},(_,i)=>f.prepare(message(i+2,`reply-${i}`,'sent',i+2)))];
+ f.anchor.folder.msgDatabase={getThreadContainingMsgHdr:()=>({numChildren:messages.length,getChildHdrAt:i=>messages[i]})};
+ await f.reader.open(f.anchor);f.flush();
+ assert.equal(f.cards.children.length,6);assert.ok(f.cards.children.every(card=>!card.hidden));
+ assert.equal(f.cards.children.some(card=>card.className==='history-gap'),false);
+ f.reader.close();
+});

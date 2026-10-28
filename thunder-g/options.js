@@ -172,3 +172,15 @@ searchResultsAsList.addEventListener('change',async()=>{
  catch(_){searchResultsAsList.checked=!searchResultsAsList.checked;reportStatus('Unable to save. Please try again.');}
  finally{searchResultsAsList.disabled=false;}
 });
+
+const compactConversations=document.getElementById('compact-conversations');
+compactConversations.disabled=true;
+browser.storage.local.get({compactConversations:true}).then(settings=>{
+  compactConversations.checked=settings.compactConversations!==false;compactConversations.disabled=false;
+}).catch(()=>reportStatus('Unable to load settings.'));
+compactConversations.addEventListener('change',async()=>{
+  compactConversations.disabled=true;
+  try{await browser.storage.local.set({compactConversations:compactConversations.checked});reportStatus('Saved. Applies when opening a conversation.');}
+  catch(_){compactConversations.checked=!compactConversations.checked;reportStatus('Unable to save. Please try again.');}
+  finally{compactConversations.disabled=false;}
+});
