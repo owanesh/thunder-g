@@ -169,7 +169,13 @@ function installInboxIdleActions(win,reader=null) {
   select.addEventListener('change',()=>{
     const tree=doc.getElementById('threadTree');
     if(tree)tree._gmSmartActionPending=false;
-    if(tree?.hasAttribute('data-gm-paginated')){
+    // The browser clears indeterminate before change fires. Read the native
+    // selection instead: both a partial and a full selection toggle to none.
+    const range=tree?.hasAttribute('data-gm-paginated')?tree._gmPageSelectionBounds?.():null;
+    const previous=inboxSelectionState(win.gDBView,tree?.selectedIndices,range);
+    if(previous.checked || previous.indeterminate){
+      selectInboxMode(win,reader,'none');
+    }else if(tree?.hasAttribute('data-gm-paginated')){
       // Native pagination owns page boundaries, including collapsed threads.
       const nativeSelect=doc.getElementById('selectColButton');
       if(!nativeSelect){select.checked=false;return;}

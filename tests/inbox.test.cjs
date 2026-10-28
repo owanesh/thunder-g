@@ -350,7 +350,7 @@ test('idle toolbar delegates page selection, refreshes the current account and c
  const nativeSelect={click(){nativeClicks++;tree.selectedIndices=[50,51,52]}};
  const doc={head,documentElement:node(),createXULElement:node,getElementById:key=>({threadPaneHeaderBar:{querySelector:()=>host},threadTree:tree,selectColButton:nativeSelect})[key],createElement:node,createElementNS:node};
  const win={document:doc,gDBView:{rowCount:100,getFlagsAt:()=>0},gFolder:folder,browsingContext:{topChromeWindow:main},requestAnimationFrame(fn){frames.set(++id,fn);return id},cancelAnimationFrame(key){frames.delete(key)}};
- const controller=scope.installInboxIdleActions(win,{selectIndices(indices){selected.push(indices)}});
+ const controller=scope.installInboxIdleActions(win,{selectIndices(indices){tree.selectedIndices=indices;selected.push(indices)}});
  const bar=host.children[0],[group,refresh,more]=bar.children,[checkbox,dropdown]=group.children;
  tree._gmSmartActionPending=true;
  const popup=doc.documentElement.children[0];dropdown.events.click();assert.equal(popup.open,true);
@@ -358,6 +358,17 @@ test('idle toolbar delegates page selection, refreshes the current account and c
  choices[1].events.click();assert.equal(tree._gmSmartActionPending,false,'menu selection releases suppression from a previous action');assert.deepEqual(Array.from(selected.pop()),[]);
  checkbox.checked=true;checkbox.events.change();assert.equal(nativeClicks,1);
  const paint=frames.values().next().value;frames.clear();paint();assert.deepEqual(Array.from(selected[0]),[50,51,52],'preserve native current-page selection');assert.equal(checkbox.checked,true);assert.equal(checkbox.indeterminate,false);
+ // Native activation clears the indeterminate flag and checks the input
+ // before change: actual row selection must still make this a deselect action.
+ for(const paginated of [true,false]){
+  tree.hasAttribute=()=>paginated;tree.selectedIndices=[51];
+  checkbox.checked=true;checkbox.indeterminate=false;checkbox.events.change();
+  assert.equal(tree.selectedIndices.length,0,'clicking a partial checkbox clears selection');
+  assert.equal(nativeClicks,1,'a partial click never invokes native select-all');
+  tree.selectedIndices=paginated?[50,51,52]:Array.from({length:100},(_,i)=>i);
+  checkbox.checked=false;checkbox.events.change();assert.equal(tree.selectedIndices.length,0,'a full selection also clears');
+ }
+ tree.hasAttribute=()=>true;
  refresh.events.click();assert.equal(calls[0][0],'download');assert.equal(calls[0][1][0],folder);assert.deepEqual(calls[1],['update',msgWindow]);
  assert.equal(more.disabled,true);
  checkbox.events.change();controller.close();assert.equal(frames.size,0);
