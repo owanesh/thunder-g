@@ -48,18 +48,24 @@ test('thread arrows toggle once per activation, including rapid clicks and keybo
 });
 test('row actions replace unrelated multi-selection before checking and executing commands',()=>{
   let selected=[1,4],index;
-  const tree={set selectedIndex(value){index=value;selected=[value]}};
+  const tree={set selectedIndex(value){index=value;selected=this._gmSmartActionPending?[]:[value]},set selectedIndices(value){selected=value}};
   const calls=[];
   const win={document:{getElementById:()=>tree},gDBView:{getMsgHdrAt:()=>({})},
     commandController:{isCommandEnabled(name){calls.push(['check',name,selected.slice()]);return true},
       doCommand(name){calls.push(['run',name,selected.slice()])}}};
+  tree._gmSmartActionPending=true; // A previous action must not block the next command.
   scope.runRowAction(win,{index:2,dataset:{}},'cmd_archive');
+  assert.equal(selected.length,0,'smart action clears the temporary selection immediately');
   assert.equal(index,2);assert.deepEqual(calls,[['check','cmd_archive',[2]],['run','cmd_archive',[2]]]);
   scope.runRowAction(win,{index:3,dataset:{properties:'dummy'}},'cmd_deleteMessage');
   assert.equal(calls.length,2,'group headers cannot execute actions');
   win.commandController.isCommandEnabled=()=>false;
   scope.runRowAction(win,{index:3,dataset:{}},'cmd_deleteMessage');
   assert.equal(calls.length,2,'disabled commands are not executed');
+  assert.equal(selected.length,0,'disabled actions also leave no selected row');
+  win.commandController.isCommandEnabled=()=>true;win.commandController.doCommand=()=>{throw Error('failed')};
+  assert.throws(()=>scope.runRowAction(win,{index:3,dataset:{}},'cmd_archive'),/failed/);
+  assert.equal(selected.length,0,'failed actions cannot leave the row selected');
   scope.runRowAction(win,{index:3,dataset:{}},'cmd_archive',{key:99,folderURI:'imap://other'});
   assert.equal(calls.length,2,'a stale action must not target a replacement message');
 });
@@ -77,7 +83,8 @@ test('virtual row recycling updates actions, avoids duplicates, and cleanup rest
   let resets=0;
   const row=Object.assign(new Row(),element());row.index=0;row.line=element();
   const native=Row.prototype.fillRow;let read=false,preview='';
-  const doc={head:element(),getElementById:()=>({reset(){resets++}}),createElement:()=>{const e=element();nodes.push(e);return e},
+  const tree={events:{},selectedIndices:[],reset(){resets++},addEventListener(name,fn){this.events[name]=fn},removeEventListener(name){delete this.events[name]}};
+  const doc={head:element(),getElementById:()=>tree,createElement:()=>{const e=element();nodes.push(e);return e},
     createElementNS:()=>element(),querySelectorAll:selector=>selector.includes('table-layout')?[row]:selector==='.gm-has-snippet'?[]:row.line.children.slice()};
   const visibility=[];
   const win={document:doc,quickFilterBar:{filterer:{visible:false},_showFilterBar(value){visibility.push(value)}},
@@ -101,6 +108,10 @@ test('virtual row recycling updates actions, avoids duplicates, and cleanup rest
   controller.setThreadGuides(true);assert.equal(row.dataset.gmThreadGuide,'start','setting applies without rebuilding rows');
   win.gViewWrapper.showGroupedBySort=true;row.fillRow();assert.equal(row.dataset.gmThreadGuide,undefined,'sort groups are not conversations');
   win.gViewWrapper.showGroupedBySort=false;row.dataset.properties='dummy';row.fillRow();assert.equal(row.line.children.length,0);
+  tree._gmSmartActionPending=true;tree.selectedIndices=[1];tree.events.select({stopImmediatePropagation(){}});
+  assert.equal(tree.selectedIndices.length,0,'native selection of the next row is suppressed after an action');
+  tree.events.pointerdown();tree.selectedIndices=[2];tree.events.select({});
+  assert.deepEqual(tree.selectedIndices,[2],'the next deliberate selection is preserved');
   controller.close();assert.equal(Row.ROW_HEIGHT,22);assert.equal(resets,2);assert.equal(Row.prototype.fillRow,native);assert.deepEqual(visibility,[false,false]);
 });
 
@@ -331,17 +342,21 @@ test('threaded views start collapsed, including async searches, and later manual
 });
 
 test('idle toolbar delegates page selection, refreshes the current account and cleans up',()=>{
- function node(){return {children:[],events:{},setAttribute(k,v){this[k]=v},append(...items){this.children.push(...items)},prepend(item){this.children.unshift(item)},addEventListener(name,fn){this.events[name]=fn},remove(){this.removed=true}}}
- const host=node(),head=node(),tree={selectedIndices:[],hasAttribute:()=>true},selected=[],calls=[],frames=new Map();let id=0,nativeClicks=0;
+ function node(){return {children:[],events:{},setAttribute(k,v){this[k]=v},append(...items){this.children.push(...items)},prepend(item){this.children.unshift(item)},addEventListener(name,fn){this.events[name]=fn},focus(){},openPopup(){this.open=true},hidePopup(){this.open=false},remove(){this.removed=true}}}
+ const host=node(),head=node(),tree={selectedIndices:[],hasAttribute:()=>true,_gmPageSelectionBounds:()=>({rowStart:50,rowEnd:53})},selected=[],calls=[],frames=new Map();let id=0,nativeClicks=0;
  const folder={updateFolder(window){calls.push(['update',window])}},msgWindow={};
  const main={msgWindow,MsgGetMessage(folders){calls.push(['download',folders])}};
  const nativeSelect={click(){nativeClicks++;tree.selectedIndices=[50,51,52]}};
- const doc={head,getElementById:key=>({threadPaneHeaderBar:{querySelector:()=>host},threadTree:tree,selectColButton:nativeSelect})[key],createElement:node,createElementNS:node};
- const win={document:doc,gFolder:folder,browsingContext:{topChromeWindow:main},requestAnimationFrame(fn){frames.set(++id,fn);return id},cancelAnimationFrame(key){frames.delete(key)}};
+ const doc={head,documentElement:node(),createXULElement:node,getElementById:key=>({threadPaneHeaderBar:{querySelector:()=>host},threadTree:tree,selectColButton:nativeSelect})[key],createElement:node,createElementNS:node};
+ const win={document:doc,gDBView:{rowCount:100,getFlagsAt:()=>0},gFolder:folder,browsingContext:{topChromeWindow:main},requestAnimationFrame(fn){frames.set(++id,fn);return id},cancelAnimationFrame(key){frames.delete(key)}};
  const controller=scope.installInboxIdleActions(win,{selectIndices(indices){selected.push(indices)}});
- const bar=host.children[0],[checkbox,refresh,more]=bar.children;
+ const bar=host.children[0],[group,refresh,more]=bar.children,[checkbox,dropdown]=group.children;
+ tree._gmSmartActionPending=true;
+ const popup=doc.documentElement.children[0];dropdown.events.click();assert.equal(popup.open,true);
+ const choices=popup.children[0].children;assert.deepEqual(choices.map(item=>item.textContent),['All','None','Read','Unread','Starred','Unstarred']);
+ choices[1].events.click();assert.equal(tree._gmSmartActionPending,false,'menu selection releases suppression from a previous action');assert.deepEqual(Array.from(selected.pop()),[]);
  checkbox.checked=true;checkbox.events.change();assert.equal(nativeClicks,1);
- const paint=frames.values().next().value;frames.clear();paint();assert.deepEqual(Array.from(selected[0]),[50,51,52],'preserve native current-page selection');assert.equal(checkbox.checked,false);
+ const paint=frames.values().next().value;frames.clear();paint();assert.deepEqual(Array.from(selected[0]),[50,51,52],'preserve native current-page selection');assert.equal(checkbox.checked,true);assert.equal(checkbox.indeterminate,false);
  refresh.events.click();assert.equal(calls[0][0],'download');assert.equal(calls[0][1][0],folder);assert.deepEqual(calls[1],['update',msgWindow]);
  assert.equal(more.disabled,true);
  checkbox.events.change();controller.close();assert.equal(frames.size,0);
@@ -380,4 +395,38 @@ test('synthetic search results use Gmail columns without changing regular folder
  assert.deepEqual(columns.filter(column=>!column.hidden).map(column=>column.id),['selectCol','threadCol','flaggedCol','senderCol','subjectCol','attachmentCol','dateCol']);
  controller.close();assert.equal(pane.updateColumns,original);assert.deepEqual(columns,snapshot);
  win.gViewWrapper.isSynthetic=false;const regular=scope.installSearchColumns(win);assert.deepEqual(columns,snapshot);regular.close();
+});
+
+test('selection menu predicates distinguish read and starred messages independently',()=>{
+ const read={isRead:true,isFlagged:false},starred={isRead:false,isFlagged:true};
+ for(const [mode,first,second] of [['all',true,true],['none',false,false],['read',true,false],['unread',false,true],['starred',false,true],['unstarred',true,false]]){
+   assert.equal(scope.inboxSelectionMatches(read,mode),first);
+   assert.equal(scope.inboxSelectionMatches(starred,mode),second);
+ }
+});
+
+test('selection menu reuses native all/starred commands and native view flags without filtering',()=>{
+ const tree={selectedIndices:[],hasAttribute:()=>false},commands=[],selections=[];
+ const headers=[{isRead:true,isFlagged:false},{isRead:false,isFlagged:true},{isRead:false,isFlagged:false}];
+ const win={document:{getElementById:()=>tree},gDBView:{rowCount:4,getFlagsAt:i=>i===3?0x20000000:0,getMsgHdrAt:i=>headers[i]},
+ commandController:{isCommandEnabled:()=>true,doCommand(command){commands.push(command);tree.selectedIndices=command==='cmd_selectAll'?[0,1,2]:[1]}}};
+ const reader={selectIndices(indices){tree.selectedIndices=indices;selections.push(Array.from(indices))}};
+ scope.selectInboxMode(win,reader,'all');assert.deepEqual(commands,['cmd_selectAll']);assert.deepEqual(selections.at(-1),[0,1,2]);
+ scope.selectInboxMode(win,reader,'starred');assert.deepEqual(commands,['cmd_selectAll','cmd_selectFlagged']);assert.deepEqual(selections.at(-1),[1]);
+ for(const [mode,expected] of [['read',[0]],['unread',[1,2]],['unstarred',[0,2]],['none',[]]]){
+  tree._gmSmartActionPending=true;scope.selectInboxMode(win,reader,mode);
+  assert.equal(tree._gmSmartActionPending,false);assert.deepEqual(selections.at(-1),expected);
+ }
+ assert.equal(win.gDBView.rowCount,4,'selection does not filter or rebuild the native view');
+});
+
+test('toolbar checkbox reflects all, partial, empty and current-page selection',()=>{
+ const view={rowCount:5,getFlagsAt:i=>i===2?0x20000000:0};
+ const state=(selected,range)=>JSON.parse(JSON.stringify(scope.inboxSelectionState(view,selected,range)));
+ assert.deepEqual(state([]),{checked:false,indeterminate:false});
+ assert.deepEqual(state([0,1,3,4]),{checked:true,indeterminate:false});
+ assert.deepEqual(state([1]),{checked:false,indeterminate:true});
+ assert.deepEqual(state([3,4],{rowStart:3,rowEnd:5}),{checked:true,indeterminate:false});
+ assert.deepEqual(state([0,3],{rowStart:3,rowEnd:5}),{checked:false,indeterminate:true});
+ assert.deepEqual(state([0],{rowStart:3,rowEnd:5}),{checked:false,indeterminate:false});
 });

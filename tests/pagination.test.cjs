@@ -50,6 +50,7 @@ for (const collapsed of [false,true,'short-last']) test(`native pagination retai
     }});
   }
   const scrolls=[];tree.scrollTo=options=>{scrolls.push({...options,tailHeight:tree.children[0].style.height});assert.equal(options.behavior,'instant');tree.scrollTop=options.top};
+  tree.dispatchEvent=event=>tree.events?.[event.type]?.(event);
   tree.currentIndex=-1;tree.selectedIndices=[];
   tree.querySelectorAll=selector=>selector==='[data-gm-outside-page]'?rows.filter(r=>r.hasAttribute('data-gm-outside-page')):rows;
   let expansions=0;
@@ -62,7 +63,7 @@ for (const collapsed of [false,true,'short-last']) test(`native pagination retai
   const frames=[];let mutation,resize;
   const quickFilter=node();quickFilter.after=bar=>{quickFilter.pagination=bar;tree.bar=bar};
   const root=node();const head=node(),doc={documentElement:root,getElementById:id=>id==='threadPaneQuickFilterButton'?quickFilter:tree,querySelector:()=>({getBoundingClientRect:()=>({height:20})}),createElement:node,head};
-  const win={document:doc,gDBView:nativeView,addEventListener(){},removeEventListener(){},
+  const win={CustomEvent:class{constructor(type){this.type=type}},document:doc,gDBView:nativeView,addEventListener(){},removeEventListener(){},
     requestAnimationFrame(fn){frames.push(fn);return frames.length},cancelAnimationFrame(){},
     MutationObserver:class{constructor(fn){mutation=(records=[{type:'childList',target:tree}])=>fn(records)}observe(){}disconnect(){}},
     ResizeObserver:class{constructor(fn){resize=fn}observe(){}disconnect(){}}};

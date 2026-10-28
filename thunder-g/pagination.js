@@ -119,6 +119,7 @@ function installNativePagination(win, reader) {
     return rowMap;
   }
   function bounds(){return nativeMessagePage(rows(),size,page)}
+  tree._gmPageSelectionBounds=()=>size?bounds():null;
   function rowHeight(){return tree._rowElementClass?.ROW_HEIGHT || tree.getRowAtIndex?.(0)?.getBoundingClientRect().height || 0}
   function setStyle(node,name,value){if(node.style[name]!==value)node.style[name]=value}
   function paint(alignStart=false) {
@@ -129,6 +130,7 @@ function installNativePagination(win, reader) {
     const rangeKey=`${range.start},${range.end},${total}`;
     if(shownRange!==rangeKey) {
       shownRange=rangeKey;
+      tree.dispatchEvent(new win.CustomEvent('gm-page-changed'));
       count.textContent=total?`${(range.start+1).toLocaleString()}–${range.end.toLocaleString()} of ${total.toLocaleString()}`:'0 of 0';
     }
     previous.disabled=page===0;next.disabled=page===range.pages-1;
@@ -196,8 +198,8 @@ function installNativePagination(win, reader) {
     schedule();
   }
   function selectPage(event){
-    if(!size || !(event.type==='click'?event.target.closest('#selectColButton'):
-      (event.ctrlKey || event.metaKey) && event.key?.toLowerCase()==='a' && !event.target?.closest?.('input,textarea'))) return;
+    if(!size || !(event.type==='gm-select-page' || (event.type==='click'?event.target.closest('#selectColButton'):
+      (event.ctrlKey || event.metaKey) && event.key?.toLowerCase()==='a' && !event.target?.closest?.('input,textarea')))) return;
     event.preventDefault();event.stopImmediatePropagation();
     let range=bounds();
     // Selecting a page is an explicit bulk action. Reveal only collapsed rows
@@ -210,7 +212,9 @@ function installNativePagination(win, reader) {
       try {if(!(win.gDBView.getFlagsAt(i)&0x20000000)) indices.push(i)}catch(_){}
     }
     const selected=new Set(tree.selectedIndices || []);
-    reader.selectIndices(indices.every(i=>selected.has(i))?[]:indices);schedule();
+    if(event.type==='gm-select-page')reader.selectIndices(indices.filter(index=>inboxSelectionMatches(win.gDBView.getMsgHdrAt(index),event.detail.mode)));
+    else reader.selectIndices(indices.every(i=>selected.has(i))?[]:indices);
+    schedule();
   }
   const observer=new win.MutationObserver(records=>{
     // Pagination depends on row membership/indices, not changes inside a cell.
@@ -220,7 +224,7 @@ function installNativePagination(win, reader) {
   const resize=new win.ResizeObserver(schedule);
   tree.addEventListener('scroll',schedule);tree.addEventListener('viewchange',viewChanged);tree.addEventListener('select',selectionChanged);
   for(const name of ['rowcountchange','expanded','collapsed'])tree.addEventListener(name,structureChanged);
-  tree.addEventListener('click',selectPage,true);tree.addEventListener('keydown',selectPage,true);
+  tree.addEventListener('gm-select-page',selectPage);tree.addEventListener('click',selectPage,true);tree.addEventListener('keydown',selectPage,true);
   function clear(){
     observer.disconnect();resize.disconnect();
     if(frame!==null) win.cancelAnimationFrame(frame);frame=null;
@@ -237,10 +241,10 @@ function installNativePagination(win, reader) {
       }
     },
     close(){
-      closed=true;clear();
+      closed=true;clear();delete tree._gmPageSelectionBounds;
       tree.removeEventListener('scroll',schedule);tree.removeEventListener('viewchange',viewChanged);tree.removeEventListener('select',selectionChanged);
       for(const name of ['rowcountchange','expanded','collapsed'])tree.removeEventListener(name,structureChanged);
-      tree.removeEventListener('click',selectPage,true);tree.removeEventListener('keydown',selectPage,true);
+      tree.removeEventListener('gm-select-page',selectPage);tree.removeEventListener('click',selectPage,true);tree.removeEventListener('keydown',selectPage,true);
       win.removeEventListener('resize',schedule);pageScroll.removeEventListener('scroll',scrollPage);
       bar.remove();tail.remove();pageScroll.remove();style.remove();
     }

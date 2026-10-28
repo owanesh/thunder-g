@@ -96,3 +96,7 @@
 :root[data-gm-hide-column-headers] #threadTree thead {
   visibility:collapse !important;
 }
+
+/* Meet the toolbar checkbox halfway without moving the remaining row columns. */
+#threadTree .tree-view-row-select { transform:translateX(7px); }
+#threadTree:dir(rtl) .tree-view-row-select { transform:translateX(-7px); }

@@ -78,15 +78,24 @@ function createPreviewQueue(win) {
   };
 }
 
-function runRowAction(win, row, name, expected) {
+function runRowAction(win, row, name, expected, reader=null) {
   if (!row || row.index < 0 || (row.dataset.properties || '').split(' ').includes('dummy')) return;
   let header;
   try { header = win.gDBView?.getMsgHdrAt(row.index); } catch (_) { return; }
   if (!header || (expected && (header.messageKey !== expected.key || header.folder?.URI !== expected.folderURI))) return;
   // Replace any earlier multi-selection. A collapsed row retains Thunderbird's
   // native conversation scope; unrelated selected rows are never included.
-  win.document.getElementById('threadTree').selectedIndex = row.index;
-  if (win.commandController.isCommandEnabled(name)) win.commandController.doCommand(name);
+  const tree=win.document.getElementById('threadTree');
+  tree._gmSmartActionPending=false;
+  tree.setAttribute?.('data-gm-smart-action-done','');
+  tree.selectedIndex = row.index;
+  try {
+    if (win.commandController.isCommandEnabled(name)) win.commandController.doCommand(name);
+  } finally {
+    tree._gmSmartActionPending=true;
+    if(reader)reader.selectIndices([]);
+    else {tree.selectedIndices=[];win.threadPaneHeader?.updateSelectedCount();}
+  }
 }
 
 function visibleInboxIndices(tree,view) {
@@ -99,6 +108,50 @@ function visibleInboxIndices(tree,view) {
   }
   return indices;
 }
+function inboxSelectionMatches(header,mode) {
+  if(mode==='all')return true;
+  if(mode==='none')return false;
+  if(mode==='read')return !!header.isRead;
+  if(mode==='unread')return !header.isRead;
+  if(mode==='starred')return !!header.isFlagged;
+  if(mode==='unstarred')return !header.isFlagged;
+  return false;
+}
+function selectInboxMode(win,reader,mode) {
+  const tree=win.document.getElementById('threadTree'),view=win.gDBView;
+  if(!tree || !view)return;
+  tree._gmSmartActionPending=false;
+  const apply=indices=>{if(reader)reader.selectIndices(indices);else tree.selectedIndices=indices;};
+  if(mode==='none'){apply([]);return;}
+  if(tree.hasAttribute('data-gm-paginated')){
+    tree.dispatchEvent(new win.CustomEvent('gm-select-page',{detail:{mode}}));return;
+  }
+  // Native commands already own select-all and starred selection, including
+  // collapsed threads. Synchronize our toolbar with their resulting selection.
+  const command=mode==='all'?'cmd_selectAll':mode==='starred'?'cmd_selectFlagged':null;
+  if(command && win.commandController?.isCommandEnabled(command)){
+    win.commandController.doCommand(command);
+    apply(Array.from(tree.selectedIndices || []));return;
+  }
+  // Thunderbird exposes no equivalent select-read/unread/unstarred commands.
+  // Read its current view and message flags, without changing any filters.
+  const indices=[];
+  for(let index=0;index<view.rowCount;index++){
+    try{
+      if(!(view.getFlagsAt(index)&0x20000000) && inboxSelectionMatches(view.getMsgHdrAt(index),mode))indices.push(index);
+    }catch(_){ /* A changing view can briefly contain an unavailable row. */ }
+  }
+  apply(indices);
+}
+function inboxSelectionState(view,selectedIndices,range=null){
+  const selected=new Set(selectedIndices || []);let total=0,count=0;
+  const start=range?.rowStart ?? 0,end=range?.rowEnd ?? view?.rowCount ?? 0;
+  for(let index=start;index<end;index++){
+    try{if(view.getFlagsAt(index)&0x20000000)continue;}catch(_){continue;}
+    total++;if(selected.has(index))count++;
+  }
+  return {checked:total>0 && count===total,indeterminate:count>0 && count<total};
+}
 function installInboxIdleActions(win,reader=null) {
   const doc=win.document,header=doc.getElementById('threadPaneHeaderBar');
   const host=header?.querySelector?.('.list-header-bar-container-start');
@@ -106,22 +159,29 @@ function installInboxIdleActions(win,reader=null) {
   let closed=false,selectionFrame=null;
   const bar=doc.createElement('div');bar.className='gm-inbox-idle-actions';bar.setAttribute('role','toolbar');bar.setAttribute('aria-label','Message list actions');
   const select=doc.createElement('input');select.type='checkbox';select.title='Select all messages on this page';select.setAttribute('aria-label',select.title);
+  function syncSelection(){
+    if(closed)return;
+    const tree=doc.getElementById('threadTree');
+    const range=tree?.hasAttribute('data-gm-paginated')?tree._gmPageSelectionBounds?.():null;
+    const state=inboxSelectionState(win.gDBView,tree?.selectedIndices,range);
+    select.checked=state.checked;select.indeterminate=state.indeterminate;
+  }
   select.addEventListener('change',()=>{
     const tree=doc.getElementById('threadTree');
+    if(tree)tree._gmSmartActionPending=false;
     if(tree?.hasAttribute('data-gm-paginated')){
       // Native pagination owns page boundaries, including collapsed threads.
       const nativeSelect=doc.getElementById('selectColButton');
       if(!nativeSelect){select.checked=false;return;}
       nativeSelect.click();
     }else{
-      const indices=visibleInboxIndices(tree,win.gDBView),selected=new Set(tree.selectedIndices || []);
-      reader?.selectIndices(indices.every(index=>selected.has(index))?[]:indices);
+      selectInboxMode(win,reader,select.checked?'all':'none');
     }
     if(selectionFrame!==null)win.cancelAnimationFrame(selectionFrame);
     selectionFrame=win.requestAnimationFrame(()=>{
       selectionFrame=null;if(closed)return;
       const tree=doc.getElementById('threadTree');
-      reader?.selectIndices(Array.from(tree?.selectedIndices || []));select.checked=false;
+      reader?.selectIndices(Array.from(tree?.selectedIndices || []));syncSelection();
     });
   });
   function button(label,path,handler){
@@ -139,21 +199,89 @@ function installInboxIdleActions(win,reader=null) {
       refresh.title='Refresh';
     }catch(error){refresh.title=error.message || 'Could not refresh mail.';}
   });
+  const group=doc.createElement('div');group.className='gm-inbox-select-group';
+  const dropdown=button('Select messages','M8 10l4 4 4-4');dropdown.className='gm-inbox-select-dropdown';
+  dropdown.setAttribute('aria-haspopup','menu');dropdown.setAttribute('aria-expanded','false');
+  const popup=doc.createXULElement('panel');popup.className='gm-inbox-selection-popup';
+  popup.setAttribute('noautofocus','true');
+  const menu=doc.createElement('div');menu.setAttribute('role','menu');menu.setAttribute('aria-label','Select messages');
+  function choose(mode){
+    popup.hidePopup();
+    if(!closed){selectInboxMode(win,reader,mode);syncSelection();}
+  }
+  for(const [label,mode] of [['All','all'],['None','none'],['Read','read'],['Unread','unread'],['Starred','starred'],['Unstarred','unstarred']]){
+    const item=doc.createElement('button');item.type='button';item.textContent=label;item.setAttribute('role','menuitem');
+    item.addEventListener('click',()=>choose(mode));menu.append(item);
+  }
+  popup.append(menu);doc.documentElement.append(popup);
+  dropdown.addEventListener('click',()=>popup.openPopup(group,'after_start',0,0,false,false));
+  popup.addEventListener('popupshown',()=>{dropdown.setAttribute('aria-expanded','true');menu.children[0]?.focus();});
+  popup.addEventListener('popuphidden',()=>{dropdown.setAttribute('aria-expanded','false');dropdown.focus();});
+  menu.addEventListener('keydown',event=>{
+    const items=[...menu.children],index=items.indexOf(doc.activeElement);
+    if(event.key==='Escape'){event.preventDefault();popup.hidePopup();}
+    if(['ArrowDown','ArrowUp','Home','End'].includes(event.key)){
+      event.preventDefault();
+      const next=event.key==='Home'?0:event.key==='End'?items.length-1:(index+(event.key==='ArrowDown'?1:-1)+items.length)%items.length;
+      items[next].focus();
+    }
+  });
+  group.append(select,dropdown);
   const more=button('More options (not available yet)','M12 5v.01 M12 12v.01 M12 19v.01');more.disabled=true;
-  bar.append(select,refresh,more);host.prepend(bar);
+  bar.append(group,refresh,more);host.prepend(bar);
+  reader?.setSelectionControl?.(group,bar);
   const style=doc.createElement('style');style.textContent=`
     #threadPaneFolderName,#threadPaneFolderCountContainer{display:none!important}
-    /* Match the native selection cell's leading edge, including RTL. */
-    #threadPaneHeaderBar{padding-inline-start:0!important}
-    #threadPaneHeaderBar > .list-header-bar-container-start{padding-inline-start:0!important}
-    .gm-inbox-idle-actions{display:flex;align-items:center;gap:8px;min-height:36px}
-    .gm-inbox-idle-actions input{appearance:auto;inline-size:18px;block-size:18px;margin:0;margin-inline-end:10px;accent-color:#1a73e8;cursor:pointer}
+    #threadPaneHeaderBar{box-sizing:border-box!important;block-size:44px!important;min-block-size:44px!important;max-block-size:44px!important;padding:3px 5px!important;margin-block:0!important;align-items:center!important;}
+    #threadPaneHeaderBar > .list-header-bar-container-start{padding:0!important;margin-block:0!important;min-block-size:0!important;block-size:36px;align-items:center;}
+    .gm-inbox-idle-actions{display:flex;align-items:center;gap:8px;min-height:36px;flex:0 0 auto;overflow:visible;}
+    .gm-inbox-select-group{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;block-size:36px;flex:0 0 auto;margin:0;padding:0 6px;border-radius:6px;gap:2px;}
+    .gm-inbox-select-group{background:transparent!important;}
+    .gm-inbox-select-group input{appearance:none!important;box-sizing:border-box;border:2px solid currentColor!important;background:transparent!important;inline-size:16px!important;block-size:16px!important;min-inline-size:16px!important;flex:0 0 16px;padding:0!important;margin:0!important;accent-color:#1a73e8;cursor:pointer;border-radius:2px!important;}
+    /* All three states keep the same square shape, independent of OS accent. */
+    .gm-inbox-select-group input:checked{appearance:none!important;background:transparent url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22m3%208%203%203%207-7%22%20fill%3D%22none%22%20stroke%3D%22%23444746%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E") center/14px 14px no-repeat!important;}
+    .gm-inbox-select-group input:indeterminate{appearance:none!important;background:linear-gradient(currentColor,currentColor) center/8px 2px no-repeat!important;}
+    @media(prefers-color-scheme:dark){.gm-inbox-select-group input:checked{background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22m3%208%203%203%207-7%22%20fill%3D%22none%22%20stroke%3D%22%23e3e3e3%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E")!important;}}
+    .gm-inbox-select-dropdown{display:inline-flex;align-items:center;justify-content:center;appearance:none;inline-size:22px;block-size:24px;min-inline-size:0;min-block-size:0;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:transparent!important;color:inherit;cursor:pointer;}
+    .gm-inbox-select-dropdown:is(:hover,:focus-visible){background:var(--treeitem-background-hover,#e9eef6)!important;border-radius:4px!important;}
+    .gm-inbox-select-group input:focus-visible{outline:2px solid Highlight;outline-offset:3px;}
+    .gm-inbox-select-dropdown svg{width:16px;height:16px;}
+    .gm-inbox-selection-popup{--panel-padding:0;--panel-border-radius:4px;}
+    .gm-inbox-selection-popup [role=menu]{padding:8px 0;min-width:160px;background:var(--layout-background-0,#fff);color:var(--layout-color-0,#202124);}
+    .gm-inbox-selection-popup [role=menuitem]{display:block;width:100%;padding:8px 24px;border:0;border-radius:0;text-align:start;font:inherit;background:transparent;color:inherit;cursor:pointer;}
+    .gm-inbox-selection-popup [role=menuitem]:is(:hover,:focus-visible){background:var(--treeitem-background-hover,#e9eef6);outline:none;}
+
     .gm-inbox-action{appearance:none;box-sizing:border-box;display:inline-flex;flex:0 0 36px;align-items:center;justify-content:center;inline-size:36px;min-inline-size:36px;max-inline-size:36px;block-size:36px;min-block-size:36px;max-block-size:36px;margin:0;padding:8px;border:0;border-radius:50%;background:transparent;color:inherit;cursor:pointer}
     .gm-inbox-action:hover:enabled{background:var(--treeitem-background-hover,#e9eef6)}
     .gm-inbox-action:disabled{opacity:.5;cursor:default}
     .gm-inbox-action:focus-visible{outline:2px solid #1a73e8;outline-offset:-2px}
   `;doc.head.append(style);
-  return {close(){closed=true;if(selectionFrame!==null)win.cancelAnimationFrame(selectionFrame);bar.remove();style.remove();}};
+  const alignmentTree=doc.getElementById('threadTree');
+  function alignCheckbox(){
+    const rowCheckbox=alignmentTree?.querySelector?.('tr.table-layout .tree-view-row-select img, tr.card-layout .tree-view-row-select img');
+    if(group.parentNode!==bar || !rowCheckbox || !select.getBoundingClientRect)return;
+    const target=rowCheckbox.getBoundingClientRect(),current=select.getBoundingClientRect();
+    if(!target.width || !current.width)return;
+    const rtl=win.getComputedStyle(bar).direction==='rtl';
+    const offset=parseFloat(bar.style.marginInlineStart)||0;
+    const delta=(target.left+target.width/2)-(current.left+current.width/2);
+    // Never use a negative offset: the rounded header clips the checkbox.
+    const next=Math.max(0,offset+(rtl?-delta:delta));
+    if(Math.abs(next-offset)>.5)bar.style.marginInlineStart=`${next}px`;
+  }
+  const alignmentObserver=win.ResizeObserver?new win.ResizeObserver(alignCheckbox):null;
+  alignmentObserver?.observe(header);
+  if(alignmentTree)alignmentObserver?.observe(alignmentTree);
+  for(const name of ['select','viewchange','rowcountchange','gm-page-changed'])alignmentTree?.addEventListener?.(name,syncSelection);
+  syncSelection();
+  alignmentTree?.addEventListener?.('viewchange',alignCheckbox);
+  alignmentTree?.addEventListener?.('scroll',alignCheckbox);
+  alignCheckbox();
+  return {close(){closed=true;reader?.setSelectionControl?.(null);alignmentObserver?.disconnect();
+    for(const name of ['select','viewchange','rowcountchange','gm-page-changed'])alignmentTree?.removeEventListener?.(name,syncSelection);
+    alignmentTree?.removeEventListener?.('viewchange',alignCheckbox);
+    alignmentTree?.removeEventListener?.('scroll',alignCheckbox);
+    if(selectionFrame!==null)win.cancelAnimationFrame(selectionFrame);popup.hidePopup();popup.remove();bar.remove();style.remove();}};
 }
 
 function installComposeLabel(doc) {
@@ -568,9 +696,10 @@ function installInboxControls(win,{threadGuides=true,reader=null}={}) {
       display:none; flex:0 0 auto; gap:2px; margin-inline-start:auto;
       pointer-events:auto;
     }
-    #threadTree tr:is(:hover,:focus-within) .gm-row-actions {
+    #threadTree tr:is(:hover,:has(.gm-row-actions button:focus-visible)) .gm-row-actions {
       display:flex !important;
     }
+    #threadTree[data-gm-smart-action-done] .gm-row-actions { display:none !important; }
     #threadTree .gm-row-actions button {
       display:inline-flex !important; align-items:center; justify-content:center;
       pointer-events:auto; flex:0 0 auto; box-sizing:border-box;
@@ -580,7 +709,7 @@ function installInboxControls(win,{threadGuides=true,reader=null}={}) {
     #threadTree .gm-row-actions button:hover { background:var(--gm-selected, ButtonFace); }
     #threadTree .gm-row-actions button:focus-visible { outline:2px solid Highlight; }
     #threadTree .gm-row-actions svg { width:18px; height:18px; }
-    #threadTree tr:is(:hover,:focus-within) .subject-line > span:not(.gm-inline-labels) {
+    #threadTree tr:is(:hover,:has(.gm-row-actions button:focus-visible)) .subject-line > span:not(.gm-inline-labels) {
       min-width:0 !important;
     }
     @media (hover:none) { #threadTree .gm-row-actions { display:flex; } }
@@ -649,7 +778,8 @@ function installInboxControls(win,{threadGuides=true,reader=null}={}) {
       button.addEventListener('dblclick', event => event.stopPropagation());
       button.addEventListener('click', event => {
         event.preventDefault(); event.stopPropagation();
-        if (!closed) runRowAction(win, row, command, {key:header.messageKey, folderURI:header.folder?.URI});
+        button.blur();
+        if (!closed) runRowAction(win, row, command, {key:header.messageKey, folderURI:header.folder?.URI},reader);
       });
       actions.append(button);
     }
@@ -671,9 +801,35 @@ function installInboxControls(win,{threadGuides=true,reader=null}={}) {
     if (Number.isFinite(originalHeight)) tree.reset();
     for (const row of doc.querySelectorAll('#threadTree tr.table-layout')) render(row);
   });
+  let clearingSmartSelection=false;
+  function clearSmartSelection(event){
+    if(!tree._gmSmartActionPending || clearingSmartSelection)return;
+    event.stopImmediatePropagation?.();
+    if(!tree.selectedIndices?.length)return;
+    clearingSmartSelection=true;
+    try{if(reader)reader.selectIndices([]);else tree.selectedIndices=[];}
+    finally{clearingSmartSelection=false;}
+  }
+  function resumeSelection(){tree._gmSmartActionPending=false;}
+  function resumeHover(event){
+    const focused=doc.activeElement;
+    const focusedActions=focused?.closest?.('.gm-row-actions');
+    const hoveredRow=event.target?.closest?.('tr.table-layout, tr.card-layout');
+    if(focusedActions && focusedActions.closest('tr')!==hoveredRow)focused.blur();
+    tree.removeAttribute?.('data-gm-smart-action-done');
+  }
+  tree.addEventListener('select',clearSmartSelection,true);
+  tree.addEventListener('pointerdown',resumeSelection,true);
+  tree.addEventListener('keydown',resumeSelection,true);
+  tree.addEventListener('pointermove',resumeHover);
   function close() {
     if (closed) return;
     closed = true;
+    tree.removeEventListener('select',clearSmartSelection,true);
+    tree.removeEventListener('pointerdown',resumeSelection,true);
+    tree.removeEventListener('keydown',resumeSelection,true);
+    tree.removeEventListener('pointermove',resumeHover);
+    delete tree._gmSmartActionPending;tree.removeAttribute?.('data-gm-smart-action-done');
     if (prototype?.fillRow === wrapped) prototype.fillRow = original;
     for (const node of doc.querySelectorAll('.gm-row-actions, .gm-message-snippet')) node.remove();
     for (const line of doc.querySelectorAll('.gm-has-snippet')) line.classList.remove('gm-has-snippet');

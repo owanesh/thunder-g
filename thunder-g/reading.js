@@ -118,7 +118,7 @@ function installReadingMode(win) {
     #paneLayout.gm-reading > #messagePane { min-height:0 !important; min-width:0 !important; }
     .gm-reading-toolbar {
       grid-area:readingbar; display:flex; align-items:center; gap:4px;
-      box-sizing:border-box; block-size:44px; padding:4px 12px; background:var(--layout-background-0, white);
+      box-sizing:border-box; block-size:44px!important; min-block-size:44px!important; max-block-size:44px!important; margin-block:0!important; padding:3px 5px!important; background:var(--layout-background-0, white);
       color:var(--layout-color-0, #202124); border-radius:16px 16px 0 0;
       border-bottom:1px solid var(--layout-border-0, #e8eaed);
       font:inherit; min-width:0; overflow-x:auto; flex-shrink:0;
@@ -550,6 +550,7 @@ function installReadingMode(win) {
   const nextButton = action('Next message', 'M9 5l7 7-7 7', () => navigate(1));
   previousButton.hidden = nextButton.hidden = true;
   layout.append(toolbar);
+  let selectionControl=null,selectionControlHome=null;
   function syncBulk() {
     syncReadAction();
     if (active || closed || !threadPane) return;
@@ -557,6 +558,10 @@ function installReadingMode(win) {
     printButton.hidden = true;
     const count = win.gDBView?.getSelectedMsgHdrs().length || 0;
     toolbar.hidden = !bulk || !count;
+    if(selectionControl){
+      if(!toolbar.hidden){toolbar.prepend(selectionControl);back.hidden=true;}
+      else {selectionControlHome?.prepend(selectionControl);back.hidden=false;}
+    }
     if (toolbar.hidden) threadPane.classList.remove('gm-bulk-selecting');
     else threadPane.classList.add('gm-bulk-selecting');
     if (!toolbar.hidden) {
@@ -638,6 +643,8 @@ function installReadingMode(win) {
     bulk = false;
     layout.append(toolbar);
     setBackIcon(false);
+    if(selectionControl)selectionControlHome?.prepend(selectionControl);
+    back.hidden=false;
     selectionLabel.textContent = '';
     snoozeButton.disabled = false;
     toolbar.setAttribute('aria-label', 'Conversation navigation');
@@ -743,6 +750,12 @@ function installReadingMode(win) {
   }
   win.addEventListener('unload', close, {once:true});
   return {close,zoom:zoomReading,
+    setSelectionControl(control,home=null){
+      if(selectionControl && selectionControlHome)selectionControlHome.prepend(selectionControl);
+      selectionControl=control;selectionControlHome=home;
+      if(!control)back.hidden=false;
+      syncBulk();
+    },
     setIndependent(enabled) {
       if (useIndependent === (enabled === true)) return;
       if (active) leave(true);
@@ -753,6 +766,7 @@ function installReadingMode(win) {
       open({index,dataset:{}});
     },
     selectIndices(indices) {
+      if(indices.length)tree._gmSmartActionPending=false;
       if (active) leave(false);
       tree.selectedIndices = indices;
       bulk = indices.length > 0;
