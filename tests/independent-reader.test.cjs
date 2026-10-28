@@ -2,7 +2,7 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const vm=require('node:vm'),fs=require('node:fs'),path=require('node:path');
 const source=fs.readFileSync(path.join(__dirname,'../thunder-g/independent-reader.js'),'utf8');
-function context(extra={}) {const scope=vm.createContext(extra);vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/label-navigation.js'),'utf8'),scope);vm.runInContext(source,scope);return scope;}
+function context(extra={}) {const scope=vm.createContext(extra);vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/label-navigation.js'),'utf8'),scope);vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/labels.js'),'utf8').split('function commonLabelKeys')[1].replace(/^/,'function commonLabelKeys'),scope);vm.runInContext(source,scope);return scope;}
 function message(key,id,folder='inbox',date=key){return {messageKey:key,messageId:id,dateInSeconds:date,folder:{URI:folder},mime2DecodedSubject:'Subject',mime2DecodedAuthor:'Sender',getStringProperty(name){return name==='keywords' && this.tagged?'work':''}}}
 test('conversation grouping deduplicates physical and logical copies, retains selected copy and sorts by date',()=>{
   const scope=context(),anchor=message(1,'same','inbox',20),sent=message(2,'other','sent',10);
@@ -57,9 +57,9 @@ function readerFixture({photo=null,tagged=false,verifyIndependentDkim}={}) {
       content.createRange=()=>({selectNodeContents(){},getBoundingClientRect:()=>({bottom:content.bottom})});
       content.defaultView={getComputedStyle:()=>({marginTop:'8px',marginBottom:'8px',paddingBottom:'0px'})};
       const pane={clientHeight:400,contentDocument:content};
-      browser.contentDocument={...node('document'),documentURI:'about:message',createElement:node,documentElement:node(),getElementById:id=>id==='messagepane'?pane:null};
+      browser.contentDocument={...node('document'),documentURI:'about:message',createElement:node,documentElement:node(),getElementById:id=>id==='messagepane'?pane:id==='hdrReplyToSenderButton'?browser.replyButton:null};
       browser.contentWindow={displayMessage:uri=>{loads.push(uri);browser.uri=uri},commandController:{isCommandEnabled:()=>true,doCommand:name=>commands.push([name,browser.uri])}};
-      browser.pane=pane;browser.content=content;browsers.push(browser);return browser;
+      browser.replyButton=node('button');browser.pane=pane;browser.content=content;browsers.push(browser);return browser;
     }};
   const tags=[{key:'work',tag:'Work',color:'#336699'}];
   const scope=context({verifyIndependentDkim,Services:{prefs:{getBoolPref:()=>false}},Ci:{nsIMsgFolderNotificationService:{msgPropertyChanged:1}},
@@ -89,9 +89,9 @@ test('reader keeps one footer after all cards, restores print, and delegates com
   assert.equal(f.layout.classList.contains('gm-independent-open'),true);
   assert.equal(f.browsers[0].getAttribute('src'),'about:message');assert.equal(f.browsers[0].getAttribute('disablesecurity'),undefined);
   f.loaded();assert.deepEqual(f.loads,['mailbox://inbox/1']);assert.equal(f.browsers[0].docShell.allowDNSPrefetch,false);assert.equal(f.timers.size,0);
-  assert.deepEqual(f.actions.children.map(button=>button.textContent),['Reply','Reply all','Forward']);
+  assert.deepEqual(f.actions.children.map(button=>button.textContent),['Reply all','Reply','Forward']);
   assert.equal(f.conversation.children.at(-1),f.actions,'reply controls follow the entire conversation');
-  f.actions.children[0].emit('click');f.reader.print();
+  f.actions.children[1].emit('click');f.reader.print();
   assert.deepEqual(f.commands,[['cmd_replySender','mailbox://inbox/1'],['cmd_print','mailbox://inbox/1']]);
   const envelopeStyle=f.browsers[0].contentDocument.documentElement.children[0].textContent;
   assert.match(envelopeStyle,/#expandedfromRow/);
@@ -114,31 +114,33 @@ test('short messages shrink independently of viewport, growing images and pane r
 test('opening a specific conversation message expands and reveals that message while keeping latest-reply actions available',async()=>{
   const f=readerFixture();const middle=f.prepare(message(2,'b','sent',2)),latest=f.prepare(message(3,'c','sent',3));
   f.anchor.folder.msgDatabase={getThreadContainingMsgHdr:()=>({numChildren:3,getChildHdrAt:i=>[latest,f.anchor,middle][i]})};
-  await f.reader.open(f.anchor);f.flush();
+  await f.reader.open(f.anchor,{focusMessage:true});f.flush();
   assert.equal(f.cards.children.length,3);assert.equal(f.conversation.children[2].textContent,'3 messages');
   assert.equal(f.browsers.length,2,'the selected message and latest reply are available');
   assert.equal(f.cards.children[0].children[1].hidden,false);assert.equal(f.cards.children[1].children[1].hidden,true);
   assert.equal(f.cards.children[2].children[1].hidden,false);
   assert.equal(f.cards.children[0].scrolled.block,'nearest','the selected message is brought into view');
   assert.equal(f.cards.children[2].scrolled,undefined,'the newest reply must not steal the viewport');
-  assert.equal(f.actions.children[0].disabled,true);f.loaded();
-  f.actions.children[1].emit('click');assert.deepEqual(f.commands,[['cmd_replyall','mailbox://sent/3']]);
+  assert.equal(f.actions.children[1].disabled,true);f.loaded();
+  f.actions.children[0].emit('click');assert.deepEqual(f.commands,[['cmd_replyall','mailbox://sent/3']]);
   const toggle=f.cards.children[1].children[0].children[0];toggle.emit('click');assert.equal(f.browsers.length,3);
-  f.loaded();toggle.emit('click');assert.notEqual(f.browsers[2].removed,true);assert.equal(f.actions.children[0].disabled,false);
+  f.loaded();toggle.emit('click');assert.notEqual(f.browsers[2].removed,true);assert.equal(f.actions.children[1].disabled,false);
   toggle.emit('click');assert.equal(f.browsers.length,3,'reopening a folded message reuses its native frame');
   const latestToggle=f.cards.children[2].children[0].children[0];latestToggle.emit('click');
   assert.equal(f.cards.children[2].children[1].hidden,false,'latest message cannot accidentally be folded away');
-  f.actions.children[0].emit('click');assert.deepEqual(f.commands.at(-1),['cmd_replySender','mailbox://sent/3']);
+  f.actions.children[1].emit('click');assert.deepEqual(f.commands.at(-1),['cmd_replySender','mailbox://sent/3']);
   f.reader.close();
 });
-test('chips have a visible accessible X, remove only their own message tag, and follow native changes',async()=>{
-  const f=readerFixture({tagged:true});await f.reader.open(f.anchor);
-  const tags=f.cards.children[0].children[0].children[0].children[1].children[3],remove=tags.children[0].children[1];
-  assert.equal(remove.textContent,'×');assert.equal(remove.getAttribute('aria-label'),'Remove Work from this message');
+test('title labels have an accessible X that removes the label across the conversation',async()=>{
+  const f=readerFixture({tagged:true});const sent=f.prepare(message(2,'reply','sent',2));sent.tagged=true;
+  f.anchor.folder.msgDatabase={getThreadContainingMsgHdr:()=>({numChildren:2,getChildHdrAt:i=>[f.anchor,sent][i]})};
+  await f.reader.open(f.anchor);
+  const tags=f.conversation.children[0].children[0],remove=tags.children[0].children[0];
+  assert.equal(remove.textContent,'×');assert.equal(remove.getAttribute('aria-label'),'Remove Work from this conversation');
   remove.emit('click',{preventDefault(){},stopPropagation(){}});
-  assert.equal(f.removals.length,1);assert.equal(f.removals[0].headers[0],f.anchor);assert.equal(f.removals[0].key,'work');assert.equal(tags.children.length,0);
-  f.anchor.tagged=true;f.tagListener.msgPropertyChanged(f.anchor,'keywords');assert.equal(tags.children.length,1);
-  const stale=tags.children[0].children[1];f.reader.hide();stale.emit('click',{preventDefault(){},stopPropagation(){}});assert.equal(f.removals.length,1);
+  assert.equal(f.removals.length,1);assert.equal(f.removals[0].headers.length,2);assert.equal(f.removals[0].key,'work');assert.equal(tags.children.length,0);
+  f.anchor.tagged=true;sent.tagged=true;f.tagListener.msgPropertyChanged(f.anchor,'keywords');assert.equal(tags.children.length,1);
+  const stale=tags.children[0].children[0];f.reader.hide();stale.emit('click',{preventDefault(){},stopPropagation(){}});assert.equal(f.removals.length,1);
   f.reader.close();
 });
 test('sender uses the existing contact photo and falls back to initials when unavailable',async()=>{
@@ -204,10 +206,15 @@ test('title aggregates labels across incoming and sent cards and stays synchroni
   f.anchor.folder.msgDatabase={getThreadContainingMsgHdr:()=>({numChildren:2,getChildHdrAt:i=>[f.anchor,sent][i]})};
   await f.reader.open(f.anchor);
   const titleTags=f.conversation.children[0].children[0];
-  assert.equal(titleTags.className,'title-tags');assert.equal(titleTags.children.length,1);
-  assert.equal(titleTags.children[0].textContent,'Work');
+  assert.equal(titleTags.className,'title-tags');assert.equal(titleTags.children.length,0,'message-only label is absent from title');
+  assert.equal(f.cards.children[0].children[0].children[0].children[1].children[3].children.length,1);
   f.anchor.tagged=false;sent.tagged=true;f.tagListener.msgPropertyChanged(sent,'keywords');
-  assert.equal(titleTags.children.length,1,'sent-only labels remain next to the conversation title');
+  assert.equal(titleTags.children.length,0,'sent-only labels stay on the sent message');
+  const sentTags=f.cards.children[1].children[0].children[0].children[1].children[3];
+  assert.equal(sentTags.children.length,1);
+  sentTags.children[0].children[1].emit('click',{preventDefault(){},stopPropagation(){}});
+  assert.equal(f.removals.at(-1).headers.length,1);assert.equal(f.removals.at(-1).headers[0],sent);
+  assert.equal(sentTags.children.length,0);
   sent.tagged=false;f.tagListener.msgPropertyChanged(sent,'keywords');assert.equal(titleTags.children.length,0);
   f.reader.close();
 });
@@ -216,8 +223,8 @@ test('numeric shortcuts and native tag menu target the opened Sent reply, never 
   f.anchor.folder.msgDatabase={getThreadContainingMsgHdr:()=>({numChildren:3,getChildHdrAt:i=>[f.anchor,sent,latest][i]})};
   await f.reader.open(f.anchor);f.loaded();
   const active=()=>f.cards.children.filter(card=>card.getAttribute('aria-current')==='true');
-  assert.deepEqual(active(),[f.cards.children[0]],'the selected message starts as the visible numeric-tag target');
-  assert.equal(f.cards.children[0].getAttribute('data-active-message'),'');
+  assert.deepEqual(active(),[f.cards.children[2]],'the latest message starts as the visible numeric-tag target');
+  assert.equal(f.cards.children[2].getAttribute('data-active-message'),'');
   const toggle=f.cards.children[1].children[0].children[0];toggle.emit('click');f.loaded();
   assert.deepEqual(active(),[f.cards.children[1]],'opening a Sent reply moves the marker to the exact target');
   assert.equal(f.cards.children[2].getAttribute('data-active-message'),undefined);
@@ -260,7 +267,7 @@ test('each message renders its own DKIM chip and keeps tags beside the sender in
   f.anchor.getStringProperty=name=>name==='dkim_verifier@pl-result'?JSON.stringify({version:'3.0',dkim:[{result:'SUCCESS',sdid:'example.org'}]}):'work';
   await f.reader.open(f.anchor);
   const card=f.cards.children[0],sender=card.children[0].children[0].children[1];
-  assert.equal(sender.children[3].className,'tags');assert.equal(card.children.length,2,'no separate tag row occupies body space');
+  assert.equal(sender.children.find(node=>node.className==='tags').children.length,0);assert.equal(card.children.length,2,'no separate tag row occupies body space');
   const dkim=card.children[0].children[1].children[1];assert.equal(dkim.textContent,'DKIM verified');assert.equal(dkim.getAttribute('data-tone'),'success');
   f.anchor.getStringProperty=name=>name==='dkim_verifier@pl-result'?JSON.stringify({version:'3.0',dkim:[{result:'PERMFAIL'}]}):'work';
   f.tagListener.msgPropertyChanged(f.anchor,'dkim_verifier@pl-result');assert.equal(dkim.getAttribute('data-tone'),'failure');
@@ -304,10 +311,10 @@ test('native body starts before index lookup while conversation-wide actions wai
  const opening=f.reader.open(f.anchor);
  assert.equal(f.browsers.length,1,'native renderer is created before the index completes');
  assert.equal(f.reader.getMessages().length,0,'L cannot label a partial conversation without sent replies');
- f.loaded();assert.equal(f.actions.children[0].disabled,true,'Reply waits for the actual newest message');
+ f.loaded();assert.equal(f.actions.children[1].disabled,true,'Reply waits for the actual newest message');
  lookup.onQueryCompleted({items:[]});await opening;
  assert.equal(f.browsers.length,1,'identical membership does not reload the native message');
- assert.equal(f.reader.getMessages().length,1);assert.equal(f.actions.children[0].disabled,false);
+ assert.equal(f.reader.getMessages().length,1);assert.equal(f.actions.children[1].disabled,false);
  f.reader.close();
 });
 
@@ -437,7 +444,7 @@ test('a delayed Sent copy is inserted in chronological order without replacing l
 test('inline reply snapshot appears immediately, changes to Sent and reconciles with the real message',async()=>{
  const f=readerFixture();await f.reader.open(f.anchor);f.loaded();let placement;
  f.scope.inlineReplyEnabled=true;f.scope.inlineComposeControllers=new WeakMap([[f.win,{float(){},open(header,command,options){placement=options}}]]);
- f.actions.children[1].emit('click');
+ f.actions.children[0].emit('click');
  const id={},state={id,state:'sending',from:'Me',to:'Other',body:'<script>literal</script>',attachments:['file.pdf']};
  placement.onSendState(state);
  assert.equal(f.cards.children.length,2);
@@ -452,7 +459,7 @@ test('inline reply snapshot appears immediately, changes to Sent and reconciles 
 test('send failure removes temporary card, and late feedback cannot populate another conversation',async()=>{
  const f=readerFixture();await f.reader.open(f.anchor);f.loaded();let placement;
  f.scope.inlineReplyEnabled=true;f.scope.inlineComposeControllers=new WeakMap([[f.win,{float(){},open(header,command,options){placement=options}}]]);
- f.actions.children[0].emit('click');const state={id:{},state:'sending',body:'Reply'};
+ f.actions.children[1].emit('click');const state={id:{},state:'sending',body:'Reply'};
  placement.onSendState(state);assert.equal(f.cards.children.length,2);
  placement.onSendState({...state,state:'saving-draft'});assert.equal(f.cards.children.length,1);
  f.reader.hide();placement.onSendState({...state,state:'sent'});assert.equal(f.cards.children.length,0);f.reader.close();
@@ -568,7 +575,7 @@ test('auto-sized message viewport removes residual body scrolling and restores i
 test('pending replies share the final envelope layout, retain the same card and preserve user scroll during saved-message loading',async()=>{
  const f=readerFixture();await f.reader.open(f.anchor);f.loaded();let placement;
  f.scope.inlineReplyEnabled=true;f.scope.inlineComposeControllers=new WeakMap([[f.win,{float(){},open(_header,_command,options){placement=options}}]]);
- f.actions.children[0].emit('click');
+ f.actions.children[1].emit('click');
  const state={id:{},state:'sending',from:'Sender',to:'Recipient',body:'Hello\n\nOn Tuesday wrote:\n> old text\n\n--\nMy signature',date:1700000000000};
  placement.onSendState(state);
  const pending=f.cards.children[1],preview=pending.children[1],heading=pending.children[0];
@@ -615,4 +622,28 @@ test('native quote folding is conservative for bottom replies, interleaved answe
  assert.equal(scope.foldableQuotedHistory(content([{excluded:true},{before:false}]),[quote]),false);
  assert.equal(scope.foldableQuotedHistory(content([{excluded:true}]),[quote]),false);
  assert.equal(scope.foldableQuotedHistory({body:{}},[quote]),false);
+});
+
+test('opening a thread without a specific message reveals only the latest message',async()=>{
+ const f=readerFixture(),latest=f.prepare(message(2,'latest','sent',2));
+ f.anchor.folder.msgDatabase={getThreadContainingMsgHdr:()=>({numChildren:2,getChildHdrAt:i=>[f.anchor,latest][i]})};
+ await f.reader.open(f.anchor);f.flush();
+ assert.equal(f.browsers.length,1);
+ assert.equal(f.cards.children[0].children[1].hidden,true);
+ assert.equal(f.cards.children[0].scrolled,undefined);
+ assert.equal(f.cards.children[1].children[1].hidden,false);
+ assert.equal(f.cards.children[1].scrolled.block,'nearest');
+ f.reader.close();
+});
+
+test('header Reply uses the same in-window compose setting as the footer on the exact message',async()=>{
+ const f=readerFixture();await f.reader.open(f.anchor);f.loaded();const calls=[];
+ f.scope.inlineReplyEnabled=true;
+ f.scope.inlineComposeControllers=new WeakMap([[f.win,{float(){},open(header,command){calls.push([header,command])}}]]);
+ f.browsers[0].replyButton.emit('command',{preventDefault(){},stopImmediatePropagation(){}});
+ assert.equal(calls.length,1);assert.equal(calls[0][0],f.anchor);assert.equal(calls[0][1],'cmd_replySender');
+ f.scope.inlineReplyEnabled=false;
+ f.browsers[0].replyButton.emit('command',{preventDefault(){},stopImmediatePropagation(){}});
+ assert.deepEqual(f.commands.at(-1),['cmd_replySender','mailbox://inbox/1']);
+ f.reader.close();
 });

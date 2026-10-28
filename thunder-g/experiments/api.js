@@ -192,6 +192,12 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
           if (!header) return null;
           return assignedTags(header, MailServices.tags.getAllTags()).map(tag =>
             ({key:tag.key,name:tag.tag,color:tag.color}));
+        }, (ids,key) => {
+          const extension=ExtensionParent.GlobalManager.extensionMap.get("gconversation@xulforum.org");
+          const headers=ids.map(id=>Number.isSafeInteger(id) && id>0 ? extension?.messageManager?.get(id) : null);
+          if(!headers.length || headers.some(header=>!header?.folder))throw new Error('Conversation is still loading');
+          applyConversationLabel(headers,key,false);
+          for(const header of headers)if(header.label && key===`$label${header.label}`)header.label=0;
         }));
         return;
       }

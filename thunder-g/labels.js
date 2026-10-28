@@ -1,3 +1,6 @@
+// Google Material Icons: mark_email_unread (outlined), Apache-2.0.
+// See icons/LICENSE-material-icons.txt.
+const MATERIAL_MARK_EMAIL_UNREAD = 'M22,8.98V18c0,1.1-0.9,2-2,2H4c-1.1,0-2-0.9-2-2L2.01,6C2.01,4.9,2.9,4,4,4h10.1C14.04,4.32,14,4.66,14,5s0.04,0.68,0.1,1 H4l8,5l3.67-2.29c0.47,0.43,1.02,0.76,1.63,0.98L12,13L4,8v10h16V9.9C20.74,9.75,21.42,9.42,22,8.98z M16,5c0,1.66,1.34,3,3,3 s3-1.34,3-3s-1.34-3-3-3S16,3.34,16,5z';
 /* Read-only presentation of existing Thunderbird tags. No message-body reads,
  * writes, network requests, separate tag store, or tab/session modifications.
  */
@@ -35,21 +38,31 @@ function installInlineLabels(window = globalThis.window, MailServices = globalTh
       display: flex !important; align-items: center; min-width: 0;
       flex: 1 1 auto; overflow: hidden; column-gap: 0 !important;
       padding-inline-start: 0 !important;
+      margin-inline-start: 0 !important;
     }
-    #threadTree .subject-line:has(> .gm-inline-labels) {
-      /* Half Thunderbird's native 22px leading inset, only when tagged. */
-      padding-inline-start: 11px !important;
+    /* The parent already has a twisty. Reserve one compact gutter only on
+       child rows; native thread depth must not add another indent per level. */
+    #threadTree tr:is([data-gm-thread-guide="middle"],[data-gm-thread-guide="end"]) .subject-line {
+      padding-inline-start:22px !important;
     }
     #threadTree .subject-line > span:not(.gm-inline-labels) {
       flex: 1 1 0; overflow: hidden; text-overflow: ellipsis;
       white-space: nowrap; min-width: 32px;
+      /* Own the spacing instead of inheriting Thunderbird's subject inset. */
+      margin-inline: 0 !important; padding-inline: 0 !important;
     }
     #threadTree .subject-line > img { flex: 0 0 auto; }
     #threadTree .gm-inline-labels {
       display: inline-flex; flex: 0 1 auto; max-width: 48%; gap: 4px;
-      overflow: hidden; margin-inline-end: 2px; align-items: center;
+      overflow: hidden; margin-inline: 0 !important; padding: 0 !important; align-items: center;
       font-weight: 400; vertical-align: middle;
     }
+    #threadTree .gm-inline-label:last-child { margin-inline-end:6px !important; }
+    /* Native state icons reserve space even when visibility:hidden. */
+    #threadTree tr:not([data-properties~="new"]):not([data-properties~="replied"]):not([data-properties~="forwarded"]):not([data-properties~="redirected"]) .subject-line > img {
+      display:none !important;
+    }
+    #threadTree .gm-inline-labels:empty { display:none !important; margin-inline:0 !important; }
     #threadTree .gm-inline-label {
       display: inline-block; flex: 0 0 auto; overflow: hidden;
       text-overflow: ellipsis; white-space: nowrap; max-width: 160px;
@@ -137,4 +150,14 @@ function installInlineLabels(window = globalThis.window, MailServices = globalTh
   }
   window.addEventListener("unload", close, { once: true });
   return { refresh, close };
+}
+
+function commonLabelKeys(groups) {
+  if(!groups.length)return new Set();
+  const keys=new Set(groups[0].map(tag=>tag.key));
+  for(const group of groups.slice(1)){
+    const present=new Set(group.map(tag=>tag.key));
+    for(const key of keys)if(!present.has(key))keys.delete(key);
+  }
+  return keys;
 }

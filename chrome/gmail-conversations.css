@@ -250,7 +250,7 @@
 }
 
 .gm-message-tags > span { display:inline-flex; align-items:center; gap:5px; }
-.gm-message-tags .gm-remove-message-tag {
+:is(.gm-message-tags,.gm-title-tags) .gm-remove-message-tag {
   appearance:none !important; -moz-appearance:none !important;
   display:inline-flex !important; align-items:center; justify-content:center;
   min-width:0 !important; min-height:0 !important;
@@ -265,7 +265,7 @@
   background:linear-gradient(currentColor,currentColor) center/100% 1.5px no-repeat,
              linear-gradient(currentColor,currentColor) center/1.5px 100% no-repeat;
 }
-.gm-message-tags .gm-remove-message-tag:hover { background:none !important; opacity:1; }
+:is(.gm-message-tags,.gm-title-tags) .gm-remove-message-tag:hover { background:none !important; opacity:1; }
 .gm-remove-message-tag:focus-visible { outline:2px solid currentColor; outline-offset:2px; }
 
 /* Stack message actions beneath the sender when a narrow reader cannot fit both. */
@@ -274,3 +274,28 @@
   .messageHeader > message-header-options { justify-self:end; max-inline-size:100%; }
   :host(message-header-options) .options { flex-wrap:wrap; justify-content:flex-end; white-space:normal !important; }
 }
+
+/* Labels belong to the conversation heading. Keep native controls available to the add-on. */
+.message .messageBody > ul.regular-tags[is="message-tags"] { display:none !important; }
+.gm-title-tags > span { display:inline-flex; align-items:center; gap:5px; }
+
+@media (prefers-reduced-motion:no-preference) {
+  .actions-button, .messageHeader .shrink-box > .star,
+  :host(message-header-options) :is(.details-hidden,.dropDown) > button,
+  :host(action-button) button.header {
+    transition:background-color 150ms cubic-bezier(.2,0,0,1) !important;
+  }
+}
+
+    :is(.actions-button, :host(message-header-options) .details-hidden > button, :host(message-header-options) .dropDown > button, :host(action-button) button.header) { position:relative; isolation:isolate; background:transparent !important; }
+    :is(.actions-button, :host(message-header-options) .details-hidden > button, :host(message-header-options) .dropDown > button, :host(action-button) button.header):is(:hover,:focus-visible) { background:transparent !important; }
+    :is(.actions-button, :host(message-header-options) .details-hidden > button, :host(message-header-options) .dropDown > button, :host(action-button) button.header)::before {
+      content:''; position:absolute; inset:0; border-radius:inherit; z-index:-1;
+      pointer-events:none; background:light-dark(#20212414,#ffffff20); opacity:0; transform:scale(.65);
+    }
+    :is(.actions-button, :host(message-header-options) .details-hidden > button, :host(message-header-options) .dropDown > button, :host(action-button) button.header):is(:hover,:focus-visible):not(:disabled):is(:hover,:focus-visible) { background:transparent !important; }
+    :is(.actions-button, :host(message-header-options) .details-hidden > button, :host(message-header-options) .dropDown > button, :host(action-button) button.header):is(:hover,:focus-visible):not(:disabled)::before { opacity:1; transform:scale(1); }
+    @media (prefers-reduced-motion:no-preference) {
+      :is(.actions-button, :host(message-header-options) .details-hidden > button, :host(message-header-options) .dropDown > button, :host(action-button) button.header):is(:hover,:focus-visible) { background:transparent !important; }
+    :is(.actions-button, :host(message-header-options) .details-hidden > button, :host(message-header-options) .dropDown > button, :host(action-button) button.header)::before { transition:transform 180ms cubic-bezier(.2,0,0,1), opacity 120ms ease-out; }
+    }

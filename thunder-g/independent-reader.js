@@ -362,11 +362,28 @@ function installIndependentReader(win) {
     .gm-pending-text { margin:0 10px 12px; white-space:pre-wrap; overflow-wrap:anywhere; font:1em/1.35 monospace; }
     .gm-pending-signature { opacity:.65; }
     article { position:relative; }
+
+    :is(.actions button) { position:relative; isolation:isolate; background:transparent !important; }
+    :is(.actions button):is(:hover,:focus-visible) { background:transparent !important; }
+    :is(.actions button)::before {
+      content:''; position:absolute; inset:0; border-radius:inherit; z-index:-1;
+      pointer-events:none; background:light-dark(#20212414,#ffffff20); opacity:0; transform:scale(.65);
+    }
+    :is(.actions button):is(:hover,:focus-visible):not(:disabled):is(:hover,:focus-visible) { background:transparent !important; }
+    :is(.actions button):is(:hover,:focus-visible):not(:disabled)::before { opacity:1; transform:scale(1); }
+    @media (prefers-reduced-motion:no-preference) {
+      :is(.actions button):is(:hover,:focus-visible) { background:transparent !important; }
+    :is(.actions button)::before { transition:transform 180ms cubic-bezier(.2,0,0,1), opacity 120ms ease-out; }
+    }
     .body { display:flex; min-height:0; flex-direction:column; margin-inline-start:var(--message-inset); }
     .quote-toggle { align-self:flex-start; min-inline-size:22px; block-size:16px;
       padding:0 5px; margin:4px 0 8px; border:0; border-radius:3px;
       background:var(--treeitem-background-hover,#e8eaed); color:inherit; font:bold 14px/12px sans-serif; cursor:pointer; }
-    .action-icon { font-size:18px; line-height:1; }
+    .action-icon { display:inline-block; inline-size:20px; block-size:20px; background:currentColor; flex:none; }
+    .action-icon.reply { mask:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22M9%205%203%2011l6%206%20M3%2011h9a7%207%200%200%201%207%207%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linejoin%3D%22round%22%20stroke-linecap%3D%22round%22%2F%3E%3C%2Fsvg%3E") center/contain no-repeat; }
+    .action-icon.reply-all { mask:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22M7%205%201%2011l6%206%20M12%205l-6%206%206%206%20M6%2011h8a7%207%200%200%201%207%207%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linejoin%3D%22round%22%20stroke-linecap%3D%22round%22%2F%3E%3C%2Fsvg%3E") center/contain no-repeat; }
+    .action-icon.forward { mask:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22M15%205l6%206-6%206%20M21%2011h-9a7%207%200%200%200-7%207%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linejoin%3D%22round%22%20stroke-linecap%3D%22round%22%2F%3E%3C%2Fsvg%3E") center/contain no-repeat; }
+
     browser { display:block; flex:none; inline-size:100%; block-size:24em; min-block-size:0; border:0; }
     [hidden] { display:none !important; }
     @media(max-width:650px) { .conversation { --message-inset:48px; padding:12px; } .toggle {gap:8px;} time {font-size:.75em;} h1 {font-size:1.4em;} .card-header {gap:8px;} }
@@ -459,20 +476,20 @@ function installIndependentReader(win) {
     for(const header of [...pendingSentCopies.values()])tagListener.msgAdded(header);
     reconcilePendingReplies();
   }
-  function runCommand(command) {
+  function runCommand(command,target=actionHeader) {
     if(typeof inlineReplyEnabled!=='undefined' && inlineReplyEnabled && ['cmd_replySender','cmd_replyall','cmd_forwardInline'].includes(command)) {
       let composer=inlineComposeControllers.get(win);
       if(!composer){composer=createInlineCompose(win);inlineComposeControllers.set(win,composer);}
       const token=ticket;
-      composer.open(actionHeader,command,{container:conversation,scrollHost:host,onSendState:state=>sendFeedback(state,token)});return;
+      composer.open(target,command,{container:conversation,scrollHost:host,onSendState:state=>sendFeedback(state,token)});return;
     }
-    const frame=frames.get(independentMessageKey(actionHeader || {}));
+    const frame=frames.get(independentMessageKey(target || {}));
     const controller=frame?.contentWindow?.commandController;
     if(controller?.isCommandEnabled(command))controller.doCommand(command);
   }
-  for(const [label,command,glyph] of [['Reply','cmd_replySender','↩'],['Reply all','cmd_replyall','⇇'],['Forward','cmd_forwardInline','↪']]) {
+  for(const [label,command,glyph] of [['Reply all','cmd_replyall','reply-all'],['Reply','cmd_replySender','reply'],['Forward','cmd_forwardInline','forward']]) {
     const button=text('button','',label);
-    const icon=text('span','action-icon',glyph);icon.setAttribute('aria-hidden','true');
+    const icon=text('span','action-icon '+glyph,'');icon.setAttribute('aria-hidden','true');
     button.replaceChildren(icon,text('span','',label));button.type='button';button.disabled=true;buttons.push(button);
     button.addEventListener('click',()=>runCommand(command));actions.append(button);
   }
@@ -485,10 +502,24 @@ function installIndependentReader(win) {
     if(typeof assignedTags!=='function')return;
     const tags=new Map(),definitions=MailServices.tags.getAllTags();
     for(const header of currentHeaders)for(const tag of assignedTags(header,definitions))tags.set(tag.key,tag);
+    const common=commonLabelKeys(currentHeaders.map(header=>assignedTags(header,definitions)));
     for(const tag of tags.values()) {
+      if(!common.has(tag.key))continue;
       const chip=text('span','tag',tag.tag),colors=chipColors(tag.color);
       chip.style.backgroundColor=colors.background;chip.style.color=colors.foreground;
-      chip.title=`${tag.tag} — present in this conversation`;bindLabelNavigation(chip,tag,win);titleTags.append(chip);
+      chip.title=tag.tag;bindLabelNavigation(chip,tag,win);
+      const remove=text('button','tag-remove','×');remove.type='button';
+      remove.title=`Remove ${tag.tag} from this conversation`;remove.setAttribute('aria-label',remove.title);
+      remove.addEventListener('click',event=>{
+        event.preventDefault();event.stopPropagation();
+        if(closed || chip.isConnected===false || !currentHeaders.length)return;
+        try {
+          applyConversationLabel(currentHeaders,tag.key,false);
+          for(const header of currentHeaders)if(header.label && tag.key===`$label${header.label}`)header.label=0;
+          refreshTags();
+        }catch(_){status.hidden=false;status.textContent='Could not remove the label from every message. Try again.';refreshTags();}
+      });
+      chip.append(remove);titleTags.append(chip);
     }
   }
   const tagListener={msgPropertyChanged(header,property){if(['keywords','label'].includes(property))refreshTags();if(property==='dkim_verifier@pl-result')for(const render of securityRenderers)render()}};
@@ -598,29 +629,27 @@ function installIndependentReader(win) {
       },()=>{if(isCurrent()){dkimPending=false;dkimUnavailable=true;renderDkim();}});
     }
     cardHeader.append(toggle,meta);article.append(cardHeader);
-    const tags=doc.createElement('div');tags.className='tags';tags.setAttribute('aria-label','Labels on this message');sender.append(tags);
-    function renderTags() {
-      tags.replaceChildren();
+    const messageTags=doc.createElement('div');messageTags.className='tags';messageTags.setAttribute('aria-label','Labels on this message');
+    sender.append(messageTags);
+    const renderMessageTags=()=>{
+      messageTags.replaceChildren();
       if(typeof assignedTags!=='function')return;
-      for(const tag of assignedTags(header,MailServices.tags.getAllTags())) {
-        const chip=text('span','tag',''),colors=chipColors(tag.color);
-        chip.style.backgroundColor=colors.background;chip.style.color=colors.foreground;
-        const label=text('span','tag-label',tag.tag);bindLabelNavigation(label,tag,win);const remove=text('button','tag-remove','×');remove.type='button';
-        remove.setAttribute('aria-label',`Remove ${tag.tag} from this message`);remove.title=`Remove ${tag.tag}`;
+      const definitions=MailServices.tags.getAllTags();
+      const common=commonLabelKeys(currentHeaders.map(message=>assignedTags(message,definitions)));
+      for(const tag of assignedTags(header,definitions)){
+        if(common.has(tag.key))continue;
+        const chip=text('span','tag',''),label=text('span','tag-label',tag.tag),colors=chipColors(tag.color);
+        chip.style.backgroundColor=colors.background;chip.style.color=colors.foreground;bindLabelNavigation(label,tag,win);
+        const remove=text('button','tag-remove','×');remove.type='button';remove.setAttribute('aria-label',`Remove ${tag.tag} from this message`);
         remove.addEventListener('click',event=>{
-          event.preventDefault();event.stopPropagation();
-          if(closed || token!==ticket)return;
-          try {
-            applyConversationLabel([header],tag.key,false);
-            if(header.label && tag.key===`$label${header.label}`)header.label=0;
-            refreshTags();
-          }
-          catch (_) {remove.title='Could not remove label. Try again.'}
+          event.preventDefault();event.stopPropagation();if(closed || token!==ticket)return;
+          try{applyConversationLabel([header],tag.key,false);if(tag.key===`$label${header.label}`)header.label=0;refreshTags();}
+          catch(_){remove.title='Could not remove label. Try again.';}
         });
-        chip.append(label,remove);tags.append(chip);
+        chip.append(label,remove);messageTags.append(chip);
       }
-    }
-    tagRenderers.add(renderTags);renderTags();
+    };
+    tagRenderers.add(renderMessageTags);renderMessageTags();
     const body=doc.createElement('div');body.className='body';body.hidden=true;article.append(body);
     let pendingBody=hydration?.body || null;
     if(pendingBody){article.append(pendingBody);body.style.position='absolute';body.style.visibility='hidden';body.style.inlineSize='100%';}
@@ -677,6 +706,17 @@ function installIndependentReader(win) {
         if(closed || token!==ticket || browser!==frame)return;
         if(timeout!==null)win.clearTimeout(timeout);timeout=null;ready=true;error.hidden=true;
         frames.set(independentMessageKey(header),frame);updateActions();
+        const replyButton=frame.contentDocument.getElementById('hdrReplyToSenderButton');
+        if(replyButton && replyButton.getAttribute('data-gm-reply-bound')!=='true'){
+          replyButton.setAttribute('data-gm-reply-bound','true');
+          const reply=event=>{
+            if(closed || token!==ticket)return;
+            event.preventDefault();event.stopImmediatePropagation();
+            runCommand('cmd_replySender',header);
+          };
+          replyButton.addEventListener('command',reply,true);
+          cleanups.add(()=>replyButton.removeEventListener('command',reply,true));
+        }
         const senderHeader=frame.contentWindow.currentHeaderData?.sender?.headerValue;
         const viaDomain=independentViaDomain(address,senderHeader,MailServices.headerParser);
         via.hidden=!viaDomain;via.textContent=viaDomain?`via ${viaDomain}`:'';
@@ -697,11 +737,21 @@ function installIndependentReader(win) {
           /* The conversation already supplies sender, date, subject and actions.
              Keep recipients, security indicators, extension controls and notices. */
           #expandedfromRow, #expandedsubjectRow, #expandedtagsRow, #dateLabel, #dateLabelSubject,
-          #hdrReplyToSenderButton, #hdrSmartReplyButton, #hdrReplyButton,
+          #hdrSmartReplyButton, #hdrReplyButton,
           #hdrReplyAllButton, #hdrReplyListButton, #hdrFollowupButton,
           #hdrForwardButton, #hdrArchiveButton, #hdrJunkButton, #hdrTrashButton {
             display:none !important;
           }
+          #hdrReplyToSenderButton {
+            display:inline-flex !important; min-inline-size:36px; min-block-size:36px;
+            padding:8px !important; border:0 !important; border-radius:50% !important;
+            background:transparent !important;
+          }
+          #hdrReplyToSenderButton > .toolbarbutton-icon {
+            list-style-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22M9%205%203%2011l6%206%20M3%2011h9a7%207%200%200%201%207%207%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linejoin%3D%22round%22%20stroke-linecap%3D%22round%22%2F%3E%3C%2Fsvg%3E") !important; width:20px; height:20px;
+          }
+          #hdrReplyToSenderButton > .toolbarbutton-text { display:none !important; }
+          #hdrReplyToSenderButton:hover { background:light-dark(#20212414,#ffffff20) !important; }
           #messagepaneboxwrapper, #messagepanebox { min-block-size:0; }
           #messagepane { min-block-size:0; flex:1; }
           .message-header-view-button { border-radius:16px !important; }
@@ -718,7 +768,25 @@ function installIndependentReader(win) {
 #otherActionsButton > .toolbarbutton-icon {
   margin:0 !important; width:16px !important; height:16px !important;
 }
+@media (prefers-reduced-motion:no-preference) {
+  #hdrReplyToSenderButton, #otherActionsButton {
+    transition:background-color 150ms cubic-bezier(.2,0,0,1) !important;
+  }
+}
 #otherActionsButton:hover { background:light-dark(#20212414,#ffffff20) !important; }
+
+    :is(#hdrReplyToSenderButton,#otherActionsButton) { position:relative; isolation:isolate; background:transparent !important; }
+    :is(#hdrReplyToSenderButton,#otherActionsButton):is(:hover,:focus-visible) { background:transparent !important; }
+    :is(#hdrReplyToSenderButton,#otherActionsButton)::before {
+      content:''; position:absolute; inset:0; border-radius:inherit; z-index:-1;
+      pointer-events:none; background:light-dark(#20212414,#ffffff20); opacity:0; transform:scale(.65);
+    }
+    :is(#hdrReplyToSenderButton,#otherActionsButton):is(:hover,:focus-visible):not(:disabled):is(:hover,:focus-visible) { background:transparent !important; }
+    :is(#hdrReplyToSenderButton,#otherActionsButton):is(:hover,:focus-visible):not(:disabled)::before { opacity:1; transform:scale(1); }
+    @media (prefers-reduced-motion:no-preference) {
+      :is(#hdrReplyToSenderButton,#otherActionsButton):is(:hover,:focus-visible) { background:transparent !important; }
+    :is(#hdrReplyToSenderButton,#otherActionsButton)::before { transition:transform 180ms cubic-bezier(.2,0,0,1), opacity 120ms ease-out; }
+    }
 #otherActionsButton:focus-visible { outline:2px solid Highlight !important; outline-offset:2px; }
 
         `;
@@ -806,11 +874,11 @@ function installIndependentReader(win) {
     cleanups.add(release);if(!hydration){if(before)cards.insertBefore(article,before);else cards.append(article);}if(expand)expandCard();
     return article;
   }
-  function render(headers,anchor,token){
+  function render(headers,anchor,token,focusMessage=false){
     const pending=[...pendingReplies];
     clearCards();currentHeaders=headers;
     actionHeader=headers.at(-1) || anchor;
-    const selected=headers.find(header=>independentMessageKey(header)===independentMessageKey(anchor)) || actionHeader;
+    const selected=(focusMessage && headers.find(header=>independentMessageKey(header)===independentMessageKey(anchor))) || actionHeader;
     let selectedCard;
     for(const header of headers) {
       const card=buildCard(header,header===selected || header===actionHeader,token);
@@ -854,13 +922,13 @@ function installIndependentReader(win) {
       try {toggleTagNumber(header,number)}catch(_){status.hidden=false;status.textContent='Could not update the label on this message. Try again.'}
       return true;
     },
-    async open(header){
+    async open(header,{focusMessage=false}={}){
       if(closed)return;if(typeof inlineComposeControllers!=='undefined')inlineComposeControllers.get(win)?.float();const token=++ticket;query?.cancel();
       resolving=true;host.hidden=false;layout.classList.add('gm-independent-open');host.scrollTop=0;
       title.textContent=header.mime2DecodedSubject || '(No subject)';title.append(titleTags);status.hidden=false;status.textContent='Loading conversation…';
       // Start the native viewer immediately. Index/Sent lookups enrich the
       // conversation asynchronously rather than holding the body behind them.
-      render(independentFolderThread(header),header,token);
+      render(independentFolderThread(header),header,token,focusMessage);
       let gloda=null;
       try {if(Services.prefs.getBoolPref('mailnews.database.global.indexer.enabled',true))gloda=ChromeUtils.importESModule('resource:///modules/gloda/GlodaPublic.sys.mjs').Gloda}catch(_){}
       query=independentConversation(win,header,gloda,independentSentFolders(),sentCache);
@@ -871,7 +939,7 @@ function installIndependentReader(win) {
       // running. Keep that confirmed message when the older query finishes.
       result.messages=independentMessages([...result.messages,...currentHeaders],header);
       const same=currentHeaders.length===result.messages.length && currentHeaders.every((message,index)=>independentMessageKey(message)===independentMessageKey(result.messages[index]));
-      if(!same)render(result.messages,header,token);else updateActions();
+      if(!same)render(result.messages,header,token,focusMessage);else updateActions();
       status.textContent=`${result.messages.length} ${result.messages.length===1?'message':'messages'}`;
       status.hidden=result.messages.length===1;
       status.title=result.indexed?'':'Conversation assembled from this folder and locally available sent messages';

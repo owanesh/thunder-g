@@ -132,7 +132,23 @@ function installReadingMode(win) {
       margin:0; font:inherit; color:inherit; border:0; border-radius:50%;
       background:transparent; padding:8px; cursor:pointer; flex:0 0 36px;
     }
+    @media (prefers-reduced-motion:no-preference) {
+      .gm-reading-back { transition:background-color 150ms cubic-bezier(.2,0,0,1); }
+    }
     .gm-reading-back:hover { background:var(--treeitem-background-hover, #e9eef6); }
+
+    :is(.gm-reading-back) { position:relative; isolation:isolate; background:transparent !important; }
+    :is(.gm-reading-back):is(:hover,:focus-visible) { background:transparent !important; }
+    :is(.gm-reading-back)::before {
+      content:''; position:absolute; inset:0; border-radius:inherit; z-index:-1;
+      pointer-events:none; background:light-dark(#20212414,#ffffff20); opacity:0; transform:scale(.65);
+    }
+    :is(.gm-reading-back):is(:hover,:focus-visible):not(:disabled):is(:hover,:focus-visible) { background:transparent !important; }
+    :is(.gm-reading-back):is(:hover,:focus-visible):not(:disabled)::before { opacity:1; transform:scale(1); }
+    @media (prefers-reduced-motion:no-preference) {
+      :is(.gm-reading-back):is(:hover,:focus-visible) { background:transparent !important; }
+    :is(.gm-reading-back)::before { transition:transform 180ms cubic-bezier(.2,0,0,1), opacity 120ms ease-out; }
+    }
     .gm-reading-back:focus-visible { outline:2px solid #1a73e8; outline-offset:-2px; }
     .gm-reading-back:disabled { opacity:.38; cursor:default; background:transparent; }
     .gm-reading-back svg { display:block; inline-size:20px; block-size:20px; flex:none; }
@@ -227,19 +243,16 @@ function installReadingMode(win) {
       ? {name:'cmd_markAsRead', label:'Mark as read'}
       : {name:'cmd_markAsUnread', label:'Mark as unread'};
   }
-  // Google Material Icons: mark_email_unread (outlined), Apache-2.0.
-  // See icons/LICENSE-material-icons.txt.
-  const unreadIconPath='M22,8.98V18c0,1.1-0.9,2-2,2H4c-1.1,0-2-0.9-2-2L2.01,6C2.01,4.9,2.9,4,4,4h10.1C14.04,4.32,14,4.66,14,5s0.04,0.68,0.1,1 H4l8,5l3.67-2.29c0.47,0.43,1.02,0.76,1.63,0.98L12,13L4,8v10h16V9.9C20.74,9.75,21.42,9.42,22,8.98z M16,5c0,1.66,1.34,3,3,3 s3-1.34,3-3s-1.34-3-3-3S16,3.34,16,5z';
   function syncReadAction() {
     const {label} = readAction();
     readButton.title = label;
     readButton.setAttribute('aria-label', label);
     const unread=label==='Mark as unread';
-    const svg=icon(unread ? unreadIconPath : 'M4 6h16v14H4z M4 7l8 6 8-6');
+    const svg=icon(unread ? MATERIAL_MARK_EMAIL_UNREAD : 'M3 9l9-6 9 6v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9z M3 9l9 6 9-6');
     if(unread){svg.setAttribute('fill','currentColor');svg.setAttribute('stroke','none');}
     readButton.replaceChildren(svg);
   }
-  const readButton = action('Mark as unread', unreadIconPath,
+  const readButton = action('Mark as unread', MATERIAL_MARK_EMAIL_UNREAD,
     // Reading can change flags after opening (including delayed auto-read).
     // Resolve the operation at click time, not from the initial button label.
     () => command(readAction().name, true));

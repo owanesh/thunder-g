@@ -253,6 +253,19 @@ function installInboxIdleActions(win,reader=null) {
 
     .gm-inbox-action{appearance:none;box-sizing:border-box;display:inline-flex;flex:0 0 36px;align-items:center;justify-content:center;inline-size:36px;min-inline-size:36px;max-inline-size:36px;block-size:36px;min-block-size:36px;max-block-size:36px;margin:0;padding:8px;border:0;border-radius:50%;background:transparent;color:inherit;cursor:pointer}
     .gm-inbox-action:hover:enabled{background:var(--treeitem-background-hover,#e9eef6)}
+
+    :is(.gm-inbox-action) { position:relative; isolation:isolate; background:transparent !important; }
+    :is(.gm-inbox-action):is(:hover,:focus-visible) { background:transparent !important; }
+    :is(.gm-inbox-action)::before {
+      content:''; position:absolute; inset:0; border-radius:inherit; z-index:-1;
+      pointer-events:none; background:light-dark(#20212414,#ffffff20); opacity:0; transform:scale(.65);
+    }
+    :is(.gm-inbox-action):is(:hover,:focus-visible):not(:disabled):is(:hover,:focus-visible) { background:transparent !important; }
+    :is(.gm-inbox-action):is(:hover,:focus-visible):not(:disabled)::before { opacity:1; transform:scale(1); }
+    @media (prefers-reduced-motion:no-preference) {
+      :is(.gm-inbox-action):is(:hover,:focus-visible) { background:transparent !important; }
+    :is(.gm-inbox-action)::before { transition:transform 180ms cubic-bezier(.2,0,0,1), opacity 120ms ease-out; }
+    }
     .gm-inbox-action:disabled{opacity:.5;cursor:default}
     .gm-inbox-action:focus-visible{outline:2px solid #1a73e8;outline-offset:-2px}
   `;doc.head.append(style);
@@ -706,7 +719,23 @@ function installInboxControls(win,{threadGuides=true,reader=null}={}) {
       width:28px; height:28px; padding:5px; border:0; border-radius:50%;
       background:transparent; color:inherit; cursor:pointer;
     }
+    @media (prefers-reduced-motion:no-preference) {
+      #threadTree .gm-row-actions button { transition:background-color 150ms cubic-bezier(.2,0,0,1); }
+    }
     #threadTree .gm-row-actions button:hover { background:var(--gm-selected, ButtonFace); }
+
+    :is(#threadTree .gm-row-actions button) { position:relative; isolation:isolate; background:transparent !important; }
+    :is(#threadTree .gm-row-actions button):is(:hover,:focus-visible) { background:transparent !important; }
+    :is(#threadTree .gm-row-actions button)::before {
+      content:''; position:absolute; inset:0; border-radius:inherit; z-index:-1;
+      pointer-events:none; background:light-dark(#20212414,#ffffff20); opacity:0; transform:scale(.65);
+    }
+    :is(#threadTree .gm-row-actions button):is(:hover,:focus-visible):not(:disabled):is(:hover,:focus-visible) { background:transparent !important; }
+    :is(#threadTree .gm-row-actions button):is(:hover,:focus-visible):not(:disabled)::before { opacity:1; transform:scale(1); }
+    @media (prefers-reduced-motion:no-preference) {
+      :is(#threadTree .gm-row-actions button):is(:hover,:focus-visible) { background:transparent !important; }
+    :is(#threadTree .gm-row-actions button)::before { transition:transform 180ms cubic-bezier(.2,0,0,1), opacity 120ms ease-out; }
+    }
     #threadTree .gm-row-actions button:focus-visible { outline:2px solid Highlight; }
     #threadTree .gm-row-actions svg { width:18px; height:18px; }
     #threadTree tr:is(:hover,:has(.gm-row-actions button:focus-visible)) .subject-line > span:not(.gm-inline-labels) {
@@ -762,7 +791,8 @@ function installInboxControls(win,{threadGuides=true,reader=null}={}) {
       ['Archive conversation', 'cmd_archive', 'M4 8h16v13H4z M3 3h18v5H3z M9 12h6'],
       ['Delete conversation', 'cmd_deleteMessage', 'M5 6h14 M9 6V3h6v3 M7 6l1 15h8l1-15'],
       [header.isRead ? 'Mark conversation as unread' : 'Mark conversation as read',
-        header.isRead ? 'cmd_markAsUnread' : 'cmd_markAsRead', 'M3 5h18v14H3z M3 6l9 7 9-7']
+        header.isRead ? 'cmd_markAsUnread' : 'cmd_markAsRead',
+        header.isRead ? MATERIAL_MARK_EMAIL_UNREAD : 'M3 9l9-6 9 6v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9z M3 9l9 6 9-6']
     ];
     for (const [label, command, path] of commands) {
       const button = doc.createElement('button');
@@ -771,6 +801,7 @@ function installInboxControls(win,{threadGuides=true,reader=null}={}) {
       const svg = doc.createElementNS('http://www.w3.org/2000/svg','svg');
       svg.setAttribute('viewBox','0 0 24 24'); svg.setAttribute('fill','none');
       svg.setAttribute('stroke','currentColor'); svg.setAttribute('stroke-width','1.8');
+      if(command==='cmd_markAsUnread'){svg.setAttribute('fill','currentColor');svg.setAttribute('stroke','none');}
       svg.setAttribute('aria-hidden','true');
       const shape = doc.createElementNS(svg.namespaceURI,'path');
       shape.setAttribute('d',path); svg.append(shape); button.append(svg);
