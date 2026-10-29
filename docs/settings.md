@@ -25,6 +25,15 @@ with manually enabling Thunder-G’s reader.
 
 ## Inbox
 
+At startup, Thunder-G shows its logo while the mailbox prepares, then fades it
+out as soon as visible messages or a completed empty folder are usable. Background
+synchronisation continues using Thunderbird's own status display. After eight
+seconds, a slow startup switches to a non-blocking waiting card so you can navigate
+folders. This card closes as soon as the mailbox is usable; **Show mail** dismisses the
+splash at any time. Offline mode immediately makes navigation available. The
+presentation follows the interface language (including live overrides), theme
+and reduced-motion preference.
+
 - **Show column headers** *(off by default)* — Restore clickable headers, column resizing and the column picker. Applies immediately without changing the sort order or saved widths.
 
 - **Messages per page** — Show 25, 50 or 100 messages at a time. **All messages**

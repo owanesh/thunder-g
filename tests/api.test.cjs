@@ -64,6 +64,30 @@ test('startup waits for a complete mail pane and cancels retries when its window
   unload();assert.equal(tasks.size,0,'unload cancels pending startup');assert.equal(attached,1);
 });
 
+test('mail-window startup uses the packaged logo, runs once and closes on unload or disable',async()=>{
+  let windows,cleanup;const startups=[];
+  const scope=require('./localization-context.cjs').createContext({ChromeUtils:{importESModule:()=>({
+    ExtensionCommon:{ExtensionAPI:class{},EventManager:class{api(){return {}}}},
+    ExtensionSupport:{registerWindowListener(id,value){windows=value},unregisterWindowListener(){}},
+    MailServices:{mfn:{addListener(){},removeListener(){}}}})},
+    Services:{prefs:{addObserver(){},removeObserver(){}}},Ci:{nsIDOMWindowUtils:{USER_SHEET:1},nsIMsgFolderNotificationService:{msgPropertyChanged:1}},
+    GMAIL_SKIN_CSS:'',GMAIL_CONVERSATIONS_CSS:'',
+    createComposeAutosave:()=>({set(){},close(){}}),installMailZoom:()=>({close(){}}),
+    installStartupSplash(win,options){const record={win,options,closed:0,refreshed:0};startups.push(record);return {close(){record.closed++},refresh(){record.refreshed++}}}});
+  vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/label-menu.js'),'utf8'),scope);
+  vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/experiments/api.js'),'utf8'),scope);
+  const api=new scope.inlineLabels().getAPI({extension:{id:'test',baseURI:{resolve:path=>'moz-extension://test/'+path}},callOnClose(value){cleanup=value}});
+  await api.inlineLabels.start();
+  const makeWindow=()=>({document:{documentURI:'chrome://messenger/content/messenger.xhtml',querySelectorAll:()=>[],getElementById:()=>null},
+    windowUtils:{loadSheetUsingURIString(){},removeSheetUsingURIString(){}},addEventListener(){},removeEventListener(){}});
+  const first=makeWindow();windows.onLoadWindow(first);windows.onLoadWindow(first);
+  assert.equal(startups.length,1);assert.equal(startups[0].options.logoURI,'moz-extension://test/icons/thunder-g.svg');
+  assert.equal(startups[0].options.isStyled({}),false,'a pane cannot dismiss splash before controllers attach');
+  windows.onUnloadWindow(first);assert.equal(startups[0].closed,1);
+  const second=makeWindow();windows.onLoadWindow(second);assert.equal(startups.length,2);
+  cleanup.close();assert.equal(startups[1].closed,1);assert.equal(startups[0].closed,1);
+});
+
 test('optional settings failures do not prevent permanent companion startup',async()=>{
   for (const fail of [false,true]) {
     const calls=[];
