@@ -620,67 +620,43 @@ function installResponsiveColumns(win) {
     tree.removeEventListener('viewchange',schedule);restore();}};
 }
 
-// Copy view includes the visible column layout, using Thunderbird's own folder
-// propagation (including its From/Recipient swap for outgoing folders).
-// Folder layouts are independent: Drafts/Sent may never have had selection
-// enabled. Keep native checkboxes available before native templates are built.
-function installSelectionColumn(win) {
-  const pane=win.threadPane,original=pane?.updateColumns;
+// Native folders remember independent column layouts, including different
+// defaults for outgoing folders. Normalize the active list before templates
+// are built; never walk accounts or persist changes into folder databases.
+function installUniformColumns(win) {
+  const pane=win.threadPane,original=pane?.updateColumns,restore=pane?.restoreColumnsState;
   if(typeof original!=='function')return {close(){}};
   const saved=new WeakMap();
-  function enable() {
-    const columns=pane.columns;
-    if(!Array.isArray(columns))return;
-    const index=columns.findIndex(column=>column.id==='selectCol');
-    if(index<0)return;
-    const column=columns[index];
-    if(!saved.has(columns))saved.set(columns,{column,index,hidden:column.hidden});
-    column.hidden=false;
-    if(index>0){columns.splice(index,1);columns.unshift(column);return true;}
-    return false;
+  const order=['selectCol','threadCol','flaggedCol','senderCol','subjectCol','attachmentCol','dateCol'];
+  const snapshot=columns=>columns.map(column=>({column,hidden:column.hidden,ordinal:column.ordinal}));
+  function restoreColumnsState(...args){
+    const result=restore.apply(this,args);
+    if(Array.isArray(pane.columns))saved.set(pane.columns,snapshot(pane.columns));
+    return result;
   }
-  function updateColumns(...args) {
-    const moved=enable();
-    // Moving the checkbox column requires a full header rebuild.
-    return original.call(this,moved?false:args[0],...args.slice(1));
-  }
-  pane.updateColumns=updateColumns;
-  updateColumns.call(pane);
-  win.document.getElementById('threadTree')?.reset?.();
-  return {close(){
-    if(pane.updateColumns!==updateColumns)return;
-    pane.updateColumns=original;
-    const columns=pane.columns,state=saved.get(columns);
-    if(state){
-      const index=columns.indexOf(state.column);
-      if(index>=0){columns.splice(index,1);columns.splice(state.index,0,state.column);state.column.hidden=state.hidden;}
-      original.call(pane);
-      win.document.getElementById('threadTree')?.reset?.();
-    }
-  }};
-}
-
-// Search lists have their own native defaults instead of a folder's saved
-// layout. Apply the same Gmail column arrangement without persisting it.
-function installSearchColumns(win) {
-  const pane=win.threadPane,original=pane?.updateColumns,saved=new WeakMap();
-  if(typeof original!=='function')return {close(){}};
   function update(...args){
     const columns=pane.columns;
-    if(win.gViewWrapper?.isSynthetic && Array.isArray(columns)){
-      if(!saved.has(columns))saved.set(columns,columns.map(column=>({column,hidden:column.hidden,ordinal:column.ordinal})));
-      const order=['selectCol','threadCol','flaggedCol','senderCol','subjectCol','attachmentCol','dateCol'];
-      for(const column of columns)column.hidden=!order.includes(column.id);
-      columns.sort((a,b)=>(order.includes(a.id)?order.indexOf(a.id):order.length)-(order.includes(b.id)?order.indexOf(b.id):order.length));
-      columns.forEach((column,index)=>{column.ordinal=index+1});
-      return original.call(this,false,...args.slice(1));
-    }
-    return original.apply(this,args);
+    if(!Array.isArray(columns))return original.apply(this,args);
+    if(!saved.has(columns))saved.set(columns,snapshot(columns));
+    const before=columns.map(column=>[column.id,column.hidden]);
+    for(const column of columns)column.hidden=!order.includes(column.id);
+    columns.sort((a,b)=>(order.includes(a.id)?order.indexOf(a.id):order.length)-(order.includes(b.id)?order.indexOf(b.id):order.length));
+    columns.forEach((column,index)=>{column.ordinal=index+1});
+    const changed=columns.some((column,index)=>column.id!==before[index][0] || column.hidden!==before[index][1]);
+    return original.call(this,changed?false:args[0],...args.slice(1));
   }
+  if(typeof restore==='function')pane.restoreColumnsState=restoreColumnsState;
   pane.updateColumns=update;update.call(pane);win.document.getElementById('threadTree')?.reset?.();
   return {close(){
-    if(pane.updateColumns!==update)return;pane.updateColumns=original;
-    const snapshot=saved.get(pane.columns);if(snapshot){pane.columns.splice(0,pane.columns.length,...snapshot.map(item=>item.column));for(const item of snapshot){item.column.hidden=item.hidden;item.column.ordinal=item.ordinal;}original.call(pane);win.document.getElementById('threadTree')?.reset?.();}
+    if(pane.updateColumns!==update)return;
+    pane.updateColumns=original;
+    if(pane.restoreColumnsState===restoreColumnsState)pane.restoreColumnsState=restore;
+    const previous=saved.get(pane.columns);
+    if(previous){pane.columns.splice(0,pane.columns.length,...previous.map(item=>item.column));for(const item of previous){item.column.hidden=item.hidden;item.column.ordinal=item.ordinal;}}
+    // Reload the current folder's saved layout, including changes made by
+    // native folder switches while this controller was active.
+    if(win.gFolder && typeof restore==='function')restore.call(pane);
+    original.call(pane);win.document.getElementById('threadTree')?.reset?.();
   }};
 }
 
@@ -783,8 +759,7 @@ function installInboxControls(win,{threadGuides=true,reader=null}={}) {
   const drafts = installSenderDraftLabels(win);
   reader?.setDraftOpener?.(drafts.openRow,drafts.getRowDraft);
   const compose = installComposeLabel(doc);
-  const selectionColumn=installSelectionColumn(win);
-  const searchColumns=installSearchColumns(win);
+  const uniformColumns=installUniformColumns(win);
   const idleActions=installInboxIdleActions(win,reader);
   const responsive = installResponsiveColumns(win);
   const viewCopy = installCompleteViewCopy(win);
@@ -1006,7 +981,7 @@ function installInboxControls(win,{threadGuides=true,reader=null}={}) {
     compose.close();
     responsive.close();
     viewCopy.close();
-    newMessage.close();idleActions.close();searchColumns.close();selectionColumn.close();
+    newMessage.close();idleActions.close();uniformColumns.close();
     threadToggles.close();
     threadDefaults.close();
     if (rowClass && Number.isFinite(originalHeight) && rowClass.ROW_HEIGHT === originalHeight + 6) {

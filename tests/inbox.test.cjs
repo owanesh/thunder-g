@@ -381,32 +381,34 @@ test('unpaginated Select all scope includes only viewport rows and excludes dumm
  assert.deepEqual(Array.from(scope.visibleInboxIndices(tree,{getFlagsAt:index=>index===2?0x20000000:0})),[1,3]);
 });
 
-test('native selection column is enabled first for every folder layout and restored on disable',()=>{
-  const calls=[],tree={reset(){calls.push('reset')}};
-  const inbox=[{id:'subjectCol',hidden:false},{id:'selectCol',hidden:false}];
-  const drafts=[{id:'flaggedCol',hidden:false},{id:'selectCol',hidden:true},{id:'subjectCol',hidden:false}];
-  const original=function(simple){calls.push(simple);assert.equal(this,pane)};
-  const pane={columns:inbox,updateColumns:original};
-  const controller=scope.installSelectionColumn({threadPane:pane,document:{getElementById:()=>tree}});
-  assert.equal(inbox[0].id,'selectCol');assert.equal(inbox[0].hidden,false);
-  pane.columns=drafts;pane.updateColumns(true);
-  assert.equal(drafts[0].id,'selectCol');assert.equal(drafts[0].hidden,false);
-  assert.equal(drafts[1].id,'flaggedCol');assert.equal(drafts[2].id,'subjectCol');
-  pane.updateColumns(true);assert.equal(drafts.length,3,'no duplicate cells on repeated updates');
-  assert.deepEqual(calls.slice(0,4),[false,'reset',false,true],'only column movement requires a full native rebuild');
-  controller.close();
-  assert.equal(pane.updateColumns,original);assert.equal(drafts[1].id,'selectCol');assert.equal(drafts[1].hidden,true);
+test('all accounts and folder types share Gmail columns and restore their saved layout on disable',()=>{
+ const ids=['subjectCol','correspondentCol','dateCol','recipientCol','locationCol','selectCol','senderCol','attachmentCol','flaggedCol','threadCol','junkStatusCol'];
+ const make=()=>ids.map((id,index)=>({id,hidden:!['subjectCol','correspondentCol','dateCol','locationCol'].includes(id),ordinal:index+1}));
+ const calls=[],first=make(),pane={columns:first,updateColumns(simple){calls.push(simple)}};
+ const win={threadPane:pane,gViewWrapper:{isSynthetic:false},document:{getElementById:()=>({reset(){}})}};
+ const controller=scope.installUniformColumns(win);
+ const expected=['selectCol','threadCol','flaggedCol','senderCol','subjectCol','attachmentCol','dateCol'];
+ for(const account of ['first','second'])for(const type of ['Inbox','Drafts','Sent','Trash','Archive','custom','search']){
+  const columns=make();pane.columns=columns;win.gViewWrapper.isSynthetic=type==='search';pane.updateColumns(true);
+  assert.deepEqual(columns.filter(column=>!column.hidden).map(column=>column.id),expected,account+' '+type);
+  assert.equal(calls.at(-1),false,'changed column structure rebuilds the native template');
+  pane.updateColumns(true);assert.equal(calls.at(-1),true,'unchanged layouts avoid unnecessary rebuilds');
+ }
+ const before=make();controller.close();assert.deepEqual(pane.columns,before);
 });
 
-test('synthetic search results use Gmail columns without changing regular folder layouts',()=>{
- const columns=['subjectCol','correspondentCol','dateCol','locationCol','selectCol','senderCol','attachmentCol','flaggedCol','threadCol'].map((id,index)=>({id,hidden:!['subjectCol','correspondentCol','dateCol','locationCol'].includes(id),ordinal:index+1}));
- const snapshot=columns.map(column=>({...column})),calls=[];
- const original=function(simple){calls.push(simple)};const pane={columns,updateColumns:original};
- const win={threadPane:pane,gViewWrapper:{isSynthetic:true},document:{getElementById:()=>({reset(){}})}};
- const controller=scope.installSearchColumns(win);
- assert.deepEqual(columns.filter(column=>!column.hidden).map(column=>column.id),['selectCol','threadCol','flaggedCol','senderCol','subjectCol','attachmentCol','dateCol']);
- controller.close();assert.equal(pane.updateColumns,original);assert.deepEqual(columns,snapshot);
- win.gViewWrapper.isSynthetic=false;const regular=scope.installSearchColumns(win);assert.deepEqual(columns,snapshot);regular.close();
+test('folder switches reusing native column objects restore the current folder settings when disabled',()=>{
+ const columns=[{id:'subjectCol',hidden:false,ordinal:1},{id:'selectCol',hidden:true,ordinal:2},{id:'dateCol',hidden:false,ordinal:3}];
+ const calls=[],original=function(){calls.push('update')};
+ const restore=function(){for(const column of this.columns){column.hidden=column.id!=='dateCol';column.ordinal=column.id==='dateCol'?1:2;}this.columns.sort((a,b)=>a.ordinal-b.ordinal);calls.push('restore')};
+ const pane={columns,updateColumns:original,restoreColumnsState:restore};
+ const win={gFolder:{URI:'account2/Sent'},threadPane:pane,document:{getElementById:()=>({reset(){}})}};
+ const controller=scope.installUniformColumns(win);
+ pane.restoreColumnsState();pane.updateColumns();
+ assert.deepEqual(columns.filter(column=>!column.hidden).map(column=>column.id),['selectCol','subjectCol','dateCol']);
+ controller.close();assert.equal(pane.updateColumns,original);assert.equal(pane.restoreColumnsState,restore);
+ assert.deepEqual(columns.filter(column=>!column.hidden).map(column=>column.id),['dateCol']);
+ assert.deepEqual(calls.slice(-2),['restore','update']);
 });
 
 test('selection menu predicates distinguish read and starred messages independently',()=>{

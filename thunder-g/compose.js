@@ -461,6 +461,37 @@ function installEmbeddedAttachmentPicker(native,main,classes=Cc,interfaces=Ci) {
   native.AttachFile=attach;
   return {close(){closed=true;if(native.AttachFile===attach)native.AttachFile=original;}};
 }
+// Floating new-message panels do not share the conversation's drop target.
+// Accept operating-system files over the entire embedded composer, including
+// its editor subdocument, and leave text, links and attachment reordering native.
+function installEmbeddedAttachmentDrop(native,panel) {
+  let closed=false;
+  const editor=native.document.getElementById?.('messageEditor')?.contentWindow;
+  const targets=[panel,native,editor].filter(Boolean);
+  function accepts(event) {
+    if(closed || !native.gMsgCompose || native.gSendOperationInProgress || native.gSaveOperationInProgress)return false;
+    const dt=event.dataTransfer;
+    if(!dt || !(Array.from(dt.types || []).includes('application/x-moz-file') || dt.files?.length))return false;
+    const source=native.gDragService?.getCurrentSession()?.sourceNode;
+    if(source && (source.ownerDocument===editor?.document || source.parentNode===native.gAttachmentBucket))return false;
+    // Keep Thunderbird's explicit insert-inline image target available.
+    return !event.target?.closest?.('#addInline');
+  }
+  function dragover(event) {
+    if(!accepts(event))return;
+    event.preventDefault();event.stopImmediatePropagation();event.dataTransfer.dropEffect='copy';
+  }
+  function drop(event) {
+    if(!accepts(event))return;
+    const attachments=native.envelopeDragObserver.getValidAttachments(event);
+    // Unsupported files (such as directories) must not navigate the editor.
+    event.preventDefault();event.stopImmediatePropagation();
+    native.envelopeDragObserver._hideDropOverlay();
+    if(attachments.length)native.AddAttachments(attachments);
+  }
+  for(const target of targets){target.addEventListener('dragover',dragover,true);target.addEventListener('drop',drop,true);}
+  return {close(){closed=true;for(const target of targets){target.removeEventListener('dragover',dragover,true);target.removeEventListener('drop',drop,true);}}};
+}
 // A saved draft is discarded through Thunderbird's recoverable Trash path.
 // Never use RemoveDraft(), which can permanently delete/expunge the copy.
 function trashInlineDraft(native,services=MailServices,msgWindow=null) {
@@ -621,7 +652,7 @@ function createInlineCompose(win) {
   const doc=win.document;let browser=null,panel=null,originalHeader=null,originalCommand=null,ready=false,observer=null;
   let restoreChrome=null,loadingTimer=null,inlineContainer=null,scrollHost=null,presentation='inline',bar=null,title=null,floatButton=null,windowButton=null,transferBusy=false,attachmentPicker=null,draftStatus=null,floatingResize=null,sendStatus=null;
   let sendNotice=null,noticeTimer=null,scrim=null,minimized=false,minimizeButton=null,bodyReadyWatcher=null,bodySheet=null,composeContentBridge=null;
-  let changeAutosave=null;
+  let changeAutosave=null,attachmentDrop=null;
   const main=win.browsingContext.topChromeWindow;
   function stopObserver(){if(observer){Services.obs.removeObserver(observer,'chrome-document-global-created');observer=null;}}
   function dispose(){
@@ -629,6 +660,7 @@ function createInlineCompose(win) {
     changeAutosave?.close();changeAutosave=null;
     sendStatus?.close();sendStatus=null;
     draftStatus?.close();draftStatus=null;floatingResize?.close();floatingResize=null;
+    attachmentDrop?.close();attachmentDrop=null;
     attachmentPicker?.close();attachmentPicker=null;
     stopObserver();if(loadingTimer!==null)win.clearTimeout(loadingTimer);loadingTimer=null;
     restoreChrome?.();restoreChrome=null;
@@ -935,6 +967,7 @@ function createInlineCompose(win) {
           if(bodyReadyWatcher?.ready && native.gMsgCompose && native.GetCurrentEditor?.()) {
             bodyReadyWatcher.close();bodyReadyWatcher=null;
             bodySheet=styleInlineComposeBody(native);
+            attachmentDrop=installEmbeddedAttachmentDrop(native,panel);
             const replyTo=native.gMsgCompose.compFields.replyTo || '',identity=native.gCurrentIdentity?.email;
             const replyRow=frame.contentDocument.getElementById('addressRowReply');
             if(replyRow && identity){
