@@ -54,7 +54,7 @@ for(const fail of [false,true])test(`recommended preset updates settings atomica
   assert.equal(element('recommended-status').dataset.kind,'error');
  }else{
   for(const id of ['independent-reader','inline-reply-enabled','inline-new-message','hide-today-pane','compose-autosave'])assert.equal(element(id).checked,true,id);
-  assert.equal(element('messages-per-page').value,'50');assert.equal(element('compose-autosave-minutes').value,'1');assert.equal(element('compose-autosave-minutes').disabled,false);
+  assert.equal(element('messages-per-page').value,'50');assert.equal(element('compose-autosave-timing').value,'auto');assert.equal(element('compose-autosave-timing').disabled,false);
   assert.equal(element('show-column-headers').checked,false);assert.equal(element('recommended-status').dataset.kind,'success');
  }
 });

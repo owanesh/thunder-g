@@ -10,9 +10,9 @@ spec=importlib.util.spec_from_file_location('release_assets',Path(__file__).reso
 release=importlib.util.module_from_spec(spec);spec.loader.exec_module(release)
 
 class ReleaseAssetsTests(unittest.TestCase):
-    def fixture(self,root):
+    def fixture(self,root,maximum="158.*"):
         manifest={'version':'0.12.1','browser_specific_settings':{'gecko':{
-            'id':release.ADDON_ID,'update_url':release.UPDATE_URL,'strict_min_version':'153.0','strict_max_version':'158.*'}}}
+            'id':release.ADDON_ID,'update_url':release.UPDATE_URL,'strict_min_version':'153.0','strict_max_version':maximum}}}
         (root/'thunder-g').mkdir();(root/'thunder-g/manifest.json').write_text(json.dumps(manifest))
         xpi=root/'thunder-g-0.12.1.xpi'
         with ZipFile(xpi,'w') as z:z.writestr('manifest.json',json.dumps(manifest))
@@ -28,6 +28,14 @@ class ReleaseAssetsTests(unittest.TestCase):
             self.assertEqual(entry['applications']['gecko'],{'strict_min_version':'153.0','strict_max_version':'158.*'})
             self.assertEqual(json.loads((root/'updates.json').read_text()),result)
             self.assertTrue(xpi.with_suffix('.xpi.sha256').exists())
+
+    def test_159_update_preserves_the_153_minimum(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder)
+            self.fixture(root,maximum='159.*')
+            result=release.generate(root,'v0.12.1')
+            limits=result['addons'][release.ADDON_ID]['updates'][0]['applications']['gecko']
+            self.assertEqual(limits,{'strict_min_version':'153.0','strict_max_version':'159.*'})
 
     def test_wrong_tag_or_stale_build_cannot_publish_a_mislabelled_update(self):
         with tempfile.TemporaryDirectory() as folder:

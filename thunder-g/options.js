@@ -38,29 +38,23 @@ checkbox.addEventListener('change',async () => {
 });
 
 const autosave = document.getElementById('compose-autosave');
-const autosaveMinutes = document.getElementById('compose-autosave-minutes');
-autosave.disabled = autosaveMinutes.disabled = true;
-let savedAutosave = {composeAutosave:true,composeAutosaveMinutes:1};
-browser.storage.local.get(savedAutosave).then(settings => {
-  savedAutosave = settings;
-  autosave.checked = settings.composeAutosave !== false;
-  autosaveMinutes.value = String([1,2,5,10].includes(settings.composeAutosaveMinutes) ? settings.composeAutosaveMinutes : 1);
-  autosave.disabled = false; autosaveMinutes.disabled = !autosave.checked;
-}).catch(() => { reportStatus(gmText("Unable to load settings.")); });
-async function saveAutosave() {
-  autosave.disabled = autosaveMinutes.disabled = true;
-  const settings = {composeAutosave:autosave.checked,composeAutosaveMinutes:Number(autosaveMinutes.value)};
-  try {
-    await browser.storage.local.set(settings); savedAutosave = settings;
-    reportStatus(gmText("Saved. Applies to newly opened compose windows."));
-  } catch (_) {
-    autosave.checked = savedAutosave.composeAutosave !== false;
-    autosaveMinutes.value = String(savedAutosave.composeAutosaveMinutes);
-    reportStatus(gmText("Unable to save. Please try again."));
-  } finally { autosave.disabled = false; autosaveMinutes.disabled = !autosave.checked; }
+const autosaveTiming=document.getElementById('compose-autosave-timing');
+autosave.disabled=autosaveTiming.disabled=true;
+let savedAutosave={composeAutosave:true,composeAutosaveMode:'auto',composeAutosaveMinutes:1};
+function showAutosave(settings){
+  autosave.checked=settings.composeAutosave!==false;
+  autosaveTiming.value=settings.composeAutosaveMode==='fixed'?String([1,2,5,10].includes(settings.composeAutosaveMinutes)?settings.composeAutosaveMinutes:1):'auto';
+  autosave.disabled=false;autosaveTiming.disabled=!autosave.checked;
 }
-autosave.addEventListener('change',saveAutosave);
-autosaveMinutes.addEventListener('change',saveAutosave);
+browser.storage.local.get(savedAutosave).then(settings=>{savedAutosave=settings;showAutosave(settings)}).catch(()=>reportStatus('Unable to load settings.'));
+async function saveAutosave(){
+  autosave.disabled=autosaveTiming.disabled=true;
+  const settings={composeAutosave:autosave.checked,composeAutosaveMode:autosaveTiming.value==='auto'?'auto':'fixed',composeAutosaveMinutes:autosaveTiming.value==='auto'?savedAutosave.composeAutosaveMinutes:Number(autosaveTiming.value)};
+  try{await browser.storage.local.set(settings);savedAutosave=settings;reportStatus('Saved. Applies to open and new composers.');}
+  catch(_){reportStatus('Unable to save. Please try again.');}
+  finally{showAutosave(savedAutosave)}
+}
+autosave.addEventListener('change',saveAutosave);autosaveTiming.addEventListener('change',saveAutosave);
 
 const pageSize = document.getElementById('messages-per-page');
 pageSize.disabled = true;
@@ -215,7 +209,7 @@ const THUNDER_G_RECOMMENDED_SETTINGS = Object.freeze({
   showColumnHeaders:false, messagesPerPage:50, hideTodayPane:true,
   threadGuides:true, searchResultsAsList:true, independentReader:true,
   inlineReplyEnabled:true, inlineNewMessageEnabled:true,
-  composeAutosave:true, composeAutosaveMinutes:1
+  composeAutosave:true, composeAutosaveMode:'auto', composeAutosaveMinutes:1
 });
 const recommendedButton=document.getElementById('apply-recommended');
 const recommendedStatus=document.getElementById('recommended-status');
@@ -223,7 +217,7 @@ browser.storage.local.get(THUNDER_G_RECOMMENDED_SETTINGS).then(()=>{
   recommendedButton.disabled=false;
 }).catch(()=>{recommendedStatus.textContent=gmText('Unable to load settings.');recommendedStatus.dataset.kind='error';});
 recommendedButton.addEventListener('click',async()=>{
-  const controls=[checkbox,autosave,autosaveMinutes,pageSize,independentReader,bimi,inlineReply,inlineNewMessage,threadGuides,columnHeaders,searchResultsAsList,interfaceLanguage];
+  const controls=[checkbox,autosave,autosaveTiming,pageSize,independentReader,bimi,inlineReply,inlineNewMessage,threadGuides,columnHeaders,searchResultsAsList,interfaceLanguage];
   const disabled=controls.map(control=>control.disabled);
   recommendedButton.disabled=true;for(const control of controls)control.disabled=true;
   recommendedButton.textContent=gmText('Applying…');recommendedStatus.textContent='';
@@ -234,14 +228,14 @@ recommendedButton.addEventListener('click',async()=>{
       inlineNewMessageEnabled:inlineNewMessage,threadGuides,showColumnHeaders:columnHeaders,searchResultsAsList};
     for(const [name,control] of Object.entries(switches))control.checked=THUNDER_G_RECOMMENDED_SETTINGS[name];
     savedPageSize=THUNDER_G_RECOMMENDED_SETTINGS.messagesPerPage;pageSize.value=String(savedPageSize);
-    savedAutosave={composeAutosave:true,composeAutosaveMinutes:1};autosaveMinutes.value='1';
+    savedAutosave={composeAutosave:true,composeAutosaveMode:'auto',composeAutosaveMinutes:1};showAutosave(savedAutosave);
     applied=true;recommendedStatus.dataset.kind='success';
     recommendedStatus.textContent=gmText('Recommended settings applied. Open a conversation to try them.');
   }catch(_){
     recommendedStatus.dataset.kind='error';recommendedStatus.textContent=gmText('Unable to save. Please try again.');
   }finally{
     controls.forEach((control,index)=>control.disabled=disabled[index]);
-    if(applied)autosaveMinutes.disabled=false;
+    if(applied)autosaveTiming.disabled=false;
     recommendedButton.disabled=false;recommendedButton.textContent=gmText('Apply recommended');
   }
 });

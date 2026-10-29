@@ -73,6 +73,14 @@ test('single click opens the current-tab reader, back restores the list, and dou
   frameQueue.shift()();
   assert.equal(layout.messagePaneVisible,false,'a thread-arrow click cancels a queued reader open');
 
+  const draftRows=[];
+  controller.setDraftOpener(row=>{draftRows.push(row.index);return true});
+  tree.events.click({button:0,target:{closest:selector=>selector==='tr.table-layout'?row:null}});
+  frameQueue.shift()();
+  assert.deepEqual(draftRows,[0],'clicking the mail routes to its saved draft');
+  assert.equal(layout.messagePaneVisible,false,'opening a draft keeps the conversation reader closed');
+  assert.equal(refreshes,0,'draft editing does not render the conversation');
+  controller.setDraftOpener(null);
   tree.events.click({button:0,target:{closest:selector=>selector==='tr.card-layout'?row:null}});
   frameQueue.shift()();
   assert.equal(layout.messagePaneVisible,true,'clicking a card row outside its subject opens the native reader');

@@ -948,13 +948,14 @@ function installIndependentReader(win) {
       try {toggleTagNumber(header,number)}catch(_){status.hidden=false;gmBindValue(status, "textContent", () => gmText("Could not update the label on this message. Try again."))}
       return true;
     },
-    async open(header,{focusMessage=false}={}){
+    async open(header,options={}){
+      const {focusMessage=false}=options || {},draft=options?.folder?options:options?.draft || null;
       if(closed)return;if(typeof inlineComposeControllers!=='undefined')inlineComposeControllers.get(win)?.float();const token=++ticket;query?.cancel();
       historyExpanded=false;resolving=true;host.hidden=false;layout.classList.add('gm-independent-open');host.scrollTop=0;
       gmBindValue(title, "textContent", () => header.mime2DecodedSubject || gmText("(No subject)"));title.append(titleTags);status.hidden=false;gmBindValue(status, "textContent", () => gmText("Loading conversation…"));
       // Start the native viewer immediately. Index/Sent lookups enrich the
       // conversation asynchronously rather than holding the body behind them.
-      render(independentFolderThread(header),header,token,focusMessage);
+      render(independentFolderThread(header).filter(message=>!draft || message.folder?.URI!==draft.folder?.URI),header,token,focusMessage);
       let gloda=null;
       try {if(Services.prefs.getBoolPref('mailnews.database.global.indexer.enabled',true))gloda=ChromeUtils.importESModule('resource:///modules/gloda/GlodaPublic.sys.mjs').Gloda}catch(_){}
       query=independentConversation(win,header,gloda,independentSentFolders(),sentCache);
@@ -963,12 +964,15 @@ function installIndependentReader(win) {
       resolving=false;
       // A Sent notification can arrive while the initial index query is still
       // running. Keep that confirmed message when the older query finishes.
-      result.messages=independentMessages([...result.messages,...currentHeaders],header);
+      result.messages=independentMessages([...result.messages,...currentHeaders],header).filter(message=>!draft || message.folder?.URI!==draft.folder?.URI);
       const same=currentHeaders.length===result.messages.length && currentHeaders.every((message,index)=>independentMessageKey(message)===independentMessageKey(result.messages[index]));
       if(!same)render(result.messages,header,token,focusMessage);else updateActions();
       status.textContent=gmCount('$1 message','$1 messages',result.messages.length);
       status.hidden=result.messages.length===1;
       gmBindValue(status, "title", () => result.indexed?'':gmText("Conversation assembled from this folder and locally available sent messages"));
+      if(draft && typeof resumeInlineDraft==='function')await resumeInlineDraft(win,draft,{
+        container:conversation,scrollHost:host,isCurrent:()=>!closed && token===ticket && !host.hidden
+      }).catch(error=>{if(!closed && token===ticket){status.hidden=false;status.textContent=error.message || 'Could not resume the saved draft.'}});
     },
     hide(){if(typeof inlineComposeControllers!=='undefined')inlineComposeControllers.get(win)?.float();++ticket;query?.cancel();query=null;resolving=false;host.hidden=true;layout.classList.remove('gm-independent-open');clearCards()},
     close(){this.hide();closed=true;contextMenu.close();sentCache.close();previews.close();win.removeEventListener?.('focus',refreshTags);MailServices.mfn?.removeListener(tagListener);stopLanguageRefresh();host.remove();layoutStyle.remove()},
