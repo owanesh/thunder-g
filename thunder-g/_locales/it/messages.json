@@ -1718,5 +1718,33 @@
   "applying_e578c27": {
     "message": "Applicazione…",
     "description": "Applying…"
+  },
+  "startup_loading": {
+    "message": "Caricamento della posta…",
+    "description": "Loading your mail…"
+  },
+  "startup_connecting": {
+    "message": "Connessione alla casella…",
+    "description": "Connecting to your mailbox…"
+  },
+  "startup_waiting": {
+    "message": "La posta non è ancora disponibile. Puoi scegliere un’altra cartella mentre attendi.",
+    "description": "Mail is not available yet. You can choose another folder while you wait."
+  },
+  "startup_updating": {
+    "message": "Aggiornamento della posta…",
+    "description": "Updating your mail…"
+  },
+  "startup_offline": {
+    "message": "Sei offline. Puoi consultare la posta già scaricata.",
+    "description": "You are offline. Downloaded mail is still available."
+  },
+  "startup_show_mail": {
+    "message": "Mostra la posta",
+    "description": "Show mail"
+  },
+  "startup_warning": {
+    "message": "Thunderbird segnala un problema",
+    "description": "Thunderbird reported a problem"
   }
 }

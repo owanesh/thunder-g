@@ -132,7 +132,7 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
     let gmailImporter = null;
     const documents = new Map();
     const pendingDocuments = new Map();
-    const windows = new Map(),tabWatchers=new Map();
+    const windows = new Map(),tabWatchers=new Map(),startupWindows=new Map();
     const conversationDocuments = new Map();
     const id = context.extension.id;
     const skinWindows = new Map();
@@ -246,6 +246,14 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
         nativeComposeAutosaves.set(win,installNativeChangeAutosave(win));return;
       }
       loadSkin(win);
+      if(win.document.documentURI==='chrome://messenger/content/messenger.xhtml' && !startupWindows.has(win)) {
+        let activityManager=null;
+        try {activityManager=Cc['@mozilla.org/activity-manager;1'].getService(Ci.nsIActivityManager);}catch(_){/* Native dialogs still report connection errors. */}
+        startupWindows.set(win,installStartupSplash(win,{
+          logoURI:context.extension.baseURI.resolve('icons/thunder-g.svg'),
+          isStyled:doc=>documents.has(doc),activityManager,
+        }));
+      }
       if (!zoomWindows.has(win)) zoomWindows.set(win,installMailZoom(win,fontSize,action=>{
         const tabmail=win.document.getElementById('tabmail');
         if(!tabmail)return zoomNativeMessage(win,
@@ -267,6 +275,7 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
       applyTodayPane(win);
       scan(win.document);
       if(!tabWatchers.has(win))tabWatchers.set(win,watchMailTabs(win,scan));
+      startupWindows.get(win)?.refresh();
     };
     const refresh = () => {
       for (const [doc, controller] of documents) {
@@ -298,6 +307,7 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
         win.removeEventListener("load", handlers.listener, true);
         win.removeEventListener("activate", handlers.activate);
       }
+      for (const controller of startupWindows.values()) controller.close(); startupWindows.clear();
       for (const controller of pendingDocuments.values()) controller.close();
       pendingDocuments.clear();
       for (const controller of documents.values()) controller.close();
@@ -375,6 +385,7 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
         chromeURLs: ["chrome://messenger/content/messenger.xhtml","chrome://messenger/content/messengercompose/messengercompose.xhtml"],
         onLoadWindow: loadWindow,
         onUnloadWindow(win) {
+          startupWindows.get(win)?.close();startupWindows.delete(win);
           nativeComposeAutosaves.get(win)?.close();nativeComposeAutosaves.delete(win);
           tabWatchers.get(win)?.close();tabWatchers.delete(win);
           zoomWindows.get(win)?.close(); zoomWindows.delete(win);

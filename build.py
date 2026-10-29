@@ -29,6 +29,7 @@ with ZipFile(output, 'w', ZIP_DEFLATED) as archive:
             data += b'\n' + (source / 'nested-labels.js').read_bytes()
             data += b'\n' + (source / 'reading.js').read_bytes()
             data += b'\n' + (source / 'dates.js').read_bytes()
+            data += b'\n' + (source / 'startup.js').read_bytes()
             data += b'\n' + (source / 'inbox.js').read_bytes()
             data += b'\n' + (source / 'conversation.js').read_bytes()
             data += b'\n' + (source / 'compose.js').read_bytes()

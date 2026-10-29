@@ -36,6 +36,7 @@ controllers, including cleanup when windows or the extension close.
 | Tag chips, picker, sidebar hierarchy or tag navigation | `labels.js`, `label-menu.js`, `nested-labels.js`, `label-navigation.js` |
 | Reader and conversation handling | `reading.js`, `conversation.js`, `independent-reader.js` |
 | Embedded writing | `compose.js` |
+| Startup splash and mailbox readiness | `startup.js`; window lifecycle in `experiments/api.js` |
 | Settings and defaults | `options.html`, `options.js`, `background.js`; follow the setter into the experiment |
 | Gmail import | `gmail-import.js`, `gmail-import-options.js` and the native adapter in `experiments/api.js` |
 
@@ -81,6 +82,11 @@ Automated tests do not replace these checks:
 - For composer changes, check signatures, attachments, draft save/reopen and inline/floating/separate-window transitions. Verify sending separately with a test account when the send path changes.
 - Toggle the affected settings, close/reopen a mail window, and disable/re-enable the extension to check cleanup and duplicate controls.
 - Check light/dark appearance and narrow panes when changing layout.
+- For startup, try cached messages, a completed empty folder, a slow connection,
+  offline mode and Account Central. The logo should fade once visible messages
+  can be used. After eight seconds a non-blocking status card leaves navigation
+  available; synchronisation must not keep the full splash on screen. Check
+  switching tabs and disabling the extension while it is waiting too.
 
 List untested combinations explicitly, including Thunderbird versus Betterbird.
 See [troubleshooting](troubleshooting.md) for useful diagnostic information.
