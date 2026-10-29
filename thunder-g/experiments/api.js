@@ -11,13 +11,15 @@ function mailPaneReady(doc) {
   return doc.readyState === 'complete' && !!win?.threadPane &&
     ['paneLayout','threadTree','folderTree'].every(id => doc.getElementById(id));
 }
-function waitForMailPane(doc, onReady) {
+function waitForMailPane(doc, onReady, onClose = () => {}) {
   const win = doc.defaultView;
   let timer = null, stopped = false, attempts = 0;
   function close() {
+    if (stopped) return;
     stopped = true;
     if (timer !== null) win.clearTimeout(timer);
     win.removeEventListener('unload',close);
+    onClose();
   }
   function check() {
     timer = null;
@@ -200,7 +202,7 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
         if (!pendingDocuments.has(doc)) pendingDocuments.set(doc,waitForMailPane(doc,() => {
           pendingDocuments.delete(doc);
           attach(doc);
-        }));
+        }, () => pendingDocuments.delete(doc)));
         return;
       }
       pendingDocuments.get(doc)?.close(); pendingDocuments.delete(doc);
@@ -230,6 +232,8 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
       }
     };
     const loadWindow = win => {
+      if (closed || win.closed) return;
+      if (windows.has(win)) { scan(win.document); return; }
       loadSkin(win);
       if (!zoomWindows.has(win)) zoomWindows.set(win,installMailZoom(win,fontSize,action=>{
         const tabmail=win.document.getElementById('tabmail');
@@ -242,7 +246,13 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
       // changes when a skin attaches, restarts, or is disabled.
       const listener = event => { if (event.target?.nodeType === 9) attach(event.target); };
       win.addEventListener("load", listener, true);
-      windows.set(win, listener);
+      const activate = () => {
+        if (closed || win.closed) return;
+        scan(win.document);
+        if (!tabWatchers.has(win)) tabWatchers.set(win,watchMailTabs(win,scan));
+      };
+      win.addEventListener("activate", activate);
+      windows.set(win, {listener, activate});
       applyTodayPane(win);
       scan(win.document);
       if(!tabWatchers.has(win))tabWatchers.set(win,watchMailTabs(win,scan));
@@ -272,7 +282,10 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
       Services.prefs.removeObserver("mailnews.tags.", observer);
       Services.prefs.removeObserver(HIDDEN_MESSAGE_LABELS_PREF, observer);
       MailServices.mfn.removeListener(tagChanges);
-      for (const [win, listener] of windows) win.removeEventListener("load", listener, true);
+      for (const [win, handlers] of windows) {
+        win.removeEventListener("load", handlers.listener, true);
+        win.removeEventListener("activate", handlers.activate);
+      }
       for (const controller of pendingDocuments.values()) controller.close();
       pendingDocuments.clear();
       for (const controller of documents.values()) controller.close();
@@ -351,8 +364,14 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
           zoomWindows.get(win)?.close(); zoomWindows.delete(win);
           removeTodayPaneStyle(win);
           unloadSkin(win);
-          const listener = windows.get(win);
-          if (listener) win.removeEventListener("load", listener, true);
+          const handlers = windows.get(win);
+          if (handlers) {
+            win.removeEventListener("load", handlers.listener, true);
+            win.removeEventListener("activate", handlers.activate);
+          }
+          for (const [doc, pending] of pendingDocuments) {
+            if (doc.defaultView?.top === win || doc.defaultView?.closed) pending.close();
+          }
           windows.delete(win);
           for (const [doc, controller] of conversationDocuments) {
             if (doc.defaultView?.top === win || doc.defaultView?.closed) {
