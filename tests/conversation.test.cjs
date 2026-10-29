@@ -79,21 +79,8 @@ test('expanded message renders its own chips below recipients, updates and clean
   let changed;
   const win={document:doc,MutationObserver:class{constructor(fn){changed=fn}observe(){}disconnect(){}},customElements:{whenDefined:()=>new Promise(()=>{})},addEventListener(){},removeEventListener(){}};
   const controller=scope.installConversationStyle(win,'');
-  assert.equal(header.children[0].children[0].textContent,'TA');
-  let removed=0;
-  const originalQuery=list.querySelectorAll;
-  list.querySelectorAll=selector=>selector==='li' ? [
-    {getAttribute:()=> 'other',querySelector:()=>({click(){throw new Error('wrong tag')}})},
-    {getAttribute:()=> 'ta',querySelector:()=>({click(){removed++}})}
-  ] : [];
-  const remove=header.children[0].children[0].children[0];
-  remove.events.click({preventDefault(){},stopPropagation(){}});
-  assert.equal(removed,1,'remove delegates only to the matching tag on this message');
-  list.querySelectorAll=originalQuery;
-  changed([{type:'attributes',attributeName:'tags',target:list}]);
-  assert.equal(header.children.length,1,'no duplicate chips');
-  attrs.tags='[]';changed([{type:'attributes',attributeName:'tags',target:list}]);
-  assert.equal(header.children.length,0,'removing the tag removes the message chip');
+  assert.equal(header.children.length,0,'message cards do not repeat conversation labels');
+  assert.ok(classes.has('gm-tags-in-message-header'));
   controller.close();assert.equal(classes.size,0);
 });
 

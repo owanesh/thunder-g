@@ -8,7 +8,7 @@ test('chip navigation resolves exact native keys, reveals tag mode and clears re
  const win={document:{getElementById:()=>({currentAbout3Pane:pane})}};
  const service={tags:{getAllTags:()=>tags}},smart={getSmartMailbox:()=>({getTagFolder(tag){assert.equal(tag,tags[0]);return {URI:'native://exact-tag'}}})};
  assert.equal(scope.openNativeLabelView(win,'exact',service,smart),'native://exact-tag');
- assert.deepEqual([...pane.folderPane.activeModes],['all','tags']);assert.equal(calls[0],'gm-open-label-view');assert.equal(calls.at(-1),'native://exact-tag');
+ assert.deepEqual([...pane.folderPane.activeModes],['all','tags']);assert.equal(calls[0],'gm-open-label-view');assert.equal(calls.at(-2),'native://exact-tag');assert.equal(calls.at(-1),'gm-label-navigation');
  assert.deepEqual(values,{sticky:true});assert.throws(()=>scope.openNativeLabelView(win,'deleted',service,smart),/no longer exists/);
 });
 test('text click/Enter navigate, remove buttons do not, cleanup restores native attributes',()=>{
@@ -20,4 +20,17 @@ test('text click/Enter navigate, remove buttons do not, cleanup restores native 
  events.click(event);events.keydown({...event,target:node,key:'Enter'});assert.deepEqual(calls,['key with/slash','key with/slash']);
  events.click({...event,target:{closest:()=>({})}});events.keydown({...event,target:node,key:'Escape'});assert.equal(calls.length,2);
  cleanup();assert.equal(attrs.get('title'),'original');assert.equal(attrs.has('role'),false);assert.equal(node.style.cursor,'default');assert.deepEqual(events,{});
+});
+
+test('label navigation offers a return path and restores the original folder and filters',()=>{
+ const values={unread:true},calls=[];
+ const pane={gFolder:{URI:'mailbox://inbox'},folderPane:{activeModes:['tags']},CustomEvent:class{constructor(type){this.type=type}},dispatchEvent(){},
+ displayFolder(uri){this.gFolder={URI:uri};calls.push(uri)},
+ quickFilterBar:{filterer:{filterValues:values,clear(){for(const key of Object.keys(values))delete values[key]},setFilterValue(k,v){values[k]=v}},updateSearch(){},reflectFiltererState(){}}};
+ const win={document:{getElementById:()=>({currentAbout3Pane:pane})}},mail={tags:{getAllTags:()=>[{key:'work',tag:'Work'}]}},smart={getSmartMailbox:()=>({getTagFolder:()=>({URI:'native://work'})})};
+ scope.openNativeLabelView(win,'work',mail,smart);
+ assert.equal(pane._gmLabelHistory.length,1);assert.equal(pane.gFolder.URI,'native://work');
+ assert.equal(scope.returnFromNativeLabelView(pane),true);
+ assert.deepEqual(calls,['native://work','mailbox://inbox']);assert.deepEqual(values,{unread:true});
+ assert.equal(pane._gmLabelHistory.length,0);assert.equal(scope.returnFromNativeLabelView(pane),false);
 });

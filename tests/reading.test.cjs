@@ -4,6 +4,7 @@ const vm = require('node:vm');
 const fs = require('node:fs');
 const path = require('node:path');
 const scope = vm.createContext({});
+vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/labels.js'),'utf8'),scope);
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/pagination.js'),'utf8'),scope);
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/nested-labels.js'),'utf8'),scope);
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/reading.js'),'utf8'),scope);
@@ -187,9 +188,13 @@ test('checkbox selection shows bulk toolbar and archives native selection withou
   for (const title of ['Print conversation','Previous message','Next message'])
     assert.equal(nodes.find(n=>n.title===title).hidden,true,`${title} is hidden in bulk mode`);
   assert.equal(layout.messagePaneVisible,false);
+  const checkboxGroup={className:'gm-inbox-select-group'},home={prepend(node){this.child=node}};
+  controller.setSelectionControl(checkboxGroup,home);
+  assert.equal(toolbar.children[0],checkboxGroup,'the actual checkbox remains visible on the bulk toolbar');
   const read=nodes.find(n=>n.title==='Mark as read');
   read.events.click[0]();
   assert.equal(calls.pop()[0],'cmd_markAsRead','unread selection must not invoke disabled mark-unread');
+  assert.equal(home.child,checkboxGroup,'clearing selection restores the same checkbox to the inbox toolbar');
   selected=messages;messages.forEach(message=>message.isRead=true);
   for(const fn of tree.events.click)fn(event);
   while(frames.length)frames.shift()();

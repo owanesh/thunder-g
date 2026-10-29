@@ -29,7 +29,7 @@
    marks neither indent message text nor take pointer events from the arrow. */
 #threadTree tr[data-gm-thread-guide] .subjectcol-column {
   position: relative;
-  --gm-thread-guide: light-dark(#8ba2c3, #8ba6cc);
+  --gm-thread-guide: light-dark(#bdc9d9, #5d6e85);
 }
 #threadTree tr[data-gm-thread-guide] .subjectcol-column::before,
 #threadTree tr[data-gm-thread-guide]:is([data-gm-thread-guide="middle"], [data-gm-thread-guide="end"]) .subjectcol-column::after {
@@ -43,7 +43,7 @@
   inset-inline-start: 7px;
   top: 0;
   bottom: 0;
-  width: 2px;
+  width: 1px;
 }
 #threadTree tr[data-gm-thread-guide="start"] .subjectcol-column::before {
   top: calc(50% + 8px);
@@ -96,3 +96,7 @@
 :root[data-gm-hide-column-headers] #threadTree thead {
   visibility:collapse !important;
 }
+
+/* Meet the toolbar checkbox halfway without moving the remaining row columns. */
+#threadTree .tree-view-row-select { transform:translateX(7px); }
+#threadTree:dir(rtl) .tree-view-row-select { transform:translateX(-7px); }

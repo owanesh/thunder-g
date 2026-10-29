@@ -7,9 +7,9 @@ browser.inlineLabels.onDkimRequest.addListener(async(request,messageId,domain,ba
 });
 async function startThunderG() {
   // Optional settings must never prevent the companion from starting.
-  let searchResultsAsList=true, showColumnHeaders = false, threadGuides = true, independentReader = false, hideTodayPane = false, messagesPerPage = 0, composeAutosave = true, composeAutosaveMinutes = 1, bimiEnabled = false, inlineReplyEnabled = false, inlineNewMessageEnabled = false;
+  let compactConversations=true, searchResultsAsList=true, showColumnHeaders = false, threadGuides = true, independentReader = false, hideTodayPane = false, messagesPerPage = 0, composeAutosave = true, composeAutosaveMinutes = 1, bimiEnabled = false, inlineReplyEnabled = false, inlineNewMessageEnabled = false;
   try {
-    const settings = await browser.storage.local.get({searchResultsAsList:true,showColumnHeaders:false,threadGuides:true,independentReader:false,hideTodayPane:false,messagesPerPage:0,composeAutosave:true,composeAutosaveMinutes:1,bimiEnabled:false,inlineReplyEnabled:false,inlineNewMessageEnabled:false});
+    const settings = await browser.storage.local.get({compactConversations:true,searchResultsAsList:true,showColumnHeaders:false,threadGuides:true,independentReader:false,hideTodayPane:false,messagesPerPage:0,composeAutosave:true,composeAutosaveMinutes:1,bimiEnabled:false,inlineReplyEnabled:false,inlineNewMessageEnabled:false});
     searchResultsAsList=settings.searchResultsAsList!==false;
     showColumnHeaders = settings.showColumnHeaders === true;
     threadGuides = settings.threadGuides !== false;
@@ -18,6 +18,7 @@ async function startThunderG() {
     inlineNewMessageEnabled = settings.inlineNewMessageEnabled === true;
     hideTodayPane = settings.hideTodayPane === true;
     independentReader = settings.independentReader === true;
+    compactConversations = settings.compactConversations !== false;
     messagesPerPage = settings.messagesPerPage;
     composeAutosave = settings.composeAutosave !== false;
     composeAutosaveMinutes = settings.composeAutosaveMinutes;
@@ -28,6 +29,7 @@ async function startThunderG() {
   await browser.inlineLabels.setHideTodayPane(hideTodayPane);
   await browser.inlineLabels.setComposeAutosave(composeAutosave,composeAutosaveMinutes || 1);
   await browser.inlineLabels.setMessagesPerPage(messagesPerPage || 0);
+  await browser.inlineLabels.setCompactConversations(compactConversations);
   await browser.inlineLabels.setIndependentReader(independentReader);
   await browser.inlineLabels.setBimiEnabled?.(bimiEnabled);
   await browser.inlineLabels.setInlineReplyEnabled?.(inlineReplyEnabled);
@@ -45,6 +47,7 @@ async function startThunderG() {
     if (area === 'local' && changes.messagesPerPage) {
       browser.inlineLabels.setMessagesPerPage(changes.messagesPerPage.newValue || 0).catch(console.error);
     }
+    if(area==='local' && changes.compactConversations)browser.inlineLabels.setCompactConversations(changes.compactConversations.newValue!==false).catch(console.error);
     if (area === 'local' && changes.independentReader) {
       browser.inlineLabels.setIndependentReader(changes.independentReader.newValue === true).catch(console.error);
     }

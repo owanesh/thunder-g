@@ -1,5 +1,6 @@
 var { setTimeout, clearTimeout } = ChromeUtils.importESModule("resource://gre/modules/Timer.sys.mjs");
 var verifyIndependentDkim = null,openIndependentDkimPopup=null;
+var compactConversationsEnabled=true;
 var independentBimiEnabled=false,independentBimiListeners=new Set();
 var { ExtensionParent } = ChromeUtils.importESModule("resource://gre/modules/ExtensionParent.sys.mjs");
 var { ExtensionCommon } = ChromeUtils.importESModule("resource://gre/modules/ExtensionCommon.sys.mjs");
@@ -194,6 +195,12 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
           if (!header) return null;
           return assignedTags(header, MailServices.tags.getAllTags()).map(tag =>
             ({key:tag.key,name:tag.tag,color:tag.color}));
+        }, (ids,key) => {
+          const extension=ExtensionParent.GlobalManager.extensionMap.get("gconversation@xulforum.org");
+          const headers=ids.map(id=>Number.isSafeInteger(id) && id>0 ? extension?.messageManager?.get(id) : null);
+          if(!headers.length || headers.some(header=>!header?.folder))throw new Error('Conversation is still loading');
+          applyConversationLabel(headers,key,false);
+          for(const header of headers)if(header.label && key===`$label${header.label}`)header.label=0;
         }));
         return;
       }
@@ -328,6 +335,7 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
         clearTimeout(pending.timer);dkimRequests.delete(request);
         try {const value=JSON.parse(payload);if(value.error)pending.reject(new Error(value.error));else pending.resolve(value);}catch(error){pending.reject(error);}
       },
+      async setCompactConversations(enabled){compactConversationsEnabled=enabled!==false;},
       async setIndependentReader(enabled) {
         independentReader = enabled === true;
         for (const reader of readers.values()) reader.setIndependent(independentReader);

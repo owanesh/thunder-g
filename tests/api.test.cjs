@@ -69,7 +69,7 @@ test('optional settings failures do not prevent permanent companion startup',asy
     const calls=[];
     const scope=vm.createContext({console:{warn(){},error(){}},browser:{
       storage:{local:{async get(){if(fail)throw Error('unavailable');return {hideTodayPane:true}}},onChanged:{addListener(){}}},
-      inlineLabels:{onDkimRequest:{addListener(){}},async setIndependentReader(value){assert.equal(value,false)},async setBimiEnabled(value){assert.equal(value,false)},async setInlineReplyEnabled(value){assert.equal(value,false)},async setInlineNewMessageEnabled(value){assert.equal(value,false)},async setComposeAutosave(enabled,minutes){assert.equal(enabled,true);assert.equal(minutes,1)},async setMessagesPerPage(){},async setHideTodayPane(value){calls.push(value)},async start(){calls.push('started')}}}});
+      inlineLabels:{onDkimRequest:{addListener(){}},async setCompactConversations(){},async setIndependentReader(value){assert.equal(value,false)},async setBimiEnabled(value){assert.equal(value,false)},async setInlineReplyEnabled(value){assert.equal(value,false)},async setInlineNewMessageEnabled(value){assert.equal(value,false)},async setComposeAutosave(enabled,minutes){assert.equal(enabled,true);assert.equal(minutes,1)},async setMessagesPerPage(){},async setHideTodayPane(value){calls.push(value)},async start(){calls.push('started')}}}});
     await vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/background.js'),'utf8'),scope);
     assert.deepEqual(calls,[!fail,'started']);
   }
@@ -79,7 +79,7 @@ test('independent reader is opt-in, restored at startup and propagated on prefer
   let changed;const calls=[];
   const scope=vm.createContext({console,browser:{
     storage:{local:{async get(){return {independentReader:true,hideTodayPane:false,composeAutosave:true,composeAutosaveMinutes:1,messagesPerPage:0}}},onChanged:{addListener(fn){changed=fn}}},
-    inlineLabels:{onDkimRequest:{addListener(){}},async setIndependentReader(value){calls.push(value)},async setHideTodayPane(){},async setComposeAutosave(){},async setMessagesPerPage(){},async start(){calls.push('started')}}}});
+    inlineLabels:{onDkimRequest:{addListener(){}},async setCompactConversations(){},async setIndependentReader(value){calls.push(value)},async setHideTodayPane(){},async setComposeAutosave(){},async setMessagesPerPage(){},async start(){calls.push('started')}}}});
   await vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/background.js'),'utf8'),scope);
   assert.deepEqual(calls,[true,'started']);
   changed({independentReader:{newValue:false}},'local');assert.deepEqual(calls,[true,'started',false]);
@@ -90,7 +90,7 @@ test('optional compose and BIMI preferences load once and retain explicit opt-in
   let reads=0;const calls=[];
   const scope=vm.createContext({console,browser:{
     storage:{local:{async get(){reads++;return {bimiEnabled:true,inlineReplyEnabled:true,inlineNewMessageEnabled:true}}},onChanged:{addListener(){}}},
-    inlineLabels:{onDkimRequest:{addListener(){}},async setHideTodayPane(){},async setComposeAutosave(){},async setMessagesPerPage(){},async setIndependentReader(){},
+    inlineLabels:{onDkimRequest:{addListener(){}},async setHideTodayPane(){},async setComposeAutosave(){},async setMessagesPerPage(){},async setCompactConversations(){},async setIndependentReader(){},
       async setBimiEnabled(value){calls.push(['bimi',value])},async setInlineReplyEnabled(value){calls.push(['reply',value])},async setInlineNewMessageEnabled(value){calls.push(['new',value])},async start(){calls.push('started')}}}});
   await vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/background.js'),'utf8'),scope);
   assert.equal(reads,1,'a later optional storage read cannot interrupt startup');
@@ -102,7 +102,7 @@ test('thread guide preference defaults on, preserves opt-out and updates live fr
  for(const initial of [undefined,false]){
   let changed;const calls=[];
   const scope=vm.createContext({console,browser:{storage:{local:{async get(defaults){return {...defaults,...(initial===undefined?{}:{threadGuides:initial})}}},onChanged:{addListener(fn){changed=fn}}},
-  inlineLabels:{onDkimRequest:{addListener(){}},async setThreadGuides(value){calls.push(value)},async setHideTodayPane(){},async setComposeAutosave(){},async setMessagesPerPage(){},async setIndependentReader(){},async start(){}}}});
+  inlineLabels:{onDkimRequest:{addListener(){}},async setThreadGuides(value){calls.push(value)},async setHideTodayPane(){},async setComposeAutosave(){},async setMessagesPerPage(){},async setCompactConversations(){},async setIndependentReader(){},async start(){}}}});
   await vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/background.js'),'utf8'),scope);
   assert.deepEqual(calls,[initial!==false]);
   changed({threadGuides:{newValue:false}},'local');changed({threadGuides:{newValue:true}},'local');
@@ -117,7 +117,7 @@ test('column headers default hidden, restore explicit choice and respond only to
     const noop=async()=>{};
     const scope=vm.createContext({console,browser:{runtime:{},storage:{local:{get:async()=>({showColumnHeaders:saved})},onChanged:{addListener(fn){changed=fn}}},inlineLabels:{
       onDkimRequest:{addListener(){}},setShowColumnHeaders:async value=>calls.push(value),
-      setHideTodayPane:noop,setComposeAutosave:noop,setMessagesPerPage:noop,setIndependentReader:noop,start:noop
+      setHideTodayPane:noop,setComposeAutosave:noop,setMessagesPerPage:noop,setCompactConversations:noop,setIndependentReader:noop,start:noop
     }}});
     vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/background.js'),'utf8'),scope);
     await new Promise(resolve=>setImmediate(resolve));
@@ -164,7 +164,7 @@ test('search lists use the complete native result set once, only after results a
 test('search-list preference defaults on and live opt-out is preserved',async()=>{
  for(const initial of [undefined,false]){
   let changed;const calls=[];
-  const scope=vm.createContext({console,browser:{storage:{local:{async get(defaults){return {...defaults,...(initial===undefined?{}:{searchResultsAsList:initial})}}},onChanged:{addListener(fn){changed=fn}}},inlineLabels:{onDkimRequest:{addListener(){}},async setSearchResultsAsList(value){calls.push(value)},async setHideTodayPane(){},async setComposeAutosave(){},async setMessagesPerPage(){},async setIndependentReader(){},async start(){}}}});
+  const scope=vm.createContext({console,browser:{storage:{local:{async get(defaults){return {...defaults,...(initial===undefined?{}:{searchResultsAsList:initial})}}},onChanged:{addListener(fn){changed=fn}}},inlineLabels:{onDkimRequest:{addListener(){}},async setSearchResultsAsList(value){calls.push(value)},async setHideTodayPane(){},async setComposeAutosave(){},async setMessagesPerPage(){},async setCompactConversations(){},async setIndependentReader(){},async start(){}}}});
   await vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/background.js'),'utf8'),scope);
   assert.deepEqual(calls,[initial!==false]);changed({searchResultsAsList:{newValue:false}},'local');assert.equal(calls.at(-1),false);changed({searchResultsAsList:{newValue:undefined}},'local');assert.equal(calls.at(-1),true);
  }
@@ -207,4 +207,13 @@ test('timed-out mail panes release pending state and can attach on a later activ
  doc.readyState='complete';win.threadPane={};
  const pending=scope.waitForMailPane(doc,()=>attached++,()=>closed++);step();
  assert.equal(attached,1);assert.equal(closed,2);pending.close();assert.equal(closed,2,'cleanup is idempotent');
+});
+
+test('compaction preference defaults on and live opt-out is preserved',async()=>{
+ for(const initial of [undefined,false]){
+  let changed;const calls=[];
+  const scope=vm.createContext({console,browser:{storage:{local:{async get(defaults){return {...defaults,...(initial===undefined?{}:{compactConversations:initial})}}},onChanged:{addListener(fn){changed=fn}}},inlineLabels:{onDkimRequest:{addListener(){}},async setCompactConversations(value){calls.push(value)},async setHideTodayPane(){},async setComposeAutosave(){},async setMessagesPerPage(){},async setIndependentReader(){},async start(){}}}});
+  await vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/background.js'),'utf8'),scope);
+  assert.deepEqual(calls,[initial!==false]);changed({compactConversations:{newValue:false}},'local');assert.equal(calls.at(-1),false);changed({compactConversations:{newValue:undefined}},'local');assert.equal(calls.at(-1),true);
+ }
 });

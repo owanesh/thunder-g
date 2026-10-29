@@ -15,14 +15,16 @@ function conversationTitleLabels(lists) {
 }
 
 /* Apply presentation to Conversations' open component roots, never mail iframes. */
-function installConversationStyle(win, css, resolveTags = null) {
+function installConversationStyle(win, css, resolveTags = null, removeLabel = null) {
   const correctedLists = new Map();
   const messageChips = new Map();
   function renderMessageTags(list) {
     if (list.getAttribute("expanded") !== "true") return;
     const header = list.closest?.('.message')?.querySelector('.messageHeader.expanded .shrink-box');
     if (!header) return;
-    const labels = conversationTitleLabels([list]);
+    const lists=[...win.document.querySelectorAll('ul[is="message-tags"]')];
+    const common=commonLabelKeys(lists.map(item=>conversationTitleLabels([item])));
+    const labels = conversationTitleLabels([list]).filter(tag=>!common.has(tag.key));
     const signature = JSON.stringify(labels);
     const previous = messageChips.get(list);
     if (previous?.signature === signature && previous.node.parentNode === header) return;
@@ -88,7 +90,10 @@ function installConversationStyle(win, css, resolveTags = null) {
   let titleRoot = null, titleChips = null, titleSignature = null;
   function updateTitleTags() {
     if (!titleRoot || closed) return;
-    const labels = conversationTitleLabels(win.document.querySelectorAll('ul[is="message-tags"]'));
+    const lists=[...win.document.querySelectorAll('ul[is="message-tags"]')];
+    const common=commonLabelKeys(lists.map(list=>conversationTitleLabels([list])));
+    const labels = conversationTitleLabels(lists).filter(tag=>common.has(tag.key));
+    for(const list of lists)renderMessageTags(list);
     const signature = JSON.stringify(labels.map(tag=>[tag.key,tag.name,tag.color]));
     if (signature === titleSignature) return;
     titleSignature = signature;
@@ -104,6 +109,20 @@ function installConversationStyle(win, css, resolveTags = null) {
       const colors = conversationTagColors(tag.color);
       chip.style.setProperty('--gm-tag-bg',colors.background);
       chip.style.setProperty('--gm-tag-fg',colors.foreground);
+      const remove=win.document.createElement('button');remove.type='button';
+      remove.className='gm-remove-message-tag';
+      remove.title=`Remove ${tag.name} from this conversation`;remove.setAttribute('aria-label',remove.title);
+      remove.addEventListener('click',event=>{
+        event.preventDefault();event.stopPropagation();
+        if(closed || chip.isConnected===false)return;
+        try {
+          const lists=[...win.document.querySelectorAll('ul[is="message-tags"]')];
+          if(!removeLabel)throw new Error('Conversation label removal unavailable');
+          removeLabel(lists.map(list=>Number(list.getAttribute('msgid'))),tag.key);
+          refreshMessageTags();
+        }catch(error){remove.title='Could not remove label from every message. Try again.';}
+      });
+      chip.append(remove);
       titleChips.append(chip);
     }
     titleRoot.append(titleChips);
@@ -138,7 +157,7 @@ function installConversationStyle(win, css, resolveTags = null) {
     }
     for (const [list,{node}] of messageChips) {
       if (list.isConnected === false) {
-        node.remove(); list.classList.remove('gm-tags-in-message-header');
+        node.remove(); list.classList?.remove('gm-tags-in-message-header');
         messageChips.delete(list); correctedLists.delete(list);
       }
     }
@@ -205,7 +224,7 @@ function installConversationStyle(win, css, resolveTags = null) {
     }
     correctedLists.clear();
     for (const [list,{node}] of messageChips) {
-      node.remove(); list.classList.remove("gm-tags-in-message-header");
+      node.remove(); list.classList?.remove("gm-tags-in-message-header");
     }
     messageChips.clear();
     win.removeEventListener("focus",refreshMessageTags);
