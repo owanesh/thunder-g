@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Accept dragged files throughout embedded new-message composers as attachments, using the same native attachment conversion as replies. Preserve text dragging, inline image targets and attachment reordering.
+
 ## 0.20.0
 
 - Restore the skin when reopening mail windows and retry panes that finish initializing late.

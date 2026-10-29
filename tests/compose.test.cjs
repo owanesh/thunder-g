@@ -502,3 +502,30 @@ test('fixed autosave retains its deadline during typing and switching to Auto re
   const before=[...timers.keys()][0];text='abc';events.input({type:'input',isTrusted:true});assert.equal(timers.has(before),false,'Auto restarts on each edit');
   controller.close();scope.configureChangeAutosave(true,'auto');
 });
+
+test('embedded file drops attach once through native conversion from the panel, compose window and editor',()=>{
+ const panel=composeEventTarget(),editor=Object.assign(composeEventTarget(),{document:{}}),native=composeEventTarget();
+ let source=null,converted=0,hidden=0;const additions=[];
+ Object.assign(native,{document:{getElementById:()=>({contentWindow:editor})},gMsgCompose:{},gAttachmentBucket:{},gDragService:{getCurrentSession:()=>({sourceNode:source})},
+  envelopeDragObserver:{getValidAttachments(event){converted++;assert.equal(event.dataTransfer.types[0],'application/x-moz-file');return event.attachments},_hideDropOverlay(){hidden++}},
+  AddAttachments(items){additions.push(items)}});
+ const hook=scope.installEmbeddedAttachmentDrop(native,panel);
+ function event(extra={}){return {dataTransfer:{types:['application/x-moz-file'],files:[]},attachments:[{name:'one.txt'},{name:'two.pdf'}],preventDefault(){this.prevented=true},stopImmediatePropagation(){this.stopped=true},...extra}}
+ for(const target of [panel,native,editor]){
+  const over=event();target.emit('dragover',over);assert.equal(over.dataTransfer.dropEffect,'copy');
+  // Event dispatch uses a copy, so test cancellation on the actual callback too.
+  const drop=event();target.listeners.get('drop')(drop);assert.equal(drop.prevented,true);assert.equal(drop.stopped,true);
+ }
+ assert.equal(converted,3);assert.equal(additions.length,3);assert.equal(additions[0].length,2);assert.equal(hidden,3);
+ for(const flags of [{gSendOperationInProgress:true},{gSaveOperationInProgress:true}]){
+  Object.assign(native,flags);native.listeners.get('drop')(event());Object.assign(native,{gSendOperationInProgress:false,gSaveOperationInProgress:false});
+ }
+ for(const internal of [{ownerDocument:editor.document},{parentNode:native.gAttachmentBucket}]){source=internal;native.listeners.get('drop')(event());}
+ source=null;
+ const text=event({dataTransfer:{types:['text/plain'],files:[]}});native.listeners.get('drop')(text);assert.equal(text.prevented,undefined);
+ const inline=event({target:{closest:()=>({id:'addInline'})}});native.listeners.get('drop')(inline);assert.equal(inline.prevented,undefined);
+ assert.equal(additions.length,3,'sending, saving, internal moves, text and explicit inline targets stay native');
+ const directory=event({attachments:[]});native.listeners.get('drop')(directory);assert.equal(directory.prevented,true);assert.equal(additions.length,3);
+ const callback=native.listeners.get('drop');hook.close();for(const target of [panel,native,editor])assert.equal(target.listeners.size,0);
+ callback(event());assert.equal(additions.length,3,'a closed composer cannot receive attachments');
+});
