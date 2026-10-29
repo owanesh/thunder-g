@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.20.1
+
 - Use the same message-list column layout in every account and folder, including Inbox, Drafts, Sent, Trash and searches. Restore saved native layouts when the add-on is disabled.
 
 - Accept dragged files throughout embedded new-message composers as attachments, using the same native attachment conversion as replies. Preserve text dragging, inline image targets and attachment reordering.
