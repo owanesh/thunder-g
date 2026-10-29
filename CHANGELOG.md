@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.21.0
+
 - Show a startup splash while the visible mailbox becomes usable, then fade it away. Slow startup uses a dismissible waiting card; include English/Italian text, dark mode and reduced-motion support.
 
 - Apply label changes to separate local Inbox/Sent copies of the same Message-ID, and retain reply label inheritance when resuming a saved inline draft.
