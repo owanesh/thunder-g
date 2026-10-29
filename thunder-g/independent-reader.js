@@ -225,12 +225,12 @@ function independentDkimStatus(header, live) {
   const domain=result?.sdid || result?.SDID || '';
   if(result?.result==='SUCCESS') {
     const warning=Array.isArray(result.warnings) && result.warnings.length>0;
-    return {tone:warning?'warning':'success',label:warning?'DKIM verified · warning':'DKIM verified',detail:domain};
+    return {tone:warning?'warning':'success',label:warning?gmText("DKIM verified · warning"):gmText("DKIM verified"),detail:domain};
   }
-  if(result?.result==='PERMFAIL')return {tone:'failure',label:'DKIM failed',detail:result.errorType || ''};
-  if(result?.result==='TEMPFAIL')return {tone:'warning',label:'DKIM temporary error',detail:result.errorType || ''};
-  if(result?.result==='none' || result?.result==='NOSIG')return {tone:'warning',label:'DKIM unsigned',detail:''};
-  return {tone:'warning',label:'DKIM not checked',detail:'No saved DKIM Verifier result is available for this message'};
+  if(result?.result==='PERMFAIL')return {tone:'failure',label:gmText("DKIM failed"),detail:result.errorType || ''};
+  if(result?.result==='TEMPFAIL')return {tone:'warning',label:gmText("DKIM temporary error"),detail:result.errorType || ''};
+  if(result?.result==='none' || result?.result==='NOSIG')return {tone:'warning',label:gmText("DKIM unsigned"),detail:''};
+  return {tone:'warning',label:gmText("DKIM not checked"),detail:gmText("No saved DKIM Verifier result is available for this message")};
 }
 function independentBimiDomain(address,result,baseDomain) {
   const from=address.split('@').at(-1)?.toLowerCase();
@@ -300,7 +300,7 @@ function installIndependentReader(win) {
   const doc=win.document,layout=doc.getElementById('paneLayout');
   let closed=false,ticket=0,query=null,revealFrame=null,resolving=false;
   const host=doc.createElement('section');host.className='gm-independent-reader';host.hidden=true;
-  host.setAttribute('aria-label','Thunder-G conversation');layout.append(host);
+  gmBindAttribute(host, 'aria-label', () => gmText("Thunder-G conversation"));layout.append(host);
   const root=host.attachShadow({mode:'open'});
   const previews=createPreviewQueue(win);
   const sentCache=createSentCandidateCache(win);
@@ -405,7 +405,7 @@ function installIndependentReader(win) {
   scope.className='scope';scope.hidden=true;
   status.className='status';status.setAttribute('role','status');cards.className='cards';
   conversation.append(title,scope,status,cards);root.append(style,conversation);
-  const titleTags=doc.createElement('span');titleTags.className='title-tags';titleTags.setAttribute('aria-label','Labels in this conversation');
+  const titleTags=doc.createElement('span');titleTags.className='title-tags';gmBindAttribute(titleTags, 'aria-label', () => gmText("Labels in this conversation"));
   const cleanups=new Set(),tagRenderers=new Set(),securityRenderers=new Set(),frames=new Map(),messageDocs=new Map(),messageCards=new Map();let currentHeaders=[],actionHeader=null,activeHeader=null,activeCard=null,historyExpanded=false;
   const zoomResizers=new Map();
   let messageZoom=null;
@@ -433,7 +433,7 @@ function installIndependentReader(win) {
     if(!header || browser.ownerDocument.getElementById('messagepane')!==browser)return null;
     return {window:browser.ownerDocument.defaultView,activate:()=>activateMessage(header)};
   });
-  const actions=doc.createElement('div');actions.className='actions';actions.setAttribute('role','group');actions.setAttribute('aria-label','Reply to conversation');
+  const actions=doc.createElement('div');actions.className='actions';actions.setAttribute('role','group');gmBindAttribute(actions, 'aria-label', () => gmText("Reply to conversation"));
   const buttons=[],pendingReplies=new Map(),pendingSentCopies=new Map();
   const normalizeSendId=value=>String(value || '').trim().replace(/^<|>$/g,'');
   function reconcilePendingReplies() {
@@ -451,7 +451,7 @@ function installIndependentReader(win) {
     let entry=pendingReplies.get(state.id);
     if(!entry) {
       const card=doc.createElement('article');card.className='gm-pending-reply';card.setAttribute('data-expanded','');
-      let name=state.from || 'Me',address='';
+      let name=state.from || gmText("Me"),address='';
       try{const from=MailServices.headerParser.parseDecodedHeader(name)[0];name=from?.name || from?.email || name;address=from?.email || '';}catch(_){}
       const heading=text('div','card-header',''),toggle=text('div','toggle','');
       const initials=name.trim().split(/\s+/).slice(0,2).map(part=>part[0]).join('').toLocaleUpperCase();
@@ -459,25 +459,25 @@ function installIndependentReader(win) {
       if(photo){const image=doc.createElement('img');image.alt='';image.setAttribute('src',photo);image.addEventListener('error',()=>avatar.replaceChildren(doc.createTextNode(initials)),{once:true});avatar.replaceChildren(image);}
       sender.append(text('span','name',name),text('span','address',address));toggle.append(avatar,sender);
       const meta=text('div','message-meta',''),date=new Date(state.date || Date.now());
-      const time=text('time','',date.toLocaleString(undefined,{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}));
-      time.dateTime=date.toISOString();time.title=date.toLocaleString();
+      const time=text('time','',date.toLocaleString(gmLocale(),{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}));
+      time.dateTime=date.toISOString();time.title=date.toLocaleString(gmLocale());
       const notice=text('span','dkim-status','');notice.setAttribute('role','status');meta.append(time,notice);heading.append(toggle,meta);
       const body=text('div','body gm-pending-body',''),recipients=text('div','gm-pending-recipients','');
-      recipients.append(text('strong','','To '),text('span','',state.to || ''));
-      if(state.cc)recipients.append(text('span','',` · Cc ${state.cc}`));
+      recipients.append(gmBindValue(text('strong', '', ''), 'textContent', () => gmText("To ")),text('span','',state.to || ''));
+      if(state.cc)recipients.append(gmBindValue(text('span', '', ''), 'textContent', () => gmText(" · Cc $1", state.cc)));
       const parts=pendingReplyText(state.body),message=text('pre','gm-pending-text',parts.body),signature=text('pre','gm-pending-text gm-pending-signature',parts.signature);
       body.append(recipients,message);if(parts.signature)body.append(signature);
       if(parts.quote){
         const quoted=text('pre','gm-pending-text',parts.quote);quoted.hidden=true;
-        const reveal=text('button','quote-toggle','…');reveal.type='button';reveal.setAttribute('aria-label','Show quoted text');reveal.setAttribute('aria-expanded','false');
-        reveal.addEventListener('click',()=>{quoted.hidden=!quoted.hidden;entry.quoteExpanded=!quoted.hidden;reveal.setAttribute('aria-expanded',String(!quoted.hidden));reveal.setAttribute('aria-label',quoted.hidden?'Show quoted text':'Hide quoted text');});
+        const reveal=text('button','quote-toggle','…');reveal.type='button';gmBindAttribute(reveal, 'aria-label', () => gmText("Show quoted text"));reveal.setAttribute('aria-expanded','false');
+        reveal.addEventListener('click',()=>{quoted.hidden=!quoted.hidden;entry.quoteExpanded=!quoted.hidden;reveal.setAttribute('aria-expanded',String(!quoted.hidden));gmBindAttribute(reveal, 'aria-label', () => quoted.hidden?gmText("Show quoted text"):gmText("Hide quoted text"));});
         body.append(quoted,reveal);
       }
       if(state.attachments?.length)body.append(text('div','address',state.attachments.join(' · ')));
       card.append(heading,body);cards.append(card);entry={card,notice,body};pendingReplies.set(state.id,entry);
       card.scrollIntoView({block:'nearest',inline:'nearest'});
     }
-    entry.messageId=state.messageId;entry.notice.textContent=state.state==='sent'?'Sent':'Sending…';
+    entry.messageId=state.messageId;gmBindValue(entry.notice, "textContent", () => state.state==='sent'?gmText("Sent"):gmText("Sending…"));
     // A forward may have no References header. Match only the exact Message-ID
     // from this composer, including when the Sent copy arrived before feedback.
     for(const header of [...pendingSentCopies.values()])tagListener.msgAdded(header);
@@ -497,7 +497,7 @@ function installIndependentReader(win) {
   for(const [label,command,glyph] of [['Reply all','cmd_replyall','reply-all'],['Reply','cmd_replySender','reply'],['Forward','cmd_forwardInline','forward']]) {
     const button=text('button','',label);
     const icon=text('span','action-icon '+glyph,'');icon.setAttribute('aria-hidden','true');
-    button.replaceChildren(icon,text('span','',label));button.type='button';button.disabled=true;buttons.push(button);
+    button.replaceChildren(icon,gmBindAction(text('span','',''),'textContent',label));button.type='button';button.disabled=true;buttons.push(button);
     button.addEventListener('click',()=>runCommand(command));actions.append(button);
   }
   conversation.append(actions);
@@ -570,7 +570,7 @@ function installIndependentReader(win) {
     if(hydration)preserveReaderPosition(host,hydration.card,()=>{card=buildCard(header,true,ticket,following,hydration)});
     else card=buildCard(header,true,ticket,following);
     updateActions();refreshTags();reconcilePendingReplies();
-    status.textContent=`${next.length} messages`;status.hidden=false;
+    gmBindValue(status, "textContent", () => gmText("$1 messages", next.length));status.hidden=false;
     if(revealFrame!==null)win.cancelAnimationFrame(revealFrame);
     if(hydration)return;
     const token=ticket;
@@ -580,6 +580,7 @@ function installIndependentReader(win) {
     });
   };
   if(MailServices.mfn)MailServices.mfn.addListener(tagListener,notifications);
+  const stopLanguageRefresh=gmOnLanguageChange(refreshTags);
   win.addEventListener?.('focus',refreshTags);
   function clearCards(){pendingSentCopies.clear();pendingReplies.clear();if(revealFrame!==null)win.cancelAnimationFrame(revealFrame);revealFrame=null;for(const cleanup of cleanups)cleanup();cleanups.clear();cards.replaceChildren();tagRenderers.clear();securityRenderers.clear();messageDocs.clear();messageCards.clear();titleTags.replaceChildren();frames.clear();currentHeaders=[];actionHeader=null;activeHeader=null;activeCard=null;updateActions()}
   function text(tag,className,value){const node=doc.createElement(tag);node.className=className;node.textContent=value;return node}
@@ -590,9 +591,9 @@ function installIndependentReader(win) {
     const cardHeader=doc.createElement('div');cardHeader.className='card-header';
     const latest=header===actionHeader;
     const toggle=doc.createElement('button');toggle.type='button';toggle.className='toggle';toggle.setAttribute('aria-expanded','false');
-    toggle.setAttribute('aria-description','Number keys label this message. L labels the entire conversation.');
-    if(latest) {article.setAttribute('data-latest','');toggle.setAttribute('aria-disabled','true');toggle.title='Most recent message'}
-    let name=header.mime2DecodedAuthor || header.author || 'Unknown sender',address='';
+    gmBindAttribute(toggle, 'aria-description', () => gmText("Number keys label this message. L labels the entire conversation."));
+    if(latest) {article.setAttribute('data-latest','');toggle.setAttribute('aria-disabled','true');gmBindValue(toggle, "title", () => gmText("Most recent message"))}
+    let name=header.mime2DecodedAuthor || header.author || gmText("Unknown sender"),address='';
     try {const from=MailServices.headerParser.parseDecodedHeader(name)[0];name=from?.name || from?.email || name;address=from?.email || ''}catch(_){}
     const initials=name.trim().split(/\s+/).slice(0,2).map(part=>part[0]).join('').toLocaleUpperCase();
     const preview=text('span','preview','');
@@ -609,7 +610,7 @@ function installIndependentReader(win) {
     }
     toggle.append(avatar,sender);
     const date=new Date((header.dateInSeconds || 0)*1000);
-    const time=text('time','',date.toLocaleString(undefined,{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}));time.dateTime=date.toISOString();time.title=date.toLocaleString();
+    const time=text('time','',date.toLocaleString(gmLocale(),{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}));time.dateTime=date.toISOString();time.title=date.toLocaleString(gmLocale());
     const meta=doc.createElement('div');meta.className='message-meta';
     const dkim=text('span','dkim-status','');dkim.setAttribute('role','status');
     let bimiTicket=0;
@@ -621,16 +622,16 @@ function installIndependentReader(win) {
       if(!domain)return;
       try {const result=await verifyIndependentDkim(domain);
         if(!isCurrent() || attempt!==bimiTicket || !independentBimiEnabled || !result?.logo?.startsWith('data:image/svg+xml;base64,'))return;
-        const image=doc.createElement('img');image.alt='';image.title='DNS-published BIMI logo';image.setAttribute('src',result.logo);
+        const image=doc.createElement('img');image.alt='';gmBindValue(image, "title", () => gmText("DNS-published BIMI logo"));image.setAttribute('src',result.logo);
         image.addEventListener('error',()=>{if(attempt===bimiTicket)avatar.replaceChildren(doc.createTextNode(initials));},{once:true});avatar.replaceChildren(image);
       }catch(_){}
     }
     if(typeof independentBimiListeners!=='undefined'){independentBimiListeners.add(refreshBimi);cleanups.add(()=>{bimiTicket++;independentBimiListeners.delete(refreshBimi);});}
     let liveDkim=null,dkimPending=typeof verifyIndependentDkim==='function',dkimUnavailable=false;
-    function renderDkim(){const value=dkimPending?{label:'DKIM checking…',tone:'warning'}:dkimUnavailable?{label:'DKIM unavailable',tone:'warning',detail:'DKIM Verifier integration unavailable'}:independentDkimStatus(header,liveDkim);dkim.textContent=value.label;dkim.setAttribute('data-tone',value.tone);dkim.title=[value.label,value.detail].filter(Boolean).join(' — ')}
+    function renderDkim(){const value=dkimPending?{label:gmText("DKIM checking…"),tone:'warning'}:dkimUnavailable?{label:gmText("DKIM unavailable"),tone:'warning',detail:gmText("DKIM Verifier integration unavailable")}:independentDkimStatus(header,liveDkim);dkim.textContent=value.label;dkim.setAttribute('data-tone',value.tone);dkim.title=[value.label,value.detail].filter(Boolean).join(' — ')}
     securityRenderers.add(renderDkim);renderDkim();meta.append(time,dkim);
     if(typeof verifyIndependentDkim==='function') {
-      dkim.textContent='DKIM checking…';
+      gmBindValue(dkim, "textContent", () => gmText("DKIM checking…"));
       Promise.resolve().then(()=>verifyIndependentDkim(header)).then(result=>{
         if(!isCurrent())return;dkimPending=false;liveDkim={...result,version:'2.1'};renderDkim();refreshBimi();
       },()=>{if(isCurrent()){dkimPending=false;dkimUnavailable=true;renderDkim();}});
@@ -663,10 +664,10 @@ function installIndependentReader(win) {
     function revealSavedBody(){if(!pendingBody)return;preserveReaderPosition(host,article,()=>{pendingBody.remove();pendingBody=null;body.style.position='';body.style.visibility='';body.style.inlineSize='';});}
     let browser=null,timeout=null,zoom=null,bodyResize=null,contentChanges=null,contentLoad=null,resizeFrame=null,ready=false,toggleQuotes=null,restoreCommands=null,focusCleanup=null,scrollCleanup=null;
     const quoteButton=text('button','quote-toggle','…');quoteButton.type='button';quoteButton.hidden=true;
-    quoteButton.setAttribute('aria-label','Show quoted text');quoteButton.setAttribute('aria-expanded','false');
+    gmBindAttribute(quoteButton, 'aria-label', () => gmText("Show quoted text"));quoteButton.setAttribute('aria-expanded','false');
     quoteButton.addEventListener('click',()=>toggleQuotes?.());
-    const error=text('div','status','Unable to display this message. Close and reopen it to retry. ');error.hidden=true;
-    const fallback=text('button','fallback','Open in Thunderbird window');fallback.type='button';
+    const error=gmBindValue(text('div', 'status', ''), 'textContent', () => gmText("Unable to display this message. Close and reopen it to retry. "));error.hidden=true;
+    const fallback=gmBindValue(text('button', 'fallback', ''), 'textContent', () => gmText("Open in Thunderbird window"));fallback.type='button';
     fallback.addEventListener('click',()=>{
       ChromeUtils.importESModule('resource:///modules/MailUtils.sys.mjs').MailUtils.openMessageInNewWindow(header);
     });error.append(fallback);
@@ -727,7 +728,7 @@ function installIndependentReader(win) {
         const senderHeader=frame.contentWindow.currentHeaderData?.sender?.headerValue;
         const viaDomain=independentViaDomain(address,senderHeader,MailServices.headerParser);
         via.hidden=!viaDomain;via.textContent=viaDomain?`via ${viaDomain}`:'';
-        via.title=viaDomain?'Sending agent from the message’s Sender header (not an authentication result)':'';
+        gmBindValue(via, "title", () => viaDomain?gmText("Sending agent from the message’s Sender header (not an authentication result)"):'');
         // Style only the native envelope chrome. Remote-content and encryption
         // notifications and attachments remain present and functional.
         const frameStyle=browser.contentDocument.createElement('style');
@@ -837,15 +838,15 @@ function installIndependentReader(win) {
             content.documentElement.append(quoteStyle);
             const folded=foldableQuotedHistory(content,quotes);
             if(folded)content.documentElement.setAttribute('data-gm-fold-quotes','');
-            else {quoteButton.setAttribute('aria-expanded','true');quoteButton.setAttribute('aria-label','Hide quoted text');}
+            else {quoteButton.setAttribute('aria-expanded','true');gmBindAttribute(quoteButton,'aria-label',()=>gmText('Hide quoted text'));}
             quoteButton.hidden=false;
             toggleQuotes=()=>{
               const folded=quoteButton.getAttribute('aria-expanded')!=='true';
               if(folded)content.documentElement.removeAttribute('data-gm-fold-quotes');
               else content.documentElement.setAttribute('data-gm-fold-quotes','');
               quoteButton.setAttribute('aria-expanded',String(folded));
-              quoteButton.setAttribute('aria-label',folded?'Hide quoted text':'Show quoted text');
-              quoteButton.title=folded?'Hide quoted text':'Show quoted text';scheduleResize();
+              gmBindAttribute(quoteButton, 'aria-label', () => folded?gmText("Hide quoted text"):gmText("Show quoted text"));
+              gmBindValue(quoteButton, "title", () => folded?gmText("Hide quoted text"):gmText("Show quoted text"));scheduleResize();
             };
           }
           if(hydration?.quoteExpanded && toggleQuotes && quoteButton.getAttribute('aria-expanded')!=='true')toggleQuotes();
@@ -944,13 +945,13 @@ function installIndependentReader(win) {
       if(number===null || host.hidden || closed)return false;
       const header=messageDocs.get(event.currentTarget) || messageDocs.get(event.target?.ownerDocument) || activeHeader;
       event.preventDefault();event.stopImmediatePropagation();
-      try {toggleTagNumber(header,number)}catch(_){status.hidden=false;status.textContent='Could not update the label on this message. Try again.'}
+      try {toggleTagNumber(header,number)}catch(_){status.hidden=false;gmBindValue(status, "textContent", () => gmText("Could not update the label on this message. Try again."))}
       return true;
     },
     async open(header,{focusMessage=false}={}){
       if(closed)return;if(typeof inlineComposeControllers!=='undefined')inlineComposeControllers.get(win)?.float();const token=++ticket;query?.cancel();
       historyExpanded=false;resolving=true;host.hidden=false;layout.classList.add('gm-independent-open');host.scrollTop=0;
-      title.textContent=header.mime2DecodedSubject || '(No subject)';title.append(titleTags);status.hidden=false;status.textContent='Loading conversation…';
+      gmBindValue(title, "textContent", () => header.mime2DecodedSubject || gmText("(No subject)"));title.append(titleTags);status.hidden=false;gmBindValue(status, "textContent", () => gmText("Loading conversation…"));
       // Start the native viewer immediately. Index/Sent lookups enrich the
       // conversation asynchronously rather than holding the body behind them.
       render(independentFolderThread(header),header,token,focusMessage);
@@ -965,12 +966,12 @@ function installIndependentReader(win) {
       result.messages=independentMessages([...result.messages,...currentHeaders],header);
       const same=currentHeaders.length===result.messages.length && currentHeaders.every((message,index)=>independentMessageKey(message)===independentMessageKey(result.messages[index]));
       if(!same)render(result.messages,header,token,focusMessage);else updateActions();
-      status.textContent=`${result.messages.length} ${result.messages.length===1?'message':'messages'}`;
+      status.textContent=gmCount('$1 message','$1 messages',result.messages.length);
       status.hidden=result.messages.length===1;
-      status.title=result.indexed?'':'Conversation assembled from this folder and locally available sent messages';
+      gmBindValue(status, "title", () => result.indexed?'':gmText("Conversation assembled from this folder and locally available sent messages"));
     },
     hide(){if(typeof inlineComposeControllers!=='undefined')inlineComposeControllers.get(win)?.float();++ticket;query?.cancel();query=null;resolving=false;host.hidden=true;layout.classList.remove('gm-independent-open');clearCards()},
-    close(){this.hide();closed=true;contextMenu.close();sentCache.close();previews.close();win.removeEventListener?.('focus',refreshTags);MailServices.mfn?.removeListener(tagListener);host.remove();layoutStyle.remove()},
+    close(){this.hide();closed=true;contextMenu.close();sentCache.close();previews.close();win.removeEventListener?.('focus',refreshTags);MailServices.mfn?.removeListener(tagListener);stopLanguageRefresh();host.remove();layoutStyle.remove()},
     refresh:refreshTags,
     print(){runCommand('cmd_print')},
     getMessages(){return resolving?[]:currentHeaders.slice()}

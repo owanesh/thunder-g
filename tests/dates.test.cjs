@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const vm=require('node:vm');
 const fs=require('node:fs');
 const path=require('node:path');
-const scope=vm.createContext({console});
+const scope=require('./localization-context.cjs').createContext({console});
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/dates.js'),'utf8'),scope);
 test('local calendar dates: time today, month/day this year, year for older mail',()=>{
   const now=new Date(2026,9,21,0,5);
@@ -16,7 +16,7 @@ test('local calendar dates: time today, month/day this year, year for older mail
 });
 test('formatting hundreds of row dates reuses a bounded set of locale formatters',()=>{
   let constructions=0;
-  const measured=vm.createContext({Intl:{DateTimeFormat:class extends Intl.DateTimeFormat {
+  const measured=require('./localization-context.cjs').createContext({Intl:{DateTimeFormat:class extends Intl.DateTimeFormat {
     constructor(...args){super(...args);constructions++;}
   }}});
   vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/dates.js'),'utf8'),measured);

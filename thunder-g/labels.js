@@ -105,7 +105,7 @@ function installInlineLabels(window = globalThis.window, MailServices = globalTh
     existing?.remove();rendered.set(row,signature);
     const container = doc.createElement("span");
     container.className = "gm-inline-labels";
-    container.setAttribute("aria-label", `Labels: ${labels.map(tag => tag.tag).join(", ")}`);
+    gmBindAttribute(container, "aria-label", () => gmText("Labels: $1", labels.map(tag => tag.tag).join(", ")));
     container.title = labels.map(tag => tag.tag).join(", ");
     for (const tag of labels) {
       const chip = doc.createElement("span");
@@ -133,7 +133,7 @@ function installInlineLabels(window = globalThis.window, MailServices = globalTh
     original = prototype.fillRow;
     wrapped = function (...args) {
       const result = original.apply(this, args);
-      try { render(this); } catch (error) { console.error("Inline labels:", error); }
+      try { render(this); } catch (error) { console.error(gmText("Inline labels:"), error); }
       return result;
     };
     prototype.fillRow = wrapped;

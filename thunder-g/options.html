@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Thunder-G settings</title>
+  <title data-i18n="thunder_g_settings_16c175c">Thunder-G settings</title>
   <link rel="icon" href="icons/thunder-g-32.png">
   <link rel="stylesheet" href="options.css">
 </head>
@@ -12,129 +12,144 @@
     <header class="page-header">
       <div class="brand">
         <img src="icons/thunder-g-64.png" width="44" height="44" alt="">
-        <div><p class="app-name">Thunder-G <span id="version" class="version"></span></p><h1>Settings</h1></div>
+        <div><p class="app-name">Thunder-G <span id="version" class="version"></span></p><h1><span data-i18n="settings_c7f73bb">Settings</span></h1></div>
       </div>
       <a id="repository" class="repository-link" href="https://github.com/vschiavoni/thunderbird-gmail-skin" target="_blank" rel="noopener noreferrer">
-        Repository
+        <span data-i18n="repository_3123868">Repository</span>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M14 3h7v7m0-7L10 14M10 3H4a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-6"/></svg>
       </a>
     </header>
 
     <div class="settings-layout">
       <aside>
-        <nav aria-label="Settings sections">
-          <a href="#inbox">Inbox</a>
-          <a href="#conversations">Conversations</a>
-          <a href="#gmail-labels">Labels</a>
-          <a href="#writing">Writing</a>
-          <a href="#sender-logos">Sender logos</a>
+        <nav aria-label="Settings sections" data-i18n-aria-label="settings_sections_2e7109b">
+          <a href="#inbox"><span data-i18n="inbox_44caf74">Inbox</span></a>
+          <a href="#conversations"><span data-i18n="conversations_07c59b4">Conversations</span></a>
+          <a href="#gmail-labels"><span data-i18n="labels_2228985">Labels</span></a>
+          <a href="#writing"><span data-i18n="writing_2dabb83">Writing</span></a>
+          <a href="#sender-logos"><span data-i18n="sender_logos_f3c497a">Sender logos</span></a>
         </nav>
-        <p class="nav-note">Changes save automatically.<br>Your choices stay after restart.</p>
+        <p class="nav-note"><span data-i18n="changes_save_automatically_b3fdb8c">Changes save automatically.</span><br><span data-i18n="your_choices_stay_after_restart_8057221">Your choices stay after restart.</span></p>
       </aside>
 
       <main>
-        <section id="inbox" aria-labelledby="inbox-title">
-          <div class="section-heading"><h2 id="inbox-title">Inbox</h2><p>A little more room for your messages.</p></div>
+        <section id="language" aria-labelledby="language-title">
           <div class="setting-row">
-            <div class="setting-copy"><label for="show-column-headers">Show column headers</label><p id="column-headers-help">Hidden by default for a Gmail-style list. Show headers to sort, resize, or choose columns. Applies immediately.</p></div>
+            <div class="setting-copy"><label id="language-title" for="interface-language"><span data-i18n="interface_language_9407e9c">Interface language</span></label><p id="language-help"><span data-i18n="automatically_follow_thunderbird_s_language_choose_e_560b31b">Automatically follow Thunderbird’s language, or choose English or Italian for Thunder-G. Changes apply immediately, independently of Thunderbird’s language.</span></p></div>
+            <select id="interface-language" aria-describedby="language-help"><option value="auto" data-i18n="automatic_thunderbird_language_6ebf246">Automatic (Thunderbird language)</option><option value="en" data-i18n="english_649df08">English</option><option value="it" data-i18n="italiano_21df739">Italiano</option></select>
+          </div>
+        </section>
+
+        <section id="recommended" aria-labelledby="recommended-title">
+          <div class="section-heading"><h2 id="recommended-title" data-i18n="quick_setup_24cc244">Quick setup</h2></div>
+          <p data-i18n="enable_the_conversation_reader_compact_threads_in_wi_132749e">Enable the conversation reader, in-window replies and writing, thread guides, autosave, and 50 messages per page. Hide Today Pane and column headers.</p>
+          <p class="section-note" data-i18n="your_language_gmail_connection_and_sender_logo_prefe_e7d9fdd">Your language, Gmail connection, and sender-logo preferences stay unchanged.</p>
+          <button id="apply-recommended" type="button" data-i18n="apply_recommended_c7620fb" disabled>Apply recommended</button>
+          <p id="recommended-status" role="status" aria-live="polite" aria-atomic="true"></p>
+        </section>
+
+        <section id="inbox" aria-labelledby="inbox-title">
+          <div class="section-heading"><h2 id="inbox-title"><span data-i18n="inbox_44caf74">Inbox</span></h2><p><span data-i18n="a_little_more_room_for_your_messages_c21d065">A little more room for your messages.</span></p></div>
+          <div class="setting-row">
+            <div class="setting-copy"><label for="show-column-headers"><span data-i18n="show_column_headers_fc67495">Show column headers</span></label><p id="column-headers-help"><span data-i18n="hidden_by_default_for_a_gmail_style_list_show_header_ed5b98c">Hidden by default for a Gmail-style list. Show headers to sort, resize, or choose columns. Applies immediately.</span></p></div>
             <input class="switch" id="show-column-headers" type="checkbox" role="switch" aria-describedby="column-headers-help">
           </div>
           <div class="setting-row">
-            <div class="setting-copy"><label for="messages-per-page">Messages per page</label><p id="page-size-help">Choose a page size or keep one continuous list.</p></div>
-            <select id="messages-per-page" aria-describedby="page-size-help"><option value="0">All messages</option><option value="25">25 messages</option><option value="50">50 messages</option><option value="100">100 messages</option></select>
+            <div class="setting-copy"><label for="messages-per-page"><span data-i18n="messages_per_page_61199bd">Messages per page</span></label><p id="page-size-help"><span data-i18n="choose_a_page_size_or_keep_one_continuous_list_d930684">Choose a page size or keep one continuous list.</span></p></div>
+            <select id="messages-per-page" aria-describedby="page-size-help"><option value="0" data-i18n="all_messages_29207df">All messages</option><option value="25" data-i18n="25_messages_2a7f71e">25 messages</option><option value="50" data-i18n="50_messages_c1e5e08">50 messages</option><option value="100" data-i18n="100_messages_3104187">100 messages</option></select>
           </div>
           <div class="setting-row">
-            <div class="setting-copy"><label for="hide-today-pane">Hide Today Pane</label><p id="today-pane-help">Hide the calendar pane and its toggle to leave more room for mail.</p></div>
+            <div class="setting-copy"><label for="hide-today-pane"><span data-i18n="hide_today_pane_ad209bb">Hide Today Pane</span></label><p id="today-pane-help"><span data-i18n="hide_the_calendar_pane_and_its_toggle_to_leave_more__42013ed">Hide the calendar pane and its toggle to leave more room for mail.</span></p></div>
             <input class="switch" id="hide-today-pane" type="checkbox" role="switch" aria-describedby="today-pane-help">
           </div>
           <div class="setting-row">
-            <div class="setting-copy"><label for="thread-guides">Show thread connection lines</label><p id="thread-guides-help">A subtle line connects messages in expanded threads. Enabled by default; applies immediately.</p></div>
+            <div class="setting-copy"><label for="thread-guides"><span data-i18n="show_thread_connection_lines_419dbd7">Show thread connection lines</span></label><p id="thread-guides-help"><span data-i18n="a_subtle_line_connects_messages_in_expanded_threads__34c9431">A subtle line connects messages in expanded threads. Enabled by default; applies immediately.</span></p></div>
             <input class="switch" id="thread-guides" type="checkbox" role="switch" aria-describedby="thread-guides-help">
           </div>
           <div class="setting-row">
-            <div class="setting-copy"><label for="search-results-as-list">Always show search results as a list</label><p id="search-list-help">Open global searches in the styled message list. Enabled by default. Turn off for Thunderbird’s timeline and faceted results. Applies to new searches.</p></div>
+            <div class="setting-copy"><label for="search-results-as-list"><span data-i18n="always_show_search_results_as_a_list_56b900d">Always show search results as a list</span></label><p id="search-list-help"><span data-i18n="open_global_searches_in_the_styled_message_list_enab_d158989">Open global searches in the styled message list. Enabled by default. Turn off for Thunderbird’s timeline and faceted results. Applies to new searches.</span></p></div>
             <input class="switch" id="search-results-as-list" type="checkbox" role="switch" aria-describedby="search-list-help">
           </div>
-          <details><summary>About your existing layout</summary><div class="details-content"><p>Your columns, density and interface font size stay native. Page totals include messages inside collapsed threads; scrolling follows visible rows.</p><p>Hiding Today Pane applies immediately. Turning it off restores Thunderbird’s existing visibility setting without changing calendar preferences.</p></div></details>
+          <details><summary><span data-i18n="about_your_existing_layout_5cd284f">About your existing layout</span></summary><div class="details-content"><p><span data-i18n="your_columns_density_and_interface_font_size_stay_na_9ade245">Your columns, density and interface font size stay native. Page totals include messages inside collapsed threads; scrolling follows visible rows.</span></p><p><span data-i18n="hiding_today_pane_applies_immediately_turning_it_off_0fc7cd6">Hiding Today Pane applies immediately. Turning it off restores Thunderbird’s existing visibility setting without changing calendar preferences.</span></p></div></details>
         </section>
 
         <section id="conversations" aria-labelledby="conversations-title">
-          <div class="section-heading"><div class="heading-line"><h2 id="conversations-title">Conversations</h2><span class="badge">Experimental</span></div><p>Read the conversation together, including your sent replies.</p></div>
-          <p class="notice"><strong>Using Thunderbird Conversations?</strong> Disable that add-on before enabling Thunder-G’s conversation reader or in-window replies. Thunder-G provides its own conversation handling.</p>
+          <div class="section-heading"><div class="heading-line"><h2 id="conversations-title"><span data-i18n="conversations_07c59b4">Conversations</span></h2><span class="badge"><span data-i18n="experimental_b718f8c">Experimental</span></span></div><p><span data-i18n="read_the_conversation_together_including_your_sent_r_f74cc40">Read the conversation together, including your sent replies.</span></p></div>
+          <p class="notice"><strong><span data-i18n="using_thunderbird_conversations_00a360c">Using Thunderbird Conversations?</span></strong> <span data-i18n="disable_that_add_on_before_enabling_thunder_g_s_conv_b28942f">Disable that add-on before enabling Thunder-G’s conversation reader or in-window replies. Thunder-G provides its own conversation handling.</span></p>
           <div class="setting-row">
-            <div class="setting-copy"><label for="independent-reader">Use Thunder-G’s conversation reader</label><p id="reader-help">Expandable message cards, attachments and reply actions in one view. Off by default.</p></div>
+            <div class="setting-copy"><label for="independent-reader"><span data-i18n="use_thunder_g_s_conversation_reader_b0bea38">Use Thunder-G’s conversation reader</span></label><p id="reader-help"><span data-i18n="expandable_message_cards_attachments_and_reply_actio_7fb60d4">Expandable message cards, attachments and reply actions in one view. Off by default.</span></p></div>
             <input class="switch" id="independent-reader" type="checkbox" role="switch" aria-describedby="reader-help">
           </div>
           <div class="setting-row">
             <div class="setting-copy"><label for="compact-conversations">Compact long conversations</label><p id="compact-help">For conversations with 6 or more messages, keep the first and last two visible. Click the counter to show the messages in between. Applies to Thunder-G’s reader when opening a conversation.</p></div>
             <input class="switch" id="compact-conversations" type="checkbox" role="switch" aria-describedby="compact-help">
           </div>
-          <details><summary>How conversations work</summary><div class="details-content"><p>Messages are grouped using Thunderbird’s local index, with a folder-thread fallback when indexing is unavailable. Message bodies, attachments, Reply, Forward and Print use Thunderbird’s native viewer and commands.</p><p>Changing readers returns to the list. The conversation toolbar acts on messages selected in the list, even when the reader finds additional messages in other folders.</p></div></details>
+          <details><summary><span data-i18n="how_conversations_work_b782f81">How conversations work</span></summary><div class="details-content"><p><span data-i18n="messages_are_grouped_using_thunderbird_s_local_index_d236247">Messages are grouped using Thunderbird’s local index, with a folder-thread fallback when indexing is unavailable. Message bodies, attachments, Reply, Forward and Print use Thunderbird’s native viewer and commands.</span></p><p><span data-i18n="changing_readers_returns_to_the_list_the_conversatio_601190b">Changing readers returns to the list. The conversation toolbar acts on messages selected in the list, even when the reader finds additional messages in other folders.</span></p></div></details>
         </section>
 
         <section id="gmail-labels" aria-labelledby="gmail-labels-title">
-          <div class="section-heading"><h2 id="gmail-labels-title">Import labels from Gmail</h2><p>Optional, one-time import of label names and nesting. No emails are downloaded or assigned labels.</p></div>
-          <p class="notice">Nothing connects to Google until you choose Connect. Google sign-in opens in your browser and supports 2FA. Google asks to see and edit labels; this importer only reads them. Account identity and label names are fetched directly from Google, with no intermediary server.</p>
-          <details id="gmail-setup"><summary>Optional Google connection setup</summary>
+          <div class="section-heading"><h2 id="gmail-labels-title"><span data-i18n="import_labels_from_gmail_646acdc">Import labels from Gmail</span></h2><p><span data-i18n="optional_one_time_import_of_label_names_and_nesting__1dcd19b">Optional, one-time import of label names and nesting. No emails are downloaded or assigned labels.</span></p></div>
+          <p class="notice"><span data-i18n="nothing_connects_to_google_until_you_choose_connect__91a5778">Nothing connects to Google until you choose Connect. Google sign-in opens in your browser and supports 2FA. Google asks to see and edit labels; this importer only reads them. Account identity and label names are fetched directly from Google, with no intermediary server.</span></p>
+          <details id="gmail-setup"><summary><span data-i18n="optional_google_connection_setup_46786e3">Optional Google connection setup</span></summary>
             <div class="details-content">
-              <p>A Google Cloud Desktop OAuth client with Gmail API enabled is required. Thunder-G does not yet ship a shared Google client. This feature is optional; other settings work without it.</p>
-              <p>Create a Desktop app client, configure its consent screen and (in Testing mode) add your account as a test user. Request only OpenID email and Gmail labels. See <a href="https://developers.google.com/identity/protocols/oauth2/native-app" target="_blank" rel="noopener noreferrer">Google’s Desktop OAuth setup</a>. Workspace accounts may require administrator approval.</p>
-              <label for="gmail-client-file">Load downloaded Desktop client JSON (optional)</label>
+              <p><span data-i18n="a_google_cloud_desktop_oauth_client_with_gmail_api_e_6dc8b88">A Google Cloud Desktop OAuth client with Gmail API enabled is required. Thunder-G does not yet ship a shared Google client. This feature is optional; other settings work without it.</span></p>
+              <p><span data-i18n="create_a_desktop_app_client_configure_its_consent_sc_1f8adb7">Create a Desktop app client, configure its consent screen and (in Testing mode) add your account as a test user. Request only OpenID email and Gmail labels. See</span> <a href="https://developers.google.com/identity/protocols/oauth2/native-app" target="_blank" rel="noopener noreferrer"><span data-i18n="google_s_desktop_oauth_setup_e14b930">Google’s Desktop OAuth setup</span></a><span data-i18n="workspace_accounts_may_require_administrator_approva_7be1375">. Workspace accounts may require administrator approval.</span></p>
+              <label for="gmail-client-file"><span data-i18n="load_downloaded_desktop_client_json_optional_384cd12">Load downloaded Desktop client JSON (optional)</span></label>
               <input id="gmail-client-file" type="file" accept="application/json,.json">
-              <label for="gmail-client-id">Google Desktop client ID</label><input id="gmail-client-id" type="text" autocomplete="off" spellcheck="false" placeholder="…apps.googleusercontent.com">
-              <label for="gmail-client-secret">Desktop client secret (if supplied by Google)</label><input id="gmail-client-secret" type="password" autocomplete="off">
-              <p>Credentials and Google access tokens are not saved to extension storage. The downloaded configuration is used only for this connection. Import credentials are separate from your Thunderbird mail accounts.</p>
+              <label for="gmail-client-id"><span data-i18n="google_desktop_client_id_b722762">Google Desktop client ID</span></label><input id="gmail-client-id" type="text" autocomplete="off" spellcheck="false" placeholder="…apps.googleusercontent.com">
+              <label for="gmail-client-secret"><span data-i18n="desktop_client_secret_if_supplied_by_google_b9cf3bd">Desktop client secret (if supplied by Google)</span></label><input id="gmail-client-secret" type="password" autocomplete="off">
+              <p><span data-i18n="credentials_and_google_access_tokens_are_not_saved_t_b3ed3f7">Credentials and Google access tokens are not saved to extension storage. The downloaded configuration is used only for this connection. Import credentials are separate from your Thunderbird mail accounts.</span></p>
             </div>
           </details>
-          <div class="gmail-actions"><button id="gmail-connect" type="button">Connect Google account and fetch labels</button><button id="gmail-disconnect" type="button" disabled>Disconnect / cancel sign-in</button></div>
-          <p id="gmail-account" role="status" aria-live="polite">Not connected</p>
+          <div class="gmail-actions"><button id="gmail-connect" type="button"><span data-i18n="connect_google_account_and_fetch_labels_ec5638b">Connect Google account and fetch labels</span></button><button id="gmail-disconnect" type="button" disabled><span data-i18n="disconnect_cancel_sign_in_b90c1a2">Disconnect / cancel sign-in</span></button></div>
+          <p id="gmail-account" role="status" aria-live="polite"><span data-i18n="not_connected_8b02f3d">Not connected</span></p>
           <div id="gmail-import-controls" hidden>
-            <label for="gmail-root">Destination parent</label><input id="gmail-root" type="text" value="GMAIL-Labels" autocomplete="off" spellcheck="false">
-            <p>Required parent tags are included automatically. Parent and child assignments remain independent. Colors and email assignments are not imported.</p>
-            <div class="gmail-actions"><button id="gmail-select-all" type="button">Select all</button><button id="gmail-select-none" type="button">Select none</button></div>
-            <div id="gmail-remote-labels" class="gmail-label-list" role="group" aria-label="Gmail labels to import"></div>
-            <label class="gmail-dry-run"><input id="gmail-dry-run" type="checkbox" checked> Dry run — preview only (no local labels created)</label>
-            <div class="gmail-actions"><button id="gmail-preview" type="button">Preview selected labels</button><button id="gmail-import" type="button" disabled>Import selected labels</button><button id="gmail-cancel" type="button">Cancel preview</button></div>
+            <label for="gmail-root"><span data-i18n="destination_parent_971732b">Destination parent</span></label><input id="gmail-root" type="text" value="GMAIL-Labels" autocomplete="off" spellcheck="false">
+            <p><span data-i18n="required_parent_tags_are_included_automatically_pare_1f23b65">Required parent tags are included automatically. Parent and child assignments remain independent. Colors and email assignments are not imported.</span></p>
+            <div class="gmail-actions"><button id="gmail-select-all" type="button"><span data-i18n="select_all_913afff">Select all</span></button><button id="gmail-select-none" type="button"><span data-i18n="select_none_618cfb0">Select none</span></button></div>
+            <div id="gmail-remote-labels" class="gmail-label-list" role="group" aria-label="Gmail labels to import" data-i18n-aria-label="gmail_labels_to_import_ed2aefe"></div>
+            <label class="gmail-dry-run"><input id="gmail-dry-run" type="checkbox" checked> <span data-i18n="dry_run_preview_only_no_local_labels_created_d5c4bda">Dry run — preview only (no local labels created)</span></label>
+            <div class="gmail-actions"><button id="gmail-preview" type="button"><span data-i18n="preview_selected_labels_9c73f64">Preview selected labels</span></button><button id="gmail-import" type="button" disabled><span data-i18n="import_selected_labels_913eacc">Import selected labels</span></button><button id="gmail-cancel" type="button"><span data-i18n="cancel_preview_6ea314a">Cancel preview</span></button></div>
             <p id="gmail-summary" role="status" aria-live="polite"></p>
-            <div class="gmail-preview-scroll"><table id="gmail-preview-table" hidden><caption>Proposed local changes</caption><thead><tr><th>Local label path</th><th>Action</th><th>Details</th></tr></thead><tbody id="gmail-preview-rows"></tbody></table></div>
+            <div class="gmail-preview-scroll"><table id="gmail-preview-table" hidden><caption><span data-i18n="proposed_local_changes_dae99de">Proposed local changes</span></caption><thead><tr><th><span data-i18n="local_label_path_e4b1711">Local label path</span></th><th><span data-i18n="action_97c89a4">Action</span></th><th><span data-i18n="details_dc3decb">Details</span></th></tr></thead><tbody id="gmail-preview-rows"></tbody></table></div>
           </div>
           <p id="gmail-feedback" role="status" aria-live="polite" aria-atomic="true"></p>
         </section>
 
         <section id="writing" aria-labelledby="writing-title">
-          <div class="section-heading"><h2 id="writing-title">Writing</h2><p>Your native composer, with a place in the current window.</p></div>
+          <div class="section-heading"><h2 id="writing-title"><span data-i18n="writing_2dabb83">Writing</span></h2><p><span data-i18n="your_native_composer_with_a_place_in_the_current_win_f65c26f">Your native composer, with a place in the current window.</span></p></div>
           <div class="setting-row">
-            <div class="setting-copy"><label for="inline-new-message">Write new messages in this window <span class="badge">Experimental</span></label><p id="new-message-help">Start in a floating panel. Resize it, expand it beside the sidebar, or open a separate window. Off by default.</p></div>
+            <div class="setting-copy"><label for="inline-new-message"><span data-i18n="write_new_messages_in_this_window_e4d5bf5">Write new messages in this window</span> <span class="badge"><span data-i18n="experimental_b718f8c">Experimental</span></span></label><p id="new-message-help"><span data-i18n="start_in_a_floating_panel_resize_it_expand_it_beside_11127a6">Start in a floating panel. Resize it, expand it beside the sidebar, or open a separate window. Off by default.</span></p></div>
             <input class="switch" id="inline-new-message" type="checkbox" role="switch" aria-describedby="new-message-help">
           </div>
           <div class="setting-row">
-            <div class="setting-copy"><label for="inline-reply-enabled">Reply in this window <span class="badge">Experimental</span></label><p id="reply-help">Reply and Reply all start below the conversation. Detach when you need more room. Disable Thunderbird Conversations first. Off by default.</p></div>
+            <div class="setting-copy"><label for="inline-reply-enabled"><span data-i18n="reply_in_this_window_9328ac7">Reply in this window</span> <span class="badge"><span data-i18n="experimental_b718f8c">Experimental</span></span></label><p id="reply-help"><span data-i18n="reply_and_reply_all_start_below_the_conversation_det_8f4541f">Reply and Reply all start below the conversation. Detach when you need more room. Disable Thunderbird Conversations first. Off by default.</span></p></div>
             <input class="switch" id="inline-reply-enabled" type="checkbox" role="switch" aria-describedby="reply-help">
           </div>
           <div class="setting-row">
-            <div class="setting-copy"><label for="compose-autosave">Automatically save drafts</label><p id="autosave-help">Use your account’s Drafts folder. Enabled by default, every minute.</p></div>
+            <div class="setting-copy"><label for="compose-autosave"><span data-i18n="automatically_save_drafts_89a125c">Automatically save drafts</span></label><p id="autosave-help"><span data-i18n="use_your_account_s_drafts_folder_enabled_by_default__09a3bd0">Use your account’s Drafts folder. Enabled by default, every minute.</span></p></div>
             <input class="switch" id="compose-autosave" type="checkbox" role="switch" aria-describedby="autosave-help draft-status-help">
           </div>
-          <div class="sub-setting"><label for="compose-autosave-minutes">Save every</label><select id="compose-autosave-minutes"><option value="1">1 minute</option><option value="2">2 minutes</option><option value="5">5 minutes</option><option value="10">10 minutes</option></select></div>
-          <p id="draft-status-help" class="section-note">The editor shows “Saving…”, then “✓ Saved” after confirmation. New edits show “Unsaved changes”; errors show “Save failed”.</p>
-          <details><summary>Editor and draft behavior</summary><div class="details-content"><p>Signatures, account identity, recipients, formatting, attachments and draft saving use Thunderbird’s native composer. Forward keeps its usual window. The floating panel resizes from its top or side edge and marked corner; the corner also supports arrow keys. Your chosen size is remembered across messages and restarts, adapting to the available space beside the sidebar.</p><p>An open message is kept when you navigate or start another one. Closing follows native Save, Discard and Cancel prompts. Separate window saves a native draft first. Turning off an in-window option affects new messages and keeps existing work open.</p><p>Autosave changes apply to newly opened composers. Disabling Thunder-G restores prior native autosave settings unless they were changed independently.</p></div></details>
+          <div class="sub-setting"><label for="compose-autosave-minutes"><span data-i18n="save_every_265e739">Save every</span></label><select id="compose-autosave-minutes"><option value="1" data-i18n="1_minute_62957ec">1 minute</option><option value="2" data-i18n="2_minutes_1dd3e66">2 minutes</option><option value="5" data-i18n="5_minutes_3aa5819">5 minutes</option><option value="10" data-i18n="10_minutes_a6f1518">10 minutes</option></select></div>
+          <p id="draft-status-help" class="section-note"><span data-i18n="the_editor_shows_saving_then_saved_after_confirmatio_056f02a">The editor shows “Saving…”, then “✓ Saved” after confirmation. New edits show “Unsaved changes”; errors show “Save failed”.</span></p>
+          <details><summary><span data-i18n="editor_and_draft_behavior_b738bee">Editor and draft behavior</span></summary><div class="details-content"><p><span data-i18n="signatures_account_identity_recipients_formatting_at_29c9ff0">Signatures, account identity, recipients, formatting, attachments and draft saving use Thunderbird’s native composer. Forward keeps its usual window. The floating panel resizes from its top or side edge and marked corner; the corner also supports arrow keys. Your chosen size is remembered across messages and restarts, adapting to the available space beside the sidebar.</span></p><p><span data-i18n="an_open_message_is_kept_when_you_navigate_or_start_a_3ae9163">An open message is kept when you navigate or start another one. Closing follows native Save, Discard and Cancel prompts. Separate window saves a native draft first. Turning off an in-window option affects new messages and keeps existing work open.</span></p><p><span data-i18n="autosave_changes_apply_to_newly_opened_composers_dis_d6e1a89">Autosave changes apply to newly opened composers. Disabling Thunder-G restores prior native autosave settings unless they were changed independently.</span></p></div></details>
         </section>
 
         <section id="sender-logos" aria-labelledby="logos-title">
-          <div class="section-heading"><h2 id="logos-title">Sender logos</h2><p>Optional domain logos alongside your messages.</p></div>
+          <div class="section-heading"><h2 id="logos-title"><span data-i18n="sender_logos_f3c497a">Sender logos</span></h2><p><span data-i18n="optional_domain_logos_alongside_your_messages_c4f6e1c">Optional domain logos alongside your messages.</span></p></div>
           <div class="setting-row">
-            <div class="setting-copy"><label for="bimi-enabled">Show sender logos with BIMI</label><p id="bimi-help">Looks up the sender’s BIMI DNS record and downloads its advertised HTTPS SVG logo. Off by default.</p></div>
+            <div class="setting-copy"><label for="bimi-enabled"><span data-i18n="show_sender_logos_with_bimi_f5ad9b1">Show sender logos with BIMI</span></label><p id="bimi-help"><span data-i18n="looks_up_the_sender_s_bimi_dns_record_and_downloads__5b7736e">Looks up the sender’s BIMI DNS record and downloads its advertised HTTPS SVG logo. Off by default.</span></p></div>
             <input class="switch" id="bimi-enabled" type="checkbox" role="switch" aria-describedby="bimi-help logo-privacy">
           </div>
-          <p id="logo-privacy" class="notice privacy-note"><strong>This downloads remote images.</strong> The logo host can see your IP address. Only the advertised logo is downloaded; no logo lookup service, favicon or certificate download is used.</p>
-          <details><summary>Checks, caching and fallback</summary><div class="details-content"><p>Requires a successful aligned DKIM check through the optional integration. A DNS-published logo is not a certified identity badge. Contact photos take priority; missing or invalid records keep the usual avatar.</p><p>Logos and missing results are cached for one hour during this session. Turning this off stops new downloads and restores the usual avatars immediately.</p></div></details>
+          <p id="logo-privacy" class="notice privacy-note"><strong><span data-i18n="this_downloads_remote_images_fbbfd71">This downloads remote images.</span></strong> <span data-i18n="the_logo_host_can_see_your_ip_address_only_the_adver_88651c5">The logo host can see your IP address. Only the advertised logo is downloaded; no logo lookup service, favicon or certificate download is used.</span></p>
+          <details><summary><span data-i18n="checks_caching_and_fallback_480dec9">Checks, caching and fallback</span></summary><div class="details-content"><p><span data-i18n="requires_a_successful_aligned_dkim_check_through_the_5ff90e3">Requires a successful aligned DKIM check through the optional integration. A DNS-published logo is not a certified identity badge. Contact photos take priority; missing or invalid records keep the usual avatar.</span></p><p><span data-i18n="logos_and_missing_results_are_cached_for_one_hour_du_dffd837">Logos and missing results are cached for one hour during this session. Turning this off stops new downloads and restores the usual avatars immediately.</span></p></div></details>
         </section>
 
-        <footer class="save-status"><span class="autosave-note">Settings save automatically</span><p id="status" role="status" aria-live="polite" aria-atomic="true"></p></footer>
+        <footer class="save-status"><span class="autosave-note"><span data-i18n="settings_save_automatically_6b09ded">Settings save automatically</span></span><p id="status" role="status" aria-live="polite" aria-atomic="true"></p></footer>
       </main>
     </div>
   </div>
-  <script src="options.js"></script>
-  <script src="gmail-import-options.js"></script>
+  <script src="localization.js"></script>
+  <script src="localization-options.js"></script>
 </body>
 </html>

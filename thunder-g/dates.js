@@ -23,7 +23,7 @@ function installCompactDates(win) {
   // Detached virtual rows must be collectable while scrolling through folders.
   let saved = new WeakMap();
   const formatters = new Map();
-  let locale = win.Services?.locale?.appLocalesAsBCP47 || win.navigator.languages;
+  let locale = gmLocale() || win.Services?.locale?.appLocalesAsBCP47 || win.navigator.languages;
   function render(row, nativeFill = false) {
     const cell = row.querySelector('.datecol-column');
     if (!cell) return;
@@ -45,12 +45,12 @@ function installCompactDates(win) {
       const id = cell.getAttribute('data-l10n-id');
       if (id && cell.getAttribute('data-l10n-args')!==JSON.stringify({title:formatted.full}))
         doc.l10n.setAttributes(cell, id, {title:formatted.full});
-    } catch (error) { console.error('Compact message dates:', error); }
+    } catch (error) { console.error(gmText("Compact message dates:"), error); }
   }
   function refresh() {
     if (closed) return;
     // Pick up locale or system timezone changes after returning to the app.
-    locale=win.Services?.locale?.appLocalesAsBCP47 || win.navigator.languages;
+    locale=gmLocale() || win.Services?.locale?.appLocalesAsBCP47 || win.navigator.languages;
     formatters.clear();
     for (const row of doc.querySelectorAll('#threadTree tr.table-layout')) render(row);
   }

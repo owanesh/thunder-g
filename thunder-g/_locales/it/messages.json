@@ -1,0 +1,1722 @@
+{
+  "invalid_autosave_snapshot_751f880": {
+    "message": "Stato del salvataggio automatico non valido",
+    "description": "Invalid autosave snapshot"
+  },
+  "unsupported_inline_compose_action_2d050f5": {
+    "message": "Azione di composizione integrata non supportata",
+    "description": "Unsupported inline compose action"
+  },
+  "wait_for_the_current_save_or_send_to_finish_dfea3c3": {
+    "message": "Attendi il completamento del salvataggio o dell'invio in corso.",
+    "description": "Wait for the current save or send to finish."
+  },
+  "draft_was_not_saved_f9d0213": {
+    "message": "La bozza non è stata salvata.",
+    "description": "Draft was not saved."
+  },
+  "could_not_save_the_draft_82b7178": {
+    "message": "Impossibile salvare la bozza.",
+    "description": "Could not save the draft."
+  },
+  "draft_saving_timed_out_your_reply_remains_open_d91b6bd": {
+    "message": "Tempo scaduto durante il salvataggio della bozza; la risposta rimane aperta.",
+    "description": "Draft saving timed out; your reply remains open."
+  },
+  "saving_56a2285": {
+    "message": "Salvataggio…",
+    "description": "Saving…"
+  },
+  "unsaved_changes_2926726": {
+    "message": "Modifiche non salvate",
+    "description": "Unsaved changes"
+  },
+  "save_failed_0a44446": {
+    "message": "Salvataggio non riuscito",
+    "description": "Save failed"
+  },
+  "not_saved_3d56409": {
+    "message": "Non salvata",
+    "description": "Not saved"
+  },
+  "saved_to_drafts_759dc9a": {
+    "message": "Salvata in Bozze",
+    "description": "Saved to Drafts"
+  },
+  "saving_to_drafts_85398fa": {
+    "message": "Salvataggio in Bozze",
+    "description": "Saving to Drafts"
+  },
+  "changes_have_not_been_saved_yet_efda6a7": {
+    "message": "Le modifiche non sono ancora state salvate",
+    "description": "Changes have not been saved yet"
+  },
+  "could_not_save_to_drafts_use_save_draft_to_retry_ee16ef2": {
+    "message": "Impossibile salvare in Bozze. Usa Salva bozza per riprovare.",
+    "description": "Could not save to Drafts. Use Save draft to retry."
+  },
+  "draft_has_not_been_saved_yet_ba0905a": {
+    "message": "La bozza non è ancora stata salvata",
+    "description": "Draft has not been saved yet"
+  },
+  "thunderbird_error_0x_1_452866e": {
+    "message": "Errore di Thunderbird 0x$1",
+    "description": "Thunderbird error 0x$1"
+  },
+  "thunderbird_did_not_provide_a_failure_reason_e9c2c47": {
+    "message": "Thunderbird non ha indicato il motivo dell'errore.",
+    "description": "Thunderbird did not provide a failure reason."
+  },
+  "composer_closed_3332c91": {
+    "message": "Editor chiuso.",
+    "description": "Composer closed."
+  },
+  "composer_is_still_busy_reply_remains_open_439207e": {
+    "message": "L'editor è ancora occupato; la risposta rimane aperta.",
+    "description": "Composer is still busy; reply remains open."
+  },
+  "connection_security_error_check_thunderbird_s_securi_c56713b": {
+    "message": "Errore di sicurezza della connessione. Controlla l'avviso di sicurezza di Thunderbird.",
+    "description": "Connection security error. Check Thunderbird’s security prompt."
+  },
+  "resize_compose_panel_a39962f": {
+    "message": "Ridimensiona il pannello di composizione",
+    "description": "Resize compose panel"
+  },
+  "drag_to_resize_arrow_keys_resize_shift_makes_larger__9b91ef4": {
+    "message": "Trascina per ridimensionare; usa i tasti freccia, con Maiusc per passi più grandi",
+    "description": "Drag to resize; arrow keys resize, Shift makes larger steps"
+  },
+  "thunder_g_could_not_open_the_attachment_picker_78bfea3": {
+    "message": "Thunder-G: impossibile aprire la finestra di scelta degli allegati.",
+    "description": "Thunder-G: could not open the attachment picker."
+  },
+  "wait_for_the_current_send_or_save_to_finish_eeeea3c": {
+    "message": "Attendi il completamento dell'invio o del salvataggio in corso.",
+    "description": "Wait for the current send or save to finish."
+  },
+  "the_saved_draft_could_not_be_found_ed22976": {
+    "message": "Impossibile trovare la bozza salvata.",
+    "description": "The saved draft could not be found."
+  },
+  "could_not_move_the_draft_to_trash_b45fa0e": {
+    "message": "Impossibile spostare la bozza nel Cestino.",
+    "description": "Could not move the draft to Trash."
+  },
+  "could_not_save_the_draft_your_reply_remains_open_8b04193": {
+    "message": "Impossibile salvare la bozza. La risposta rimane aperta.",
+    "description": "Could not save the draft. Your reply remains open."
+  },
+  "could_not_discard_your_message_remains_open_0cb294a": {
+    "message": "Impossibile eliminare il messaggio. Il messaggio rimane aperto.",
+    "description": "Could not discard. Your message remains open."
+  },
+  "minimize_1c5b768": {
+    "message": "Riduci a icona",
+    "description": "Minimize"
+  },
+  "restore_composer_ee63c34": {
+    "message": "Ripristina l'editor",
+    "description": "Restore composer"
+  },
+  "detach_message_ca9d7f1": {
+    "message": "Sgancia il messaggio",
+    "description": "Detach message"
+  },
+  "expand_in_this_window_6dbf8e2": {
+    "message": "Espandi in questa finestra",
+    "description": "Expand in this window"
+  },
+  "detach_reply_into_a_floating_panel_8e705a3": {
+    "message": "Sgancia la risposta in un pannello mobile",
+    "description": "Detach reply into a floating panel"
+  },
+  "return_reply_below_the_message_8e686cd": {
+    "message": "Riporta la risposta sotto il messaggio",
+    "description": "Return reply below the message"
+  },
+  "detach_reply_2164c27": {
+    "message": "Sgancia la risposta",
+    "description": "Detach reply"
+  },
+  "return_to_conversation_4fe5302": {
+    "message": "Torna alla conversazione",
+    "description": "Return to conversation"
+  },
+  "state_preserving_panel_moves_are_unavailable_4047c67": {
+    "message": "Non è possibile spostare il pannello mantenendone lo stato.",
+    "description": "State-preserving panel moves are unavailable."
+  },
+  "saving_draft_before_opening_a_separate_window_b0873fd": {
+    "message": "Salvataggio della bozza prima di aprire una finestra separata…",
+    "description": "Saving draft before opening a separate window…"
+  },
+  "could_not_open_a_separate_window_the_draft_remains_h_44840c5": {
+    "message": "Impossibile aprire una finestra separata; la bozza rimane qui.",
+    "description": "Could not open a separate window; the draft remains here."
+  },
+  "the_new_window_did_not_finish_loading_the_saved_repl_161c852": {
+    "message": "La nuova finestra non ha completato il caricamento; la risposta salvata rimane qui.",
+    "description": "The new window did not finish loading; the saved reply remains here."
+  },
+  "could_not_detach_your_reply_remains_open_b1a7b97": {
+    "message": "Impossibile sganciare la risposta; rimane aperta qui.",
+    "description": "Could not detach; your reply remains open."
+  },
+  "sending_cf76551": {
+    "message": "Invio…",
+    "description": "Sending…"
+  },
+  "sent_35f49dc": {
+    "message": "Inviato",
+    "description": "Sent"
+  },
+  "sending_failed_saving_draft_62d38c7": {
+    "message": "Invio non riuscito. Salvataggio della bozza…",
+    "description": "Sending failed. Saving draft…"
+  },
+  "not_sent_saved_to_drafts_47ecaa2": {
+    "message": "Non inviato. Salvato in Bozze.",
+    "description": "Not sent. Saved to Drafts."
+  },
+  "not_sent_draft_could_not_be_saved_your_reply_is_stil_de96d18": {
+    "message": "Non inviato. Impossibile salvare la bozza. La risposta è ancora aperta.",
+    "description": "Not sent. Draft could not be saved. Your reply is still open."
+  },
+  "dismiss_notification_dc83cd8": {
+    "message": "Chiudi la notifica",
+    "description": "Dismiss notification"
+  },
+  "dismiss_70afe9e": {
+    "message": "Chiudi",
+    "description": "Dismiss"
+  },
+  "thunder_g_could_not_update_send_feedback_143b192": {
+    "message": "Thunder-G: impossibile aggiornare lo stato dell'invio.",
+    "description": "Thunder-G: could not update send feedback."
+  },
+  "new_message_in_this_window_6d0389d": {
+    "message": "Nuovo messaggio in questa finestra",
+    "description": "New message in this window"
+  },
+  "reply_in_this_window_9328ac7": {
+    "message": "Rispondi in questa finestra",
+    "description": "Reply in this window"
+  },
+  "new_message_1c3b20d": {
+    "message": "Nuovo messaggio",
+    "description": "New Message"
+  },
+  "forward_ba4e722": {
+    "message": "Inoltra",
+    "description": "Forward"
+  },
+  "reply_all_84c27c0": {
+    "message": "Rispondi a tutti",
+    "description": "Reply all"
+  },
+  "reply_6c2bb73": {
+    "message": "Rispondi",
+    "description": "Reply"
+  },
+  "no_subject_2f1f27d": {
+    "message": "(Nessun oggetto)",
+    "description": "(No subject)"
+  },
+  "save_draft_4f25637": {
+    "message": "Salva bozza",
+    "description": "Save draft"
+  },
+  "separate_window_b64eccd": {
+    "message": "Finestra separata",
+    "description": "Separate window"
+  },
+  "open_message_in_a_separate_window_a4e5786": {
+    "message": "Apri il messaggio in una finestra separata",
+    "description": "Open message in a separate window"
+  },
+  "open_reply_in_a_separate_window_379c8e8": {
+    "message": "Apri la risposta in una finestra separata",
+    "description": "Open reply in a separate window"
+  },
+  "close_bbfa773": {
+    "message": "Chiudi",
+    "description": "Close"
+  },
+  "close_message_67a95a1": {
+    "message": "Chiudi il messaggio",
+    "description": "Close message"
+  },
+  "close_reply_e2dbe30": {
+    "message": "Chiudi la risposta",
+    "description": "Close reply"
+  },
+  "subject_8d183db": {
+    "message": "Oggetto",
+    "description": "Subject"
+  },
+  "discard_draft_3a09ce0": {
+    "message": "Elimina bozza",
+    "description": "Discard draft"
+  },
+  "editor_could_not_finish_starting_close_and_use_a_cla_9215dfa": {
+    "message": "L'editor non ha completato l'avvio. Chiudilo e usa una risposta in finestra separata.",
+    "description": "Editor could not finish starting. Close and use a classic reply."
+  },
+  "labels_on_this_message_dea100b": {
+    "message": "Etichette di questo messaggio",
+    "description": "Labels on this message"
+  },
+  "remove_1_from_this_message_de8649c": {
+    "message": "Rimuovi $1 da questo messaggio",
+    "description": "Remove $1 from this message"
+  },
+  "labels_in_this_conversation_c146b9c": {
+    "message": "Etichette della conversazione",
+    "description": "Labels in this conversation"
+  },
+  "present_in_this_conversation_e8f5c4c": {
+    "message": " — presente in questa conversazione",
+    "description": " — present in this conversation"
+  },
+  "remove_1_from_this_conversation_874dcd3": {
+    "message": "Rimuovi $1 da questa conversazione",
+    "description": "Remove $1 from this conversation"
+  },
+  "conversation_label_removal_unavailable_ab7817c": {
+    "message": "Rimozione delle etichette della conversazione non disponibile",
+    "description": "Conversation label removal unavailable"
+  },
+  "could_not_remove_label_from_every_message_try_again_2f683b6": {
+    "message": "Impossibile rimuovere l'etichetta da tutti i messaggi. Riprova.",
+    "description": "Could not remove label from every message. Try again."
+  },
+  "compact_message_dates_92f3828": {
+    "message": "Date compatte dei messaggi:",
+    "description": "Compact message dates:"
+  },
+  "the_gmail_import_operation_failed_f985fc3": {
+    "message": "Importazione da Gmail non riuscita.",
+    "description": "The Gmail import operation failed."
+  },
+  "preview_required_no_labels_have_been_created_99c5f68": {
+    "message": "Anteprima necessaria. Non è stata creata alcuna etichetta.",
+    "description": "Preview required. No labels have been created."
+  },
+  "create_6e157c5": {
+    "message": "Crea",
+    "description": "Create"
+  },
+  "already_exists_skip_3e5c59b": {
+    "message": "Già esistente — ignora",
+    "description": "Already exists — skip"
+  },
+  "conflict_needs_attention_e4a29cc": {
+    "message": "Conflitto — richiede attenzione",
+    "description": "Conflict — needs attention"
+  },
+  "required_parent_5e83701": {
+    "message": "Etichetta padre necessaria",
+    "description": "Required parent"
+  },
+  "1_2_labels_to_create_3_already_exist_4_conflicts_not_e23f3f6": {
+    "message": "$1: $2 etichette da creare, $3 già esistenti, $4 conflitti. Non è stato importato nulla.",
+    "description": "$1: $2 labels to create, $3 already exist, $4 conflicts. Nothing has been imported."
+  },
+  "checking_the_proposed_local_changes_bae7e1e": {
+    "message": "Verifica delle modifiche locali proposte…",
+    "description": "Checking the proposed local changes…"
+  },
+  "exclude_conflicting_labels_or_change_the_destination_274c979": {
+    "message": "Escludi le etichette in conflitto o cambia destinazione, poi genera una nuova anteprima.",
+    "description": "Exclude conflicting labels or change the destination, then preview again."
+  },
+  "dry_run_complete_review_the_table_before_enabling_im_2e89679": {
+    "message": "Simulazione completata. Controlla la tabella prima di abilitare l'importazione.",
+    "description": "Dry run complete. Review the table before enabling Import."
+  },
+  "not_connected_8b02f3d": {
+    "message": "Non connesso",
+    "description": "Not connected"
+  },
+  "complete_google_sign_in_in_your_browser_no_local_lab_8c3f27d": {
+    "message": "Completa l'accesso a Google nel browser. Non verrà creata alcuna etichetta locale.",
+    "description": "Complete Google sign-in in your browser. No local labels will be created."
+  },
+  "connected_account_1_2_gmail_system_labels_excluded_588873f": {
+    "message": "Account connesso: $1. Escluse $2 etichette di sistema Gmail.",
+    "description": "Connected account: $1. $2 Gmail system labels excluded."
+  },
+  "disconnected_created_labels_if_any_are_kept_a6ebe5e": {
+    "message": "Disconnesso. Le eventuali etichette create vengono conservate.",
+    "description": "Disconnected. Created labels, if any, are kept."
+  },
+  "preview_cancelled_no_labels_were_created_cbcf6e6": {
+    "message": "Anteprima annullata. Non è stata creata alcuna etichetta.",
+    "description": "Preview cancelled. No labels were created."
+  },
+  "creating_the_selected_local_labels_e33d25e": {
+    "message": "Creazione delle etichette locali selezionate…",
+    "description": "Creating the selected local labels…"
+  },
+  "created_1_skipped_2_failed_or_not_attempted_3_4_2d52dc2": {
+    "message": "Create $1, ignorate $2, non riuscite o non tentate $3. $4",
+    "description": "Created $1, skipped $2, failed or not attempted $3. $4"
+  },
+  "import_complete_cbb6705": {
+    "message": "Importazione completata.",
+    "description": "Import complete."
+  },
+  "choose_the_small_desktop_oauth_client_json_from_goog_9e11f07": {
+    "message": "Scegli il piccolo file JSON del client OAuth desktop scaricato da Google Cloud.",
+    "description": "Choose the small Desktop OAuth client JSON from Google Cloud."
+  },
+  "this_is_not_a_google_desktop_client_configuration_2dc35b4": {
+    "message": "Questo file non è una configurazione client desktop di Google.",
+    "description": "This is not a Google Desktop client configuration."
+  },
+  "desktop_client_loaded_for_this_session_click_connect_3f13b69": {
+    "message": "Client desktop caricato per questa sessione. Premi Connetti per continuare.",
+    "description": "Desktop client loaded for this session. Click Connect to continue."
+  },
+  "connected_account_1_786ca8e": {
+    "message": "Account connesso: $1",
+    "description": "Connected account: $1"
+  },
+  "use_label_paths_without_empty_segments_surrounding_s_b716664": {
+    "message": "Usa percorsi delle etichette senza segmenti vuoti, spazi iniziali o finali o caratteri di controllo (massimo 512 caratteri).",
+    "description": "Use label paths without empty segments, surrounding spaces or control characters (maximum 512 characters)."
+  },
+  "the_selection_contains_an_unknown_gmail_label_fetch__9d0d520": {
+    "message": "La selezione contiene un'etichetta Gmail sconosciuta. Recupera di nuovo le etichette.",
+    "description": "The selection contains an unknown Gmail label. Fetch labels again."
+  },
+  "invalid_or_excessively_long_label_path_98572cc": {
+    "message": "Percorso dell'etichetta non valido o troppo lungo.",
+    "description": "Invalid or excessively long label path."
+  },
+  "selected_gmail_paths_differ_only_in_case_or_unicode__30b4f22": {
+    "message": "I percorsi Gmail selezionati differiscono solo per maiuscole o normalizzazione Unicode.",
+    "description": "Selected Gmail paths differ only in case or Unicode normalization."
+  },
+  "conflicts_with_an_existing_local_label_b066c1c": {
+    "message": "Conflitto con un'etichetta locale esistente: ",
+    "description": "Conflicts with an existing local label: "
+  },
+  "connect_to_gmail_first_30c8536": {
+    "message": "Connettiti prima a Gmail.",
+    "description": "Connect to Gmail first."
+  },
+  "the_importer_has_closed_3739bf5": {
+    "message": "Lo strumento di importazione è stato chiuso.",
+    "description": "The importer has closed."
+  },
+  "a_google_connection_is_already_in_progress_5f21e4b": {
+    "message": "È già in corso una connessione a Google.",
+    "description": "A Google connection is already in progress."
+  },
+  "connection_cancelled_c5b721c": {
+    "message": "Connessione annullata.",
+    "description": "Connection cancelled."
+  },
+  "google_did_not_provide_a_verified_account_email_e589163": {
+    "message": "Google non ha fornito un indirizzo email verificato per l'account.",
+    "description": "Google did not provide a verified account email."
+  },
+  "google_returned_an_invalid_label_list_ad3dfec": {
+    "message": "Google ha restituito un elenco di etichette non valido.",
+    "description": "Google returned an invalid label list."
+  },
+  "wait_for_google_sign_in_to_finish_a54f829": {
+    "message": "Attendi il completamento dell'accesso a Google.",
+    "description": "Wait for Google sign-in to finish."
+  },
+  "choose_labels_and_a_destination_c2afabb": {
+    "message": "Scegli le etichette e una destinazione.",
+    "description": "Choose labels and a destination."
+  },
+  "unknown_import_operation_199f5ff": {
+    "message": "Operazione di importazione sconosciuta.",
+    "description": "Unknown import operation."
+  },
+  "preview_the_selected_labels_again_before_importing_e9e3551": {
+    "message": "Genera una nuova anteprima delle etichette selezionate prima di importare.",
+    "description": "Preview the selected labels again before importing."
+  },
+  "local_labels_changed_since_the_preview_run_preview_a_530a023": {
+    "message": "Le etichette locali sono cambiate dall'anteprima. Genera una nuova anteprima; non è stato importato nulla.",
+    "description": "Local labels changed since the preview. Run Preview again; nothing was imported."
+  },
+  "resolve_conflicts_or_exclude_those_branches_then_pre_ba08f99": {
+    "message": "Risolvi i conflitti o escludi quei rami, poi genera una nuova anteprima. Non è stato importato nulla.",
+    "description": "Resolve conflicts or exclude those branches, then preview again. Nothing was imported."
+  },
+  "import_stopped_after_a_native_label_creation_failed__9d8a834": {
+    "message": "Importazione interrotta dopo un errore nella creazione di un'etichetta nativa. Le etichette create sono state conservate; genera una nuova anteprima per riprovare.",
+    "description": "Import stopped after a native label creation failed. Created labels were kept; preview again to retry safely."
+  },
+  "google_connection_cancelled_8655d98": {
+    "message": "Connessione a Google annullata.",
+    "description": "Google connection cancelled."
+  },
+  "configure_an_optional_google_desktop_oauth_client_fi_c2dc6e9": {
+    "message": "Configura prima un client OAuth desktop di Google facoltativo. Consulta la configurazione dell'importazione Gmail.",
+    "description": "Configure an optional Google Desktop OAuth client first. See Gmail import setup."
+  },
+  "google_sign_in_requires_thunderbird_s_external_brows_1aaa82d": {
+    "message": "L'accesso a Google richiede l'impostazione OAuth di Thunderbird per il browser esterno. Non è stata aperta alcuna finestra di accesso.",
+    "description": "Google sign-in requires Thunderbird’s external-browser OAuth setting. No sign-in was opened."
+  },
+  "google_label_permission_was_not_granted_b916c0b": {
+    "message": "Il permesso per le etichette Google non è stato concesso.",
+    "description": "Google label permission was not granted."
+  },
+  "google_sign_in_failed_was_cancelled_or_timed_out_che_2fc89c5": {
+    "message": "L'accesso a Google non è riuscito, è stato annullato o è scaduto. Verifica la configurazione del client desktop, l'accesso alle API Gmail e il consenso Google.",
+    "description": "Google sign-in failed, was cancelled, or timed out. Check the Desktop client configuration, Gmail API access and Google consent."
+  },
+  "open_a_thunderbird_mail_window_before_connecting_to__9e9f20a": {
+    "message": "Apri una finestra di posta di Thunderbird prima di connetterti a Gmail.",
+    "description": "Open a Thunderbird mail window before connecting to Gmail."
+  },
+  "google_authorization_expired_connect_again_69e24ce": {
+    "message": "Autorizzazione Google scaduta. Connettiti di nuovo.",
+    "description": "Google authorization expired. Connect again."
+  },
+  "google_could_not_fetch_account_or_label_information__852a81b": {
+    "message": "Google non ha potuto recuperare i dati dell'account o delle etichette (HTTP $1).",
+    "description": "Google could not fetch account or label information (HTTP $1)."
+  },
+  "google_request_timed_out_connect_again_to_retry_09bee66": {
+    "message": "Richiesta a Google scaduta. Connettiti di nuovo per riprovare.",
+    "description": "Google request timed out. Connect again to retry."
+  },
+  "message_list_actions_8fde50e": {
+    "message": "Azioni dell'elenco messaggi",
+    "description": "Message list actions"
+  },
+  "select_all_messages_on_this_page_e198730": {
+    "message": "Seleziona tutti i messaggi di questa pagina",
+    "description": "Select all messages on this page"
+  },
+  "refresh_56e3bad": {
+    "message": "Aggiorna",
+    "description": "Refresh"
+  },
+  "mail_refresh_is_unavailable_1308bff": {
+    "message": "Aggiornamento della posta non disponibile.",
+    "description": "Mail refresh is unavailable."
+  },
+  "could_not_refresh_mail_5eac7d3": {
+    "message": "Impossibile aggiornare la posta.",
+    "description": "Could not refresh mail."
+  },
+  "select_messages_b436e59": {
+    "message": "Seleziona messaggi",
+    "description": "Select messages"
+  },
+  "all_6a72085": {
+    "message": "Tutti",
+    "description": "All"
+  },
+  "none_6eef664": {
+    "message": "Nessuno",
+    "description": "None"
+  },
+  "read_852b438": {
+    "message": "Già letti",
+    "description": "Read"
+  },
+  "unread_07b032b": {
+    "message": "Da leggere",
+    "description": "Unread"
+  },
+  "starred_e61561a": {
+    "message": "Speciali",
+    "description": "Starred"
+  },
+  "unstarred_23a7963": {
+    "message": "Non speciali",
+    "description": "Unstarred"
+  },
+  "more_options_not_available_yet_e9b7db7": {
+    "message": "Altre opzioni (non ancora disponibili)",
+    "description": "More options (not available yet)"
+  },
+  "back_to_previous_message_list_9836802": {
+    "message": "Torna all'elenco messaggi precedente",
+    "description": "Back to previous message list"
+  },
+  "compose_47da6f0": {
+    "message": "Scrivi",
+    "description": "Compose"
+  },
+  "compose_a_new_message_2e01ccc": {
+    "message": "Scrivi un nuovo messaggio",
+    "description": "Compose a new message"
+  },
+  "archive_conversation_b387b00": {
+    "message": "Archivia conversazione",
+    "description": "Archive conversation"
+  },
+  "delete_conversation_de43467": {
+    "message": "Elimina conversazione",
+    "description": "Delete conversation"
+  },
+  "mark_conversation_as_unread_a3cfb9b": {
+    "message": "Segna conversazione come da leggere",
+    "description": "Mark conversation as unread"
+  },
+  "mark_conversation_as_read_16f2456": {
+    "message": "Segna conversazione come già letta",
+    "description": "Mark conversation as read"
+  },
+  "dkim_verified_warning_b118fde": {
+    "message": "DKIM verificato · avviso",
+    "description": "DKIM verified · warning"
+  },
+  "dkim_verified_ca25a60": {
+    "message": "DKIM verificato",
+    "description": "DKIM verified"
+  },
+  "dkim_failed_c2b7bf0": {
+    "message": "Verifica DKIM non riuscita",
+    "description": "DKIM failed"
+  },
+  "dkim_temporary_error_586bfa6": {
+    "message": "Errore DKIM temporaneo",
+    "description": "DKIM temporary error"
+  },
+  "dkim_unsigned_59ded0d": {
+    "message": "Messaggio non firmato con DKIM",
+    "description": "DKIM unsigned"
+  },
+  "dkim_not_checked_383895d": {
+    "message": "DKIM non verificato",
+    "description": "DKIM not checked"
+  },
+  "no_saved_dkim_verifier_result_is_available_for_this__e3d705b": {
+    "message": "Non è disponibile un risultato salvato di DKIM Verifier per questo messaggio",
+    "description": "No saved DKIM Verifier result is available for this message"
+  },
+  "thunder_g_conversation_63ed9af": {
+    "message": "Conversazione Thunder-G",
+    "description": "Thunder-G conversation"
+  },
+  "reply_to_conversation_b17dc45": {
+    "message": "Rispondi alla conversazione",
+    "description": "Reply to conversation"
+  },
+  "to_19e9dab": {
+    "message": "A ",
+    "description": "To "
+  },
+  "show_quoted_text_84b7670": {
+    "message": "Mostra testo citato",
+    "description": "Show quoted text"
+  },
+  "hide_quoted_text_88fb39c": {
+    "message": "Nascondi testo citato",
+    "description": "Hide quoted text"
+  },
+  "could_not_remove_the_label_from_every_message_try_ag_bac8040": {
+    "message": "Impossibile rimuovere l'etichetta da tutti i messaggi. Riprova.",
+    "description": "Could not remove the label from every message. Try again."
+  },
+  "number_keys_label_this_message_l_labels_the_entire_c_7a91204": {
+    "message": "I tasti numerici assegnano etichette a questo messaggio. L assegna etichette all'intera conversazione.",
+    "description": "Number keys label this message. L labels the entire conversation."
+  },
+  "most_recent_message_2e3fccc": {
+    "message": "Messaggio più recente",
+    "description": "Most recent message"
+  },
+  "unknown_sender_7f73fbc": {
+    "message": "Mittente sconosciuto",
+    "description": "Unknown sender"
+  },
+  "dns_published_bimi_logo_51d9b99": {
+    "message": "Logo BIMI pubblicato nel DNS",
+    "description": "DNS-published BIMI logo"
+  },
+  "dkim_checking_1da2bed": {
+    "message": "Verifica DKIM…",
+    "description": "DKIM checking…"
+  },
+  "dkim_unavailable_f658fb8": {
+    "message": "DKIM non disponibile",
+    "description": "DKIM unavailable"
+  },
+  "dkim_verifier_integration_unavailable_f4b13fd": {
+    "message": "Integrazione DKIM Verifier non disponibile",
+    "description": "DKIM Verifier integration unavailable"
+  },
+  "could_not_remove_label_try_again_b78dd17": {
+    "message": "Impossibile rimuovere l'etichetta. Riprova.",
+    "description": "Could not remove label. Try again."
+  },
+  "unable_to_display_this_message_close_and_reopen_it_t_ea7ded0": {
+    "message": "Impossibile visualizzare questo messaggio. Chiudi e riapri per riprovare. ",
+    "description": "Unable to display this message. Close and reopen it to retry. "
+  },
+  "open_in_thunderbird_window_e3f170f": {
+    "message": "Apri in una finestra di Thunderbird",
+    "description": "Open in Thunderbird window"
+  },
+  "sending_agent_from_the_message_s_sender_header_not_a_2809221": {
+    "message": "Agente di invio indicato nell'intestazione Sender del messaggio (non è un risultato di autenticazione)",
+    "description": "Sending agent from the message’s Sender header (not an authentication result)"
+  },
+  "show_1_earlier_messages_0077b3b": {
+    "message": "Mostra $1 messaggi precedenti",
+    "description": "Show $1 earlier messages"
+  },
+  "could_not_update_the_label_on_this_message_try_again_61dab09": {
+    "message": "Impossibile aggiornare l'etichetta di questo messaggio. Riprova.",
+    "description": "Could not update the label on this message. Try again."
+  },
+  "loading_conversation_6a8bebb": {
+    "message": "Caricamento della conversazione…",
+    "description": "Loading conversation…"
+  },
+  "conversation_assembled_from_this_folder_and_locally__cbe1cb3": {
+    "message": "Conversazione ricostruita da questa cartella e dai messaggi inviati disponibili localmente",
+    "description": "Conversation assembled from this folder and locally available sent messages"
+  },
+  "unknown_label_visibility_3e5503c": {
+    "message": "Visibilità dell'etichetta sconosciuta.",
+    "description": "Unknown label visibility."
+  },
+  "this_label_no_longer_exists_cfe0b1a": {
+    "message": "Questa etichetta non esiste più.",
+    "description": "This label no longer exists."
+  },
+  "enter_a_name_without_empty_path_segments_bde7322": {
+    "message": "Inserisci un nome senza segmenti di percorso vuoti.",
+    "description": "Enter a name without empty path segments."
+  },
+  "a_label_cannot_be_nested_under_itself_79cd1c8": {
+    "message": "Un'etichetta non può essere annidata sotto se stessa.",
+    "description": "A label cannot be nested under itself."
+  },
+  "a_label_with_that_path_already_exists_4fc92f5": {
+    "message": "Esiste già un'etichetta con questo percorso.",
+    "description": "A label with that path already exists."
+  },
+  "a_selected_label_no_longer_exists_c07fe78": {
+    "message": "Un'etichetta selezionata non esiste più.",
+    "description": "A selected label no longer exists."
+  },
+  "the_parent_label_no_longer_exists_8af67b7": {
+    "message": "L'etichetta padre non esiste più.",
+    "description": "The parent label no longer exists."
+  },
+  "a_label_cannot_be_nested_under_itself_or_its_descend_2c0f698": {
+    "message": "Un'etichetta non può essere annidata sotto se stessa o i suoi discendenti.",
+    "description": "A label cannot be nested under itself or its descendants."
+  },
+  "choose_a_valid_label_color_4249607": {
+    "message": "Scegli un colore valido per l'etichetta.",
+    "description": "Choose a valid label color."
+  },
+  "1_some_changes_could_not_be_restored_check_the_selec_2b8cbc1": {
+    "message": "$1 Non è stato possibile ripristinare alcune modifiche; controlla le etichette selezionate.",
+    "description": "$1 Some changes could not be restored; check the selected labels."
+  },
+  "label_options_0f44f71": {
+    "message": "Opzioni etichetta",
+    "description": "Label options"
+  },
+  "the_label_could_not_be_updated_402fd5e": {
+    "message": "Impossibile aggiornare l'etichetta.",
+    "description": "The label could not be updated."
+  },
+  "options_for_1_selected_labels_09b045c": {
+    "message": "Opzioni per $1 etichette selezionate",
+    "description": "Options for $1 selected labels"
+  },
+  "options_for_1_31462a8": {
+    "message": "Opzioni per $1",
+    "description": "Options for $1"
+  },
+  "1_selected_labels_e44141a": {
+    "message": "$1 etichette selezionate",
+    "description": "$1 selected labels"
+  },
+  "label_color_604ae19": {
+    "message": "Colore etichetta  ›",
+    "description": "Label color  ›"
+  },
+  "in_label_list_4156d5a": {
+    "message": "Nell'elenco etichette",
+    "description": "In label list"
+  },
+  "show_d97d1ee": {
+    "message": "Mostra",
+    "description": "Show"
+  },
+  "show_if_unread_4310f87": {
+    "message": "Mostra se da leggere",
+    "description": "Show if unread"
+  },
+  "hide_34d8b60": {
+    "message": "Nascondi",
+    "description": "Hide"
+  },
+  "1_in_label_list_5f389f4": {
+    "message": "$1 nell'elenco etichette",
+    "description": "$1 in label list"
+  },
+  "in_message_list_6164b8d": {
+    "message": "Nell'elenco messaggi",
+    "description": "In message list"
+  },
+  "edit_selected_labels_61a5e06": {
+    "message": "Modifica etichette selezionate…",
+    "description": "Edit selected labels…"
+  },
+  "edit_5301648": {
+    "message": "Modifica",
+    "description": "Edit"
+  },
+  "remove_label_e8f51d8": {
+    "message": "Rimuovi etichetta",
+    "description": "Remove label"
+  },
+  "remove_1_emails_and_sublabels_will_be_kept_c821266": {
+    "message": "Rimuovere «$1»? Email e sottoetichette verranno conservate.",
+    "description": "Remove “$1”? Emails and sublabels will be kept."
+  },
+  "add_sublabel_1d2ed68": {
+    "message": "Aggiungi sottoetichetta",
+    "description": "Add sublabel"
+  },
+  "label_color_c51b6d8": {
+    "message": "Colore etichetta",
+    "description": "Label color"
+  },
+  "label_colors_8e223a9": {
+    "message": "Colori etichetta",
+    "description": "Label colors"
+  },
+  "label_color_1_a1251f1": {
+    "message": "Colore etichetta $1",
+    "description": "Label color $1"
+  },
+  "set_label_color_1_882bfac": {
+    "message": "Imposta colore etichetta $1",
+    "description": "Set label color $1"
+  },
+  "custom_label_color_e724f78": {
+    "message": "Colore personalizzato per l'etichetta",
+    "description": "Custom label color"
+  },
+  "add_custom_color_8ba529e": {
+    "message": "Aggiungi colore personalizzato",
+    "description": "Add custom color"
+  },
+  "remove_color_13b6a13": {
+    "message": "Rimuovi colore",
+    "description": "Remove color"
+  },
+  "unchanged_fields_keep_each_label_s_current_value_mov_bb15a1b": {
+    "message": "I campi non modificati mantengono il valore attuale di ogni etichetta. Spostando un'etichetta padre si spostano anche i discendenti; colore e visibilità si applicano solo alle etichette selezionate.",
+    "description": "Unchanged fields keep each label’s current value. Moving a parent also moves its descendants; color and visibility affect only selected labels."
+  },
+  "parent_label_7548818": {
+    "message": "Etichetta padre",
+    "description": "Parent label"
+  },
+  "keep_current_parents_47263ec": {
+    "message": "Mantieni i padri attuali",
+    "description": "Keep current parents"
+  },
+  "no_parent_top_level_4b59c9d": {
+    "message": "Nessun padre (livello principale)",
+    "description": "No parent (top level)"
+  },
+  "keep_current_colors_35d9865": {
+    "message": "Mantieni i colori attuali",
+    "description": "Keep current colors"
+  },
+  "set_the_same_color_08b6af2": {
+    "message": "Imposta lo stesso colore",
+    "description": "Set the same color"
+  },
+  "bulk_label_color_8d9ed11": {
+    "message": "Colore per le etichette selezionate",
+    "description": "Bulk label color"
+  },
+  "keep_current_visibility_424f30b": {
+    "message": "Mantieni la visibilità attuale",
+    "description": "Keep current visibility"
+  },
+  "cancel_77dfd21": {
+    "message": "Annulla",
+    "description": "Cancel"
+  },
+  "apply_to_selected_labels_f4aa2cc": {
+    "message": "Applica alle etichette selezionate",
+    "description": "Apply to selected labels"
+  },
+  "label_paths_will_stay_unchanged_fdb9b08": {
+    "message": "I percorsi delle etichette non cambieranno.",
+    "description": "Label paths will stay unchanged."
+  },
+  "new_sublabel_8a7cdd7": {
+    "message": "Nuova sottoetichetta",
+    "description": "New sublabel"
+  },
+  "edit_label_84e1c43": {
+    "message": "Modifica etichetta",
+    "description": "Edit label"
+  },
+  "nest_label_under_1_e2cc9bf": {
+    "message": "Annida l'etichetta sotto: $1",
+    "description": "Nest label under: $1"
+  },
+  "changing_this_path_also_updates_its_sublabels_df7e1fd": {
+    "message": "Modificando questo percorso si aggiornano anche le sue sottoetichette.",
+    "description": "Changing this path also updates its sublabels."
+  },
+  "label_name_936da4b": {
+    "message": "Nome etichetta",
+    "description": "Label name"
+  },
+  "full_label_path_12b7140": {
+    "message": "Percorso completo dell'etichetta",
+    "description": "Full label path"
+  },
+  "sublabel_name_884adea": {
+    "message": "Nome sottoetichetta",
+    "description": "Sublabel name"
+  },
+  "save_efc007a": {
+    "message": "Salva",
+    "description": "Save"
+  },
+  "the_mail_window_is_unavailable_317ef15": {
+    "message": "La finestra di posta non è disponibile.",
+    "description": "The mail window is unavailable."
+  },
+  "open_a_mail_tab_first_bdf939e": {
+    "message": "Apri prima una scheda di posta.",
+    "description": "Open a mail tab first."
+  },
+  "the_label_view_is_unavailable_6265371": {
+    "message": "La vista etichetta non è disponibile.",
+    "description": "The label view is unavailable."
+  },
+  "show_all_messages_with_label_1_12722ab": {
+    "message": "Mostra tutti i messaggi con l'etichetta $1",
+    "description": "Show all messages with label $1"
+  },
+  "open_label_view_228aa03": {
+    "message": "Apri vista etichetta:",
+    "description": "Open label view:"
+  },
+  "inline_labels_9cf060a": {
+    "message": "Etichette integrate:",
+    "description": "Inline labels:"
+  },
+  "enter_a_label_name_without_empty_path_segments_f952426": {
+    "message": "Inserisci un nome di etichetta senza segmenti di percorso vuoti.",
+    "description": "Enter a label name without empty path segments."
+  },
+  "the_parent_label_no_longer_exists_choose_another_lab_9e2d6d8": {
+    "message": "L'etichetta padre non esiste più. Scegli un'altra etichetta.",
+    "description": "The parent label no longer exists. Choose another label."
+  },
+  "a_label_with_this_name_already_exists_c892bd6": {
+    "message": "Esiste già un'etichetta con questo nome.",
+    "description": "A label with this name already exists."
+  },
+  "less_526cb74": {
+    "message": "Meno",
+    "description": "Less"
+  },
+  "more_4bab2d8": {
+    "message": "Altro",
+    "description": "More"
+  },
+  "show_fewer_labels_f20dc23": {
+    "message": "Mostra meno etichette",
+    "description": "Show fewer labels"
+  },
+  "show_more_labels_bff4cb4": {
+    "message": "Mostra più etichette",
+    "description": "Show more labels"
+  },
+  "labels_2228985": {
+    "message": "Etichette",
+    "description": "Labels"
+  },
+  "create_new_label_162fa3b": {
+    "message": "Crea nuova etichetta",
+    "description": "Create new label"
+  },
+  "message_pages_2c4fdc8": {
+    "message": "Pagine dei messaggi",
+    "description": "Message pages"
+  },
+  "previous_page_81f5471": {
+    "message": "Pagina precedente",
+    "description": "Previous page"
+  },
+  "next_page_4bfc194": {
+    "message": "Pagina successiva",
+    "description": "Next page"
+  },
+  "scroll_current_message_page_de9c66c": {
+    "message": "Scorri la pagina corrente dei messaggi",
+    "description": "Scroll current message page"
+  },
+  "conversation_navigation_018b9a6": {
+    "message": "Navigazione conversazione",
+    "description": "Conversation navigation"
+  },
+  "clear_selection_247fd63": {
+    "message": "Deseleziona",
+    "description": "Clear selection"
+  },
+  "back_to_message_list_1a92a6f": {
+    "message": "Torna all'elenco messaggi",
+    "description": "Back to message list"
+  },
+  "archive_2621c6f": {
+    "message": "Archivia",
+    "description": "Archive"
+  },
+  "mark_as_spam_1c547bf": {
+    "message": "Segna come spam",
+    "description": "Mark as spam"
+  },
+  "delete_f6fdbe4": {
+    "message": "Elimina",
+    "description": "Delete"
+  },
+  "mark_as_read_c1ee860": {
+    "message": "Segna come già letto",
+    "description": "Mark as read"
+  },
+  "mark_as_unread_5eeffe7": {
+    "message": "Segna come da leggere",
+    "description": "Mark as unread"
+  },
+  "snooze_follow_up_7cee0a2": {
+    "message": "Posticipa / Promemoria…",
+    "description": "Snooze / Follow-Up…"
+  },
+  "move_to_c0a3ef6": {
+    "message": "Sposta in…",
+    "description": "Move to…"
+  },
+  "label_as_f091e8c": {
+    "message": "Assegna etichetta",
+    "description": "Label as"
+  },
+  "includes_sent_replies_in_this_conversation_bb113a1": {
+    "message": "Include le risposte inviate in questa conversazione.",
+    "description": "Includes sent replies in this conversation."
+  },
+  "search_labels_d0b7b1a": {
+    "message": "Cerca etichette",
+    "description": "Search labels"
+  },
+  "no_matching_labels_ee5e170": {
+    "message": "Nessuna etichetta corrispondente",
+    "description": "No matching labels"
+  },
+  "create_new_5477033": {
+    "message": "Crea nuova",
+    "description": "Create new"
+  },
+  "manage_labels_9241029": {
+    "message": "Gestisci etichette",
+    "description": "Manage labels"
+  },
+  "expand_or_collapse_1_22355a9": {
+    "message": "Espandi o comprimi $1",
+    "description": "Expand or collapse $1"
+  },
+  "could_not_update_every_message_check_labels_and_try__ed1a334": {
+    "message": "Impossibile aggiornare tutti i messaggi. Controlla le etichette e riprova.",
+    "description": "Could not update every message. Check labels and try again."
+  },
+  "conversation_label_update_failed_e35132d": {
+    "message": "Aggiornamento delle etichette della conversazione non riuscito:",
+    "description": "Conversation label update failed:"
+  },
+  "label_as_d9722e1": {
+    "message": "Assegna etichetta:",
+    "description": "Label as:"
+  },
+  "label_as_entire_conversation_1_messages_includes_sen_2303960": {
+    "message": "Assegna etichetta — intera conversazione, $1 messaggi, incluse le risposte inviate",
+    "description": "Label as — entire conversation, $1 messages, includes sent replies"
+  },
+  "label_as_1_selected_messages_ae70b60": {
+    "message": "Assegna etichetta — $1 messaggi selezionati",
+    "description": "Label as — $1 selected messages"
+  },
+  "conversation_is_still_loading_close_this_panel_and_t_046f656": {
+    "message": "La conversazione è ancora in caricamento. Chiudi questo pannello e riprova.",
+    "description": "Conversation is still loading. Close this panel and try again."
+  },
+  "new_label_8a881f8": {
+    "message": "Nuova etichetta",
+    "description": "New label"
+  },
+  "please_enter_a_new_label_name_8e07ea3": {
+    "message": "Inserisci un nuovo nome di etichetta:",
+    "description": "Please enter a new label name:"
+  },
+  "new_label_name_48ba815": {
+    "message": "Nuovo nome di etichetta",
+    "description": "New label name"
+  },
+  "nest_label_under_c2cd549": {
+    "message": "Annida l'etichetta sotto:",
+    "description": "Nest label under:"
+  },
+  "choose_a_parent_label_1e6f6c9": {
+    "message": "Scegli un'etichetta padre",
+    "description": "Choose a parent label"
+  },
+  "message_selection_changed_close_this_panel_and_try_a_b0aefb6": {
+    "message": "La selezione dei messaggi è cambiata. Chiudi questo pannello e riprova.",
+    "description": "Message selection changed. Close this panel and try again."
+  },
+  "could_not_create_or_apply_this_label_30da18c": {
+    "message": "Impossibile creare o applicare questa etichetta.",
+    "description": "Could not create or apply this label."
+  },
+  "labels_l_31e630e": {
+    "message": "Etichette… (L)",
+    "description": "Labels… (L)"
+  },
+  "print_conversation_fca1364": {
+    "message": "Stampa conversazione",
+    "description": "Print conversation"
+  },
+  "previous_message_93261bd": {
+    "message": "Messaggio precedente",
+    "description": "Previous message"
+  },
+  "next_message_e3960a5": {
+    "message": "Messaggio successivo",
+    "description": "Next message"
+  },
+  "selected_message_actions_c42228b": {
+    "message": "Azioni sui messaggi selezionati",
+    "description": "Selected message actions"
+  },
+  "print_message_50ed5f1": {
+    "message": "Stampa messaggio",
+    "description": "Print message"
+  },
+  "unable_2cef4f1": {
+    "message": "Impossibile",
+    "description": "Unable"
+  },
+  "unable_to_load_settings_09ac96e": {
+    "message": "Impossibile caricare le impostazioni.",
+    "description": "Unable to load settings."
+  },
+  "saved_9d4af69": {
+    "message": "Salvato.",
+    "description": "Saved."
+  },
+  "unable_to_save_please_try_again_3c289d3": {
+    "message": "Impossibile salvare. Riprova.",
+    "description": "Unable to save. Please try again."
+  },
+  "saved_applies_to_newly_opened_compose_windows_9997dbe": {
+    "message": "Salvato. Si applica alle nuove finestre di composizione.",
+    "description": "Saved. Applies to newly opened compose windows."
+  },
+  "saved_open_a_message_from_the_list_to_use_the_select_9ab1cc5": {
+    "message": "Salvato. Apri un messaggio dall'elenco per usare il lettore selezionato.",
+    "description": "Saved. Open a message from the list to use the selected reader."
+  },
+  "saved_applies_to_new_replies_an_open_reply_stays_ava_4648f66": {
+    "message": "Salvato. Si applica alle nuove risposte; le risposte già aperte restano disponibili.",
+    "description": "Saved. Applies to new replies; an open reply stays available."
+  },
+  "saved_applies_to_new_messages_an_open_message_stays__5f4d7ef": {
+    "message": "Salvato. Si applica ai nuovi messaggi; i messaggi già aperti restano disponibili.",
+    "description": "Saved. Applies to new messages; an open message stays available."
+  },
+  "saved_applies_to_new_searches_26f138a": {
+    "message": "Salvato. Si applica alle nuove ricerche.",
+    "description": "Saved. Applies to new searches."
+  },
+  "saved_applies_when_opening_a_conversation_eb03e73": {
+    "message": "Salvato. Si applica all'apertura di una conversazione.",
+    "description": "Saved. Applies when opening a conversation."
+  },
+  "dkim_verification_timed_out_19cab11": {
+    "message": "Tempo scaduto durante la verifica DKIM",
+    "description": "DKIM verification timed out"
+  },
+  "dkim_bridge_unavailable_f2efba9": {
+    "message": "Collegamento DKIM non disponibile",
+    "description": "DKIM bridge unavailable"
+  },
+  "dkim_popup_integration_unavailable_929524a": {
+    "message": "Integrazione del pannello DKIM non disponibile",
+    "description": "DKIM popup integration unavailable"
+  },
+  "conversation_is_still_loading_3b7528c": {
+    "message": "La conversazione è ancora in caricamento",
+    "description": "Conversation is still loading"
+  },
+  "reader_closed_61232f1": {
+    "message": "Lettore chiuso",
+    "description": "Reader closed"
+  },
+  "extension_has_closed_2dcae88": {
+    "message": "L'estensione è stata chiusa.",
+    "description": "Extension has closed."
+  },
+  "invalid_importer_request_59b65e9": {
+    "message": "Richiesta di importazione non valida.",
+    "description": "Invalid importer request."
+  },
+  "thunder_g_settings_16c175c": {
+    "message": "Impostazioni di Thunder-G",
+    "description": "Thunder-G settings"
+  },
+  "settings_c7f73bb": {
+    "message": "Impostazioni",
+    "description": "Settings"
+  },
+  "repository_3123868": {
+    "message": "Repository",
+    "description": "Repository"
+  },
+  "settings_sections_2e7109b": {
+    "message": "Sezioni delle impostazioni",
+    "description": "Settings sections"
+  },
+  "inbox_44caf74": {
+    "message": "Posta in arrivo",
+    "description": "Inbox"
+  },
+  "conversations_07c59b4": {
+    "message": "Conversazioni",
+    "description": "Conversations"
+  },
+  "writing_2dabb83": {
+    "message": "Scrittura",
+    "description": "Writing"
+  },
+  "sender_logos_f3c497a": {
+    "message": "Loghi dei mittenti",
+    "description": "Sender logos"
+  },
+  "changes_save_automatically_b3fdb8c": {
+    "message": "Le modifiche si salvano automaticamente.",
+    "description": "Changes save automatically."
+  },
+  "your_choices_stay_after_restart_8057221": {
+    "message": "Le scelte vengono mantenute dopo il riavvio.",
+    "description": "Your choices stay after restart."
+  },
+  "a_little_more_room_for_your_messages_c21d065": {
+    "message": "Un po' più di spazio per i tuoi messaggi.",
+    "description": "A little more room for your messages."
+  },
+  "show_column_headers_fc67495": {
+    "message": "Mostra intestazioni delle colonne",
+    "description": "Show column headers"
+  },
+  "hidden_by_default_for_a_gmail_style_list_show_header_ed5b98c": {
+    "message": "Nascoste per impostazione predefinita, come in Gmail. Mostrale per ordinare, ridimensionare o scegliere le colonne. Si applica subito.",
+    "description": "Hidden by default for a Gmail-style list. Show headers to sort, resize, or choose columns. Applies immediately."
+  },
+  "messages_per_page_61199bd": {
+    "message": "Messaggi per pagina",
+    "description": "Messages per page"
+  },
+  "choose_a_page_size_or_keep_one_continuous_list_d930684": {
+    "message": "Scegli una dimensione della pagina oppure un elenco continuo.",
+    "description": "Choose a page size or keep one continuous list."
+  },
+  "all_messages_29207df": {
+    "message": "Tutti i messaggi",
+    "description": "All messages"
+  },
+  "25_messages_2a7f71e": {
+    "message": "25 messaggi",
+    "description": "25 messages"
+  },
+  "50_messages_c1e5e08": {
+    "message": "50 messaggi",
+    "description": "50 messages"
+  },
+  "100_messages_3104187": {
+    "message": "100 messaggi",
+    "description": "100 messages"
+  },
+  "hide_today_pane_ad209bb": {
+    "message": "Nascondi il pannello Oggi",
+    "description": "Hide Today Pane"
+  },
+  "hide_the_calendar_pane_and_its_toggle_to_leave_more__42013ed": {
+    "message": "Nascondi il pannello del calendario e il suo pulsante per lasciare più spazio alla posta.",
+    "description": "Hide the calendar pane and its toggle to leave more room for mail."
+  },
+  "show_thread_connection_lines_419dbd7": {
+    "message": "Mostra linee di collegamento nei thread",
+    "description": "Show thread connection lines"
+  },
+  "a_subtle_line_connects_messages_in_expanded_threads__34c9431": {
+    "message": "Una linea sottile collega i messaggi nei thread espansi. Attive per impostazione predefinita; si applica subito.",
+    "description": "A subtle line connects messages in expanded threads. Enabled by default; applies immediately."
+  },
+  "always_show_search_results_as_a_list_56b900d": {
+    "message": "Mostra sempre i risultati di ricerca come elenco",
+    "description": "Always show search results as a list"
+  },
+  "open_global_searches_in_the_styled_message_list_enab_d158989": {
+    "message": "Apri le ricerche globali nell'elenco messaggi personalizzato. Attivo per impostazione predefinita. Disattivalo per usare la cronologia e i filtri di Thunderbird. Si applica alle nuove ricerche.",
+    "description": "Open global searches in the styled message list. Enabled by default. Turn off for Thunderbird’s timeline and faceted results. Applies to new searches."
+  },
+  "about_your_existing_layout_5cd284f": {
+    "message": "Informazioni sul layout esistente",
+    "description": "About your existing layout"
+  },
+  "your_columns_density_and_interface_font_size_stay_na_9ade245": {
+    "message": "Colonne, densità e dimensione dei caratteri dell'interfaccia restano quelle native. I totali delle pagine includono i messaggi nei thread compressi; lo scorrimento segue le righe visibili.",
+    "description": "Your columns, density and interface font size stay native. Page totals include messages inside collapsed threads; scrolling follows visible rows."
+  },
+  "hiding_today_pane_applies_immediately_turning_it_off_0fc7cd6": {
+    "message": "Nascondere il pannello Oggi ha effetto immediato. Disattivando l'opzione si ripristina la visibilità esistente di Thunderbird, senza modificare le preferenze del calendario.",
+    "description": "Hiding Today Pane applies immediately. Turning it off restores Thunderbird’s existing visibility setting without changing calendar preferences."
+  },
+  "experimental_b718f8c": {
+    "message": "Sperimentale",
+    "description": "Experimental"
+  },
+  "read_the_conversation_together_including_your_sent_r_f74cc40": {
+    "message": "Leggi l'intera conversazione, incluse le tue risposte inviate.",
+    "description": "Read the conversation together, including your sent replies."
+  },
+  "using_thunderbird_conversations_00a360c": {
+    "message": "Usi Thunderbird Conversations?",
+    "description": "Using Thunderbird Conversations?"
+  },
+  "disable_that_add_on_before_enabling_thunder_g_s_conv_b28942f": {
+    "message": "Disattiva quel componente aggiuntivo prima di abilitare il lettore di conversazioni di Thunder-G o le risposte nella stessa finestra. Thunder-G gestisce le conversazioni autonomamente.",
+    "description": "Disable that add-on before enabling Thunder-G’s conversation reader or in-window replies. Thunder-G provides its own conversation handling."
+  },
+  "use_thunder_g_s_conversation_reader_b0bea38": {
+    "message": "Usa il lettore di conversazioni di Thunder-G",
+    "description": "Use Thunder-G’s conversation reader"
+  },
+  "expandable_message_cards_attachments_and_reply_actio_7fb60d4": {
+    "message": "Schede messaggio espandibili, allegati e azioni di risposta in un'unica vista. Disattivo per impostazione predefinita.",
+    "description": "Expandable message cards, attachments and reply actions in one view. Off by default."
+  },
+  "compact_long_conversations_7ac58c3": {
+    "message": "Compatta le conversazioni lunghe",
+    "description": "Compact long conversations"
+  },
+  "for_conversations_with_6_or_more_messages_keep_the_f_4650dcb": {
+    "message": "Nelle conversazioni con almeno 6 messaggi, mantieni visibili il primo e gli ultimi due. Premi il contatore per mostrare i messaggi intermedi. Si applica all'apertura di una conversazione nel lettore di Thunder-G.",
+    "description": "For conversations with 6 or more messages, keep the first and last two visible. Click the counter to show the messages in between. Applies to Thunder-G’s reader when opening a conversation."
+  },
+  "how_conversations_work_b782f81": {
+    "message": "Come funzionano le conversazioni",
+    "description": "How conversations work"
+  },
+  "messages_are_grouped_using_thunderbird_s_local_index_d236247": {
+    "message": "I messaggi vengono raggruppati tramite l'indice locale di Thunderbird, usando il thread della cartella se l'indice non è disponibile. Corpi dei messaggi, allegati, Rispondi, Inoltra e Stampa usano il visualizzatore e i comandi nativi di Thunderbird.",
+    "description": "Messages are grouped using Thunderbird’s local index, with a folder-thread fallback when indexing is unavailable. Message bodies, attachments, Reply, Forward and Print use Thunderbird’s native viewer and commands."
+  },
+  "changing_readers_returns_to_the_list_the_conversatio_601190b": {
+    "message": "Cambiare lettore riporta all'elenco. La barra della conversazione agisce sui messaggi selezionati nell'elenco, anche quando il lettore trova altri messaggi in cartelle diverse.",
+    "description": "Changing readers returns to the list. The conversation toolbar acts on messages selected in the list, even when the reader finds additional messages in other folders."
+  },
+  "import_labels_from_gmail_646acdc": {
+    "message": "Importa etichette da Gmail",
+    "description": "Import labels from Gmail"
+  },
+  "optional_one_time_import_of_label_names_and_nesting__1dcd19b": {
+    "message": "Importazione facoltativa, una sola volta, di nomi e gerarchia delle etichette. Non vengono scaricate email né assegnate etichette ai messaggi.",
+    "description": "Optional, one-time import of label names and nesting. No emails are downloaded or assigned labels."
+  },
+  "nothing_connects_to_google_until_you_choose_connect__91a5778": {
+    "message": "Non viene stabilita alcuna connessione a Google finché non premi Connetti. L'accesso a Google si apre nel browser e supporta l'autenticazione a due fattori. Google chiede di vedere e modificare le etichette; questo strumento le legge soltanto. Identità dell'account e nomi delle etichette vengono recuperati direttamente da Google, senza server intermedi.",
+    "description": "Nothing connects to Google until you choose Connect. Google sign-in opens in your browser and supports 2FA. Google asks to see and edit labels; this importer only reads them. Account identity and label names are fetched directly from Google, with no intermediary server."
+  },
+  "optional_google_connection_setup_46786e3": {
+    "message": "Configurazione facoltativa della connessione a Google",
+    "description": "Optional Google connection setup"
+  },
+  "a_google_cloud_desktop_oauth_client_with_gmail_api_e_6dc8b88": {
+    "message": "Serve un client OAuth desktop di Google Cloud con le API Gmail abilitate. Thunder-G non include ancora un client Google condiviso. Questa funzione è facoltativa; le altre impostazioni funzionano anche senza.",
+    "description": "A Google Cloud Desktop OAuth client with Gmail API enabled is required. Thunder-G does not yet ship a shared Google client. This feature is optional; other settings work without it."
+  },
+  "create_a_desktop_app_client_configure_its_consent_sc_1f8adb7": {
+    "message": "Crea un client per app desktop, configura la schermata di consenso e, in modalità di test, aggiungi il tuo account come utente di prova. Richiedi solo email OpenID ed etichette Gmail. Consulta",
+    "description": "Create a Desktop app client, configure its consent screen and (in Testing mode) add your account as a test user. Request only OpenID email and Gmail labels. See"
+  },
+  "google_s_desktop_oauth_setup_e14b930": {
+    "message": "la configurazione OAuth desktop di Google",
+    "description": "Google’s Desktop OAuth setup"
+  },
+  "workspace_accounts_may_require_administrator_approva_7be1375": {
+    "message": ". Gli account Workspace potrebbero richiedere l'approvazione dell'amministratore.",
+    "description": ". Workspace accounts may require administrator approval."
+  },
+  "load_downloaded_desktop_client_json_optional_384cd12": {
+    "message": "Carica il file JSON del client desktop scaricato (facoltativo)",
+    "description": "Load downloaded Desktop client JSON (optional)"
+  },
+  "google_desktop_client_id_b722762": {
+    "message": "ID client desktop di Google",
+    "description": "Google Desktop client ID"
+  },
+  "desktop_client_secret_if_supplied_by_google_b9cf3bd": {
+    "message": "Segreto del client desktop (se fornito da Google)",
+    "description": "Desktop client secret (if supplied by Google)"
+  },
+  "credentials_and_google_access_tokens_are_not_saved_t_b3ed3f7": {
+    "message": "Credenziali e token di accesso Google non vengono salvati nell'archivio dell'estensione. La configurazione scaricata viene usata solo per questa connessione. Le credenziali di importazione sono separate dagli account di posta di Thunderbird.",
+    "description": "Credentials and Google access tokens are not saved to extension storage. The downloaded configuration is used only for this connection. Import credentials are separate from your Thunderbird mail accounts."
+  },
+  "connect_google_account_and_fetch_labels_ec5638b": {
+    "message": "Connetti l'account Google e recupera le etichette",
+    "description": "Connect Google account and fetch labels"
+  },
+  "disconnect_cancel_sign_in_b90c1a2": {
+    "message": "Disconnetti / annulla accesso",
+    "description": "Disconnect / cancel sign-in"
+  },
+  "destination_parent_971732b": {
+    "message": "Etichetta padre di destinazione",
+    "description": "Destination parent"
+  },
+  "required_parent_tags_are_included_automatically_pare_1f23b65": {
+    "message": "Le etichette padre necessarie vengono incluse automaticamente. Le assegnazioni di padri e figli restano indipendenti. Colori e assegnazioni alle email non vengono importati.",
+    "description": "Required parent tags are included automatically. Parent and child assignments remain independent. Colors and email assignments are not imported."
+  },
+  "select_all_913afff": {
+    "message": "Seleziona tutte",
+    "description": "Select all"
+  },
+  "select_none_618cfb0": {
+    "message": "Deseleziona tutte",
+    "description": "Select none"
+  },
+  "gmail_labels_to_import_ed2aefe": {
+    "message": "Etichette Gmail da importare",
+    "description": "Gmail labels to import"
+  },
+  "dry_run_preview_only_no_local_labels_created_d5c4bda": {
+    "message": "Simulazione — solo anteprima (non crea etichette locali)",
+    "description": "Dry run — preview only (no local labels created)"
+  },
+  "preview_selected_labels_9c73f64": {
+    "message": "Anteprima delle etichette selezionate",
+    "description": "Preview selected labels"
+  },
+  "import_selected_labels_913eacc": {
+    "message": "Importa etichette selezionate",
+    "description": "Import selected labels"
+  },
+  "cancel_preview_6ea314a": {
+    "message": "Annulla anteprima",
+    "description": "Cancel preview"
+  },
+  "proposed_local_changes_dae99de": {
+    "message": "Modifiche locali proposte",
+    "description": "Proposed local changes"
+  },
+  "local_label_path_e4b1711": {
+    "message": "Percorso etichetta locale",
+    "description": "Local label path"
+  },
+  "action_97c89a4": {
+    "message": "Azione",
+    "description": "Action"
+  },
+  "details_dc3decb": {
+    "message": "Dettagli",
+    "description": "Details"
+  },
+  "your_native_composer_with_a_place_in_the_current_win_f65c26f": {
+    "message": "L'editor nativo, con uno spazio nella finestra corrente.",
+    "description": "Your native composer, with a place in the current window."
+  },
+  "write_new_messages_in_this_window_e4d5bf5": {
+    "message": "Scrivi nuovi messaggi in questa finestra",
+    "description": "Write new messages in this window"
+  },
+  "start_in_a_floating_panel_resize_it_expand_it_beside_11127a6": {
+    "message": "Inizia in un pannello mobile. Ridimensionalo, espandilo accanto alla barra laterale o apri una finestra separata. Disattivo per impostazione predefinita.",
+    "description": "Start in a floating panel. Resize it, expand it beside the sidebar, or open a separate window. Off by default."
+  },
+  "reply_and_reply_all_start_below_the_conversation_det_8f4541f": {
+    "message": "Rispondi e Rispondi a tutti si aprono sotto la conversazione. Sgancia il pannello quando serve più spazio. Disattiva prima Thunderbird Conversations. Disattivo per impostazione predefinita.",
+    "description": "Reply and Reply all start below the conversation. Detach when you need more room. Disable Thunderbird Conversations first. Off by default."
+  },
+  "automatically_save_drafts_89a125c": {
+    "message": "Salva automaticamente le bozze",
+    "description": "Automatically save drafts"
+  },
+  "use_your_account_s_drafts_folder_enabled_by_default__09a3bd0": {
+    "message": "Usa la cartella Bozze del tuo account. Attivo per impostazione predefinita, ogni minuto.",
+    "description": "Use your account’s Drafts folder. Enabled by default, every minute."
+  },
+  "save_every_265e739": {
+    "message": "Salva ogni",
+    "description": "Save every"
+  },
+  "1_minute_62957ec": {
+    "message": "1 minuto",
+    "description": "1 minute"
+  },
+  "2_minutes_1dd3e66": {
+    "message": "2 minuti",
+    "description": "2 minutes"
+  },
+  "5_minutes_3aa5819": {
+    "message": "5 minuti",
+    "description": "5 minutes"
+  },
+  "10_minutes_a6f1518": {
+    "message": "10 minuti",
+    "description": "10 minutes"
+  },
+  "the_editor_shows_saving_then_saved_after_confirmatio_056f02a": {
+    "message": "L'editor mostra «Salvataggio…», poi «✓ Salvata» dopo la conferma. Le nuove modifiche mostrano «Modifiche non salvate»; gli errori mostrano «Salvataggio non riuscito».",
+    "description": "The editor shows “Saving…”, then “✓ Saved” after confirmation. New edits show “Unsaved changes”; errors show “Save failed”."
+  },
+  "editor_and_draft_behavior_b738bee": {
+    "message": "Comportamento dell'editor e delle bozze",
+    "description": "Editor and draft behavior"
+  },
+  "signatures_account_identity_recipients_formatting_at_29c9ff0": {
+    "message": "Firme, identità dell'account, destinatari, formattazione, allegati e salvataggio delle bozze usano l'editor nativo di Thunderbird. Inoltra mantiene la finestra abituale. Il pannello mobile si ridimensiona dal bordo superiore, dai lati e dall'angolo indicato; l'angolo supporta anche i tasti freccia. La dimensione scelta viene mantenuta tra messaggi e riavvii, adattandosi allo spazio disponibile accanto alla barra laterale.",
+    "description": "Signatures, account identity, recipients, formatting, attachments and draft saving use Thunderbird’s native composer. Forward keeps its usual window. The floating panel resizes from its top or side edge and marked corner; the corner also supports arrow keys. Your chosen size is remembered across messages and restarts, adapting to the available space beside the sidebar."
+  },
+  "an_open_message_is_kept_when_you_navigate_or_start_a_3ae9163": {
+    "message": "Un messaggio aperto viene mantenuto quando navighi o ne inizi un altro. La chiusura usa le richieste native Salva, Non salvare e Annulla. Finestra separata salva prima una bozza nativa. Disattivare un'opzione nella stessa finestra ha effetto sui nuovi messaggi e mantiene aperto il lavoro esistente.",
+    "description": "An open message is kept when you navigate or start another one. Closing follows native Save, Discard and Cancel prompts. Separate window saves a native draft first. Turning off an in-window option affects new messages and keeps existing work open."
+  },
+  "autosave_changes_apply_to_newly_opened_composers_dis_d6e1a89": {
+    "message": "Le modifiche al salvataggio automatico si applicano ai nuovi editor. Disattivando Thunder-G si ripristinano le precedenti impostazioni native di salvataggio automatico, a meno che non siano state cambiate separatamente.",
+    "description": "Autosave changes apply to newly opened composers. Disabling Thunder-G restores prior native autosave settings unless they were changed independently."
+  },
+  "optional_domain_logos_alongside_your_messages_c4f6e1c": {
+    "message": "Loghi di dominio facoltativi accanto ai messaggi.",
+    "description": "Optional domain logos alongside your messages."
+  },
+  "show_sender_logos_with_bimi_f5ad9b1": {
+    "message": "Mostra i loghi dei mittenti con BIMI",
+    "description": "Show sender logos with BIMI"
+  },
+  "looks_up_the_sender_s_bimi_dns_record_and_downloads__5b7736e": {
+    "message": "Cerca il record DNS BIMI del mittente e scarica il logo SVG HTTPS indicato. Disattivo per impostazione predefinita.",
+    "description": "Looks up the sender’s BIMI DNS record and downloads its advertised HTTPS SVG logo. Off by default."
+  },
+  "this_downloads_remote_images_fbbfd71": {
+    "message": "Questa funzione scarica immagini remote.",
+    "description": "This downloads remote images."
+  },
+  "the_logo_host_can_see_your_ip_address_only_the_adver_88651c5": {
+    "message": "Il server del logo può vedere il tuo indirizzo IP. Viene scaricato solo il logo indicato; non vengono usati servizi di ricerca loghi, favicon o download di certificati.",
+    "description": "The logo host can see your IP address. Only the advertised logo is downloaded; no logo lookup service, favicon or certificate download is used."
+  },
+  "checks_caching_and_fallback_480dec9": {
+    "message": "Verifiche, cache e alternative",
+    "description": "Checks, caching and fallback"
+  },
+  "requires_a_successful_aligned_dkim_check_through_the_5ff90e3": {
+    "message": "Richiede una verifica DKIM allineata e riuscita tramite l'integrazione facoltativa. Un logo pubblicato nel DNS non certifica l'identità. Le foto dei contatti hanno la priorità; record mancanti o non validi mantengono l'avatar abituale.",
+    "description": "Requires a successful aligned DKIM check through the optional integration. A DNS-published logo is not a certified identity badge. Contact photos take priority; missing or invalid records keep the usual avatar."
+  },
+  "logos_and_missing_results_are_cached_for_one_hour_du_dffd837": {
+    "message": "Loghi e risultati mancanti vengono memorizzati per un'ora durante questa sessione. Disattivando la funzione si interrompono i nuovi download e si ripristinano subito gli avatar abituali.",
+    "description": "Logos and missing results are cached for one hour during this session. Turning this off stops new downloads and restores the usual avatars immediately."
+  },
+  "settings_save_automatically_6b09ded": {
+    "message": "Le impostazioni si salvano automaticamente",
+    "description": "Settings save automatically"
+  },
+  "interface_language_9407e9c": {
+    "message": "Lingua dell’interfaccia",
+    "description": "Interface language"
+  },
+  "automatically_follow_thunderbird_s_language_choose_e_560b31b": {
+    "message": "Segui automaticamente la lingua di Thunderbird oppure scegli English o Italiano per Thunder-G. Le modifiche si applicano subito, indipendentemente dalla lingua di Thunderbird.",
+    "description": "Automatically follow Thunderbird’s language, or choose English or Italian for Thunder-G. Changes apply immediately, independently of Thunderbird’s language."
+  },
+  "automatic_thunderbird_language_6ebf246": {
+    "message": "Automatica (lingua di Thunderbird)",
+    "description": "Automatic (Thunderbird language)"
+  },
+  "english_649df08": {
+    "message": "English",
+    "description": "English"
+  },
+  "italiano_21df739": {
+    "message": "Italiano",
+    "description": "Italiano"
+  },
+  "saved_restart_thunderbird_to_apply_the_language_to_e_535d27e": {
+    "message": "Salvato. La lingua di Thunder-G è stata aggiornata.",
+    "description": "Saved. Thunder-G’s language has been updated."
+  },
+  "1_message_e03bb2c": {
+    "message": "$1 messaggio",
+    "description": "$1 message"
+  },
+  "1_messages_f3fdbb7": {
+    "message": "$1 messaggi",
+    "description": "$1 messages"
+  },
+  "1_selected_8383f86": {
+    "message": "$1 selezionati",
+    "description": "$1 selected"
+  },
+  "1_2_of_3_9ab3250": {
+    "message": "$1–$2 di $3",
+    "description": "$1–$2 of $3"
+  },
+  "0_of_0_6b81c87": {
+    "message": "0 di 0",
+    "description": "0 of 0"
+  },
+  "show_1_earlier_message_128cff1": {
+    "message": "Mostra $1 messaggio precedente",
+    "description": "Show $1 earlier message"
+  },
+  "saved_499dc62": {
+    "message": "✓ Salvata",
+    "description": "✓ Saved"
+  },
+  "draft_1_77cd8ea": {
+    "message": "Bozza: $1",
+    "description": "Draft: $1"
+  },
+  "light_blue_d87c6d5": {
+    "message": "Azzurro",
+    "description": "Light blue"
+  },
+  "blue_7d44bc4": {
+    "message": "Blu",
+    "description": "Blue"
+  },
+  "dark_blue_b7b6953": {
+    "message": "Blu scuro",
+    "description": "Dark blue"
+  },
+  "light_green_12294ab": {
+    "message": "Verde chiaro",
+    "description": "Light green"
+  },
+  "green_933bf21": {
+    "message": "Verde",
+    "description": "Green"
+  },
+  "dark_green_d486103": {
+    "message": "Verde scuro",
+    "description": "Dark green"
+  },
+  "yellow_3526f60": {
+    "message": "Giallo",
+    "description": "Yellow"
+  },
+  "orange_09fb6aa": {
+    "message": "Arancione",
+    "description": "Orange"
+  },
+  "red_cc9db3a": {
+    "message": "Rosso",
+    "description": "Red"
+  },
+  "pink_5407635": {
+    "message": "Rosa",
+    "description": "Pink"
+  },
+  "purple_32576f4": {
+    "message": "Viola",
+    "description": "Purple"
+  },
+  "gray_4f9beff": {
+    "message": "Grigio",
+    "description": "Gray"
+  },
+  "default_808d7dc": {
+    "message": "Predefinito",
+    "description": "Default"
+  },
+  "gmail_inspired_interface_for_thunderbird_with_native_ef84227": {
+    "message": "Interfaccia ispirata a Gmail per Thunderbird, con etichette native, anteprime dei messaggi, azioni rapide e conversazioni personalizzate.",
+    "description": "Gmail-inspired interface for Thunderbird with native tag chips, message previews, quick actions, and conversation styling."
+  },
+  "me_94563ec": {
+    "message": "Io",
+    "description": "Me"
+  },
+  "cc_1_28f64c0": {
+    "message": " · Cc $1",
+    "description": " · Cc $1"
+  },
+  "back_dc381ae": {
+    "message": "‹ Indietro",
+    "description": "‹ Back"
+  },
+  "back_3b79003": {
+    "message": "‹  Indietro",
+    "description": "‹  Back"
+  },
+  "edit_1_labels_73493dc": {
+    "message": "Modifica $1 etichette",
+    "description": "Edit $1 labels"
+  },
+  "labels_1_21c4806": {
+    "message": "Etichette: $1",
+    "description": "Labels: $1"
+  },
+  "draft_1_4ca355d": {
+    "message": " Bozza: $1",
+    "description": " Draft: $1"
+  },
+  "1_selected_message_2c142ec": {
+    "message": "$1 selezionato",
+    "description": "$1 selected message"
+  },
+  "label_as_1_selected_message_e6131a9": {
+    "message": "Assegna etichetta — $1 messaggio selezionato",
+    "description": "Label as — $1 selected message"
+  },
+  "apply_recommended_c7620fb": {
+    "message": "Applica impostazioni consigliate",
+    "description": "Apply recommended"
+  },
+  "quick_setup_24cc244": {
+    "message": "Configurazione rapida",
+    "description": "Quick setup"
+  },
+  "enable_the_conversation_reader_compact_threads_in_wi_132749e": {
+    "message": "Attiva il lettore di conversazioni, risposte e scrittura nella stessa finestra, linee dei thread, salvataggio automatico e 50 messaggi per pagina. Nasconde il pannello Oggi e le intestazioni delle colonne.",
+    "description": "Enable the conversation reader, in-window replies and writing, thread guides, autosave, and 50 messages per page. Hide Today Pane and column headers."
+  },
+  "your_language_gmail_connection_and_sender_logo_prefe_e7d9fdd": {
+    "message": "La lingua, la connessione Gmail e le preferenze per i loghi dei mittenti restano invariate.",
+    "description": "Your language, Gmail connection, and sender-logo preferences stay unchanged."
+  },
+  "recommended_settings_applied_open_a_conversation_to__d12c130": {
+    "message": "Impostazioni consigliate applicate. Apri una conversazione per provarle.",
+    "description": "Recommended settings applied. Open a conversation to try them."
+  },
+  "applying_e578c27": {
+    "message": "Applicazione…",
+    "description": "Applying…"
+  }
+}

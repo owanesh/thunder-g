@@ -65,10 +65,10 @@ function installNativePagination(win, reader) {
   if (!tree?.parentNode) return {setSize(){},close(){}};
   let size=0,page=0,frame=null,closed=false,lastView=null,rowMap=null,shownRange='';
   const bar=doc.createElement('div');bar.className='gm-native-pagination';bar.hidden=true;
-  bar.setAttribute('role','navigation');bar.setAttribute('aria-label','Message pages');
+  bar.setAttribute('role','navigation');gmBindAttribute(bar, 'aria-label', () => gmText("Message pages"));
   const count=doc.createElement('span');count.setAttribute('aria-live','polite');
   const previous=doc.createElement('button'),next=doc.createElement('button');
-  for(const [button,label,glyph] of [[previous,'Previous page','‹'],[next,'Next page','›']]) {
+  for(const [button,label,glyph] of [[previous,gmText("Previous page"),'‹'],[next,gmText("Next page"),'›']]) {
     button.type='button';button.title=label;button.setAttribute('aria-label',label);button.textContent=glyph;
   }
   bar.append(count,previous,next);
@@ -81,7 +81,7 @@ function installNativePagination(win, reader) {
   // Keep native global row indices, but expose a scrollbar whose extent is
   // only the current page. The native tree still renders and selects messages.
   const pageScroll=doc.createElement('div');pageScroll.className='gm-page-scroll';pageScroll.hidden=true;
-  pageScroll.setAttribute('aria-label','Scroll current message page');
+  gmBindAttribute(pageScroll, 'aria-label', () => gmText("Scroll current message page"));
   const pageExtent=doc.createElement('div');pageExtent.style.inlineSize='1px';pageScroll.append(pageExtent);
   doc.documentElement.append(pageScroll);
   const style=doc.createElement('style');style.textContent=`
@@ -131,7 +131,7 @@ function installNativePagination(win, reader) {
     if(shownRange!==rangeKey) {
       shownRange=rangeKey;
       tree.dispatchEvent(new win.CustomEvent('gm-page-changed'));
-      count.textContent=total?`${(range.start+1).toLocaleString()}–${range.end.toLocaleString()} of ${total.toLocaleString()}`:'0 of 0';
+      gmBindValue(count, "textContent", () => total?gmText("$1–$2 of $3", (range.start+1).toLocaleString(gmLocale()), range.end.toLocaleString(gmLocale()), total.toLocaleString(gmLocale())):gmText("0 of 0"));
     }
     previous.disabled=page===0;next.disabled=page===range.pages-1;
     const height=rowHeight();

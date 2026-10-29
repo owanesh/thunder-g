@@ -52,6 +52,12 @@
         "parameters": [{"name":"enabled","type":"boolean"}]
       },
       {
+        "name": "setLanguage",
+        "type": "function",
+        "async": true,
+        "parameters": [{"name":"language","type":"string","enum":["en","it"]}]
+      },
+      {
         "name": "setIndependentReader",
         "type": "function",
         "async": true,

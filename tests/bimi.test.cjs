@@ -1,5 +1,5 @@
 const {test}=require('node:test');const assert=require('node:assert/strict');const vm=require('node:vm'),fs=require('node:fs');
-function scope(){const s=vm.createContext({URL});vm.runInContext(fs.readFileSync('integrations/bimi-lookup.js','utf8'),s);return s;}
+function scope(){const s=require('./localization-context.cjs').createContext({URL});vm.runInContext(fs.readFileSync('integrations/bimi-lookup.js','utf8'),s);return s;}
 test('BIMI requires a single unambiguous DNS record with a public HTTPS logo URL',()=>{
  const s=scope(),url=r=>s.thunderGBimiURL(r);
  assert.equal(url(['v=BIMI1; l=https://brand.example/logo.svg; a=https://brand.example/cert.pem']),'https://brand.example/logo.svg');
@@ -19,7 +19,7 @@ test('BIMI organizational fallback respects explicit opt-out and DNS failures',a
  }
 });
 test('BIMI discovery is gated by aligned successful DKIM rather than the display name',()=>{
- const s=vm.createContext({});vm.runInContext(fs.readFileSync('thunder-g/independent-reader.js','utf8'),s);
+ const s=require('./localization-context.cjs').createContext({});vm.runInContext(fs.readFileSync('thunder-g/independent-reader.js','utf8'),s);
  const base=domain=>domain.split('.').slice(-2).join('.');
  assert.equal(s.independentBimiDomain('sender@mail.brand.example',{dkim:[{result:'SUCCESS',sdid:'brand.example'}]},base),'mail.brand.example');
  for(const result of [null,{dkim:[{result:'PERMFAIL',sdid:'brand.example'}]},{dkim:[{result:'SUCCESS',sdid:'attacker.example'}]}])assert.equal(s.independentBimiDomain('sender@brand.example',result,base),null);
@@ -29,7 +29,7 @@ test('logo download accepts a static SVG namespace and blocks additional request
   let requests=0,cancelled=false,read=false;
   const bytes=new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg"><path d="M0 0"/></svg>');
   const elements=[{localName:variant==='script'?'script':'svg',namespaceURI:'http://www.w3.org/2000/svg',attributes:[{name:'xmlns',localName:'xmlns',namespaceURI:'http://www.w3.org/2000/xmlns/',value:'http://www.w3.org/2000/svg'},...(variant==='external'?[{name:'style',localName:'style',value:'fill:url(https://other.example/tracker)'}]:[])]}];
-  const s=vm.createContext({URL,AbortController,TextDecoder,Uint8Array,setTimeout,clearTimeout,btoa:value=>Buffer.from(value,'binary').toString('base64'),
+  const s=require('./localization-context.cjs').createContext({URL,AbortController,TextDecoder,Uint8Array,setTimeout,clearTimeout,btoa:value=>Buffer.from(value,'binary').toString('base64'),
    DOMParser:class{parseFromString(){return {documentElement:{localName:'svg'},querySelector:()=>null,querySelectorAll:()=>elements}}},
    fetch:async(url,options)=>{requests++;assert.equal(options.credentials,'omit');assert.equal(options.redirect,'error');assert.equal(options.referrerPolicy,'no-referrer');if(variant==='redirect')throw Error('redirect');return {ok:true,headers:{get:name=>name==='content-type'?'image/svg+xml':null},body:{getReader:()=>({async read(){if(read)return {done:true};read=true;return {value:variant==='oversize'?new Uint8Array(65537):bytes}},async cancel(){cancelled=true}})}};}
   });vm.runInContext(fs.readFileSync('integrations/bimi-lookup.js','utf8'),s);

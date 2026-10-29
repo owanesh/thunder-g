@@ -31,7 +31,7 @@ function installConversationStyle(win, css, resolveTags = null, removeLabel = nu
     previous?.node.remove();
     const node = win.document.createElement('div');
     node.className = 'gm-message-tags';
-    node.setAttribute('aria-label','Labels on this message');
+    gmBindAttribute(node, 'aria-label', () => gmText("Labels on this message"));
     for (const tag of labels) {
       const chip = win.document.createElement('span');
       chip.textContent = tag.name;
@@ -43,8 +43,8 @@ function installConversationStyle(win, css, resolveTags = null, removeLabel = nu
       const remove = win.document.createElement('button');
       remove.type = 'button';
       remove.className = 'gm-remove-message-tag';
-      remove.title = `Remove ${tag.name} from this message`;
-      remove.setAttribute('aria-label',remove.title);
+      gmBindValue(remove, "title", () => gmText("Remove $1 from this message", tag.name));
+      gmBindAttribute(remove,'aria-label',()=>remove.title);
       remove.addEventListener('click',event => {
         event.preventDefault(); event.stopPropagation();
         if (closed || list.isConnected === false) return;
@@ -100,11 +100,11 @@ function installConversationStyle(win, css, resolveTags = null, removeLabel = nu
     titleChips?.remove();
     titleChips = win.document.createElement('div');
     titleChips.className = 'gm-title-tags';
-    titleChips.setAttribute('aria-label','Labels in this conversation');
+    gmBindAttribute(titleChips, 'aria-label', () => gmText("Labels in this conversation"));
     for (const tag of labels) {
       const chip = win.document.createElement('span');
       chip.textContent = tag.name;
-      chip.title = tag.name + ' — present in this conversation';
+      gmBindValue(chip, "title", () => tag.name + gmText(" — present in this conversation"));
       bindLabelNavigation(chip,tag,win);
       const colors = conversationTagColors(tag.color);
       chip.style.setProperty('--gm-tag-bg',colors.background);

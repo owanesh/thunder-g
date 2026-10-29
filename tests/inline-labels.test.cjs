@@ -29,7 +29,7 @@ function fixture() {
   const sheets=[];
   const win = {windowUtils:{loadSheetUsingURIString(uri,type){sheets.push([uri,type]);},
     removeSheetUsingURIString(uri,type){assert.deepEqual(sheets.pop(),[uri,type]);}},document:doc, customElements:{whenDefined:async()=>{},get:()=>ThreadRow}, gDBView:{getMsgHdrAt:()=>({getStringProperty:()=>keywords})}, addEventListener(){},removeEventListener(){}};
-  const scope = vm.createContext({Ci:{nsIDOMWindowUtils:{USER_SHEET:1}},window:win,MailServices:{tags:{getAllTags:()=>tags}},console});
+  const scope = require('./localization-context.cjs').createContext({Ci:{nsIDOMWindowUtils:{USER_SHEET:1}},window:win,MailServices:{tags:{getAllTags:()=>tags}},console});
   vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'../thunder-g/label-navigation.js'),'utf8')+'\n'+menuCode+'\n'+code, scope);
   return { scope, row, nativeSubject, tags, sheets, setKeywords(value){keywords=value;} };
 }

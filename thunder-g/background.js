@@ -6,6 +6,8 @@ browser.inlineLabels.onDkimRequest.addListener(async(request,messageId,domain,ba
   await browser.inlineLabels.resolveDkim(request,JSON.stringify(result));
 });
 async function startThunderG() {
+  await ThunderGI18n.ready;
+  await browser.inlineLabels.setLanguage?.(ThunderGI18n.language);
   // Optional settings must never prevent the companion from starting.
   let compactConversations=true, searchResultsAsList=true, showColumnHeaders = false, threadGuides = true, independentReader = false, hideTodayPane = false, messagesPerPage = 0, composeAutosave = true, composeAutosaveMinutes = 1, bimiEnabled = false, inlineReplyEnabled = false, inlineNewMessageEnabled = false;
   try {
@@ -36,6 +38,7 @@ async function startThunderG() {
   await browser.inlineLabels.setInlineNewMessageEnabled?.(inlineNewMessageEnabled);
   await browser.inlineLabels.start();
   browser.storage.onChanged.addListener((changes, area) => {
+    if(area==='local' && changes.interfaceLanguage){ThunderGI18n.setPreference(changes.interfaceLanguage.newValue);browser.inlineLabels.setLanguage(ThunderGI18n.language).catch(console.error);}
     if(area==='local' && changes.searchResultsAsList)browser.inlineLabels.setSearchResultsAsList(changes.searchResultsAsList.newValue!==false).catch(console.error);
     if(area==='local' && changes.showColumnHeaders)browser.inlineLabels.setShowColumnHeaders(changes.showColumnHeaders.newValue===true).catch(console.error);
     if(area==='local' && changes.threadGuides)browser.inlineLabels.setThreadGuides(changes.threadGuides.newValue!==false).catch(console.error);

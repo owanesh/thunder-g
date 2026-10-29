@@ -6,7 +6,7 @@ test('native keyword notifications refresh open conversations and unsubscribe on
   let listener, windows, cleanup, refreshed=0, disposed=0, removed;
   const mail={mfn:{addListener(value,flags){listener=value;assert.equal(flags,8)},removeListener(value){removed=value}}};
   const support={registerWindowListener(id,value){windows=value},unregisterWindowListener(){}};
-  const scope=vm.createContext({ChromeUtils:{importESModule:()=>({
+  const scope=require('./localization-context.cjs').createContext({ChromeUtils:{importESModule:()=>({
     ExtensionCommon:{ExtensionAPI:class{},EventManager:class{api(){return {}}}},ExtensionSupport:support,MailServices:mail,ExtensionParent:{}})},
     Services:{prefs:{addObserver(){},removeObserver(){}}},
     Ci:{nsIDOMWindowUtils:{USER_SHEET:1},nsIMsgFolderNotificationService:{msgPropertyChanged:8}},
@@ -49,7 +49,7 @@ test('native keyword notifications refresh open conversations and unsubscribe on
 });
 
 test('startup waits for a complete mail pane and cancels retries when its window closes',()=>{
-  const scope=vm.createContext({ChromeUtils:{importESModule:()=>({ExtensionCommon:{ExtensionAPI:class{}}})}});
+  const scope=require('./localization-context.cjs').createContext({ChromeUtils:{importESModule:()=>({ExtensionCommon:{ExtensionAPI:class{}}})}});
   vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/label-menu.js'),'utf8'),scope);
   vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/experiments/api.js'),'utf8'),scope);
   const tasks=new Map();let sequence=0,unload,attached=0;
@@ -67,7 +67,7 @@ test('startup waits for a complete mail pane and cancels retries when its window
 test('optional settings failures do not prevent permanent companion startup',async()=>{
   for (const fail of [false,true]) {
     const calls=[];
-    const scope=vm.createContext({console:{warn(){},error(){}},browser:{
+    const scope=require('./localization-context.cjs').createContext({console:{warn(){},error(){}},browser:{
       storage:{local:{async get(){if(fail)throw Error('unavailable');return {hideTodayPane:true}}},onChanged:{addListener(){}}},
       inlineLabels:{onDkimRequest:{addListener(){}},async setCompactConversations(){},async setIndependentReader(value){assert.equal(value,false)},async setBimiEnabled(value){assert.equal(value,false)},async setInlineReplyEnabled(value){assert.equal(value,false)},async setInlineNewMessageEnabled(value){assert.equal(value,false)},async setComposeAutosave(enabled,minutes){assert.equal(enabled,true);assert.equal(minutes,1)},async setMessagesPerPage(){},async setHideTodayPane(value){calls.push(value)},async start(){calls.push('started')}}}});
     await vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/background.js'),'utf8'),scope);
@@ -77,7 +77,7 @@ test('optional settings failures do not prevent permanent companion startup',asy
 
 test('independent reader is opt-in, restored at startup and propagated on preference changes',async()=>{
   let changed;const calls=[];
-  const scope=vm.createContext({console,browser:{
+  const scope=require('./localization-context.cjs').createContext({console,browser:{
     storage:{local:{async get(){return {independentReader:true,hideTodayPane:false,composeAutosave:true,composeAutosaveMinutes:1,messagesPerPage:0}}},onChanged:{addListener(fn){changed=fn}}},
     inlineLabels:{onDkimRequest:{addListener(){}},async setCompactConversations(){},async setIndependentReader(value){calls.push(value)},async setHideTodayPane(){},async setComposeAutosave(){},async setMessagesPerPage(){},async start(){calls.push('started')}}}});
   await vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/background.js'),'utf8'),scope);
@@ -88,7 +88,7 @@ test('independent reader is opt-in, restored at startup and propagated on prefer
 
 test('optional compose and BIMI preferences load once and retain explicit opt-in values',async()=>{
   let reads=0;const calls=[];
-  const scope=vm.createContext({console,browser:{
+  const scope=require('./localization-context.cjs').createContext({console,browser:{
     storage:{local:{async get(){reads++;return {bimiEnabled:true,inlineReplyEnabled:true,inlineNewMessageEnabled:true}}},onChanged:{addListener(){}}},
     inlineLabels:{onDkimRequest:{addListener(){}},async setHideTodayPane(){},async setComposeAutosave(){},async setMessagesPerPage(){},async setCompactConversations(){},async setIndependentReader(){},
       async setBimiEnabled(value){calls.push(['bimi',value])},async setInlineReplyEnabled(value){calls.push(['reply',value])},async setInlineNewMessageEnabled(value){calls.push(['new',value])},async start(){calls.push('started')}}}});
@@ -101,7 +101,7 @@ test('optional compose and BIMI preferences load once and retain explicit opt-in
 test('thread guide preference defaults on, preserves opt-out and updates live from local storage',async()=>{
  for(const initial of [undefined,false]){
   let changed;const calls=[];
-  const scope=vm.createContext({console,browser:{storage:{local:{async get(defaults){return {...defaults,...(initial===undefined?{}:{threadGuides:initial})}}},onChanged:{addListener(fn){changed=fn}}},
+  const scope=require('./localization-context.cjs').createContext({console,browser:{storage:{local:{async get(defaults){return {...defaults,...(initial===undefined?{}:{threadGuides:initial})}}},onChanged:{addListener(fn){changed=fn}}},
   inlineLabels:{onDkimRequest:{addListener(){}},async setThreadGuides(value){calls.push(value)},async setHideTodayPane(){},async setComposeAutosave(){},async setMessagesPerPage(){},async setCompactConversations(){},async setIndependentReader(){},async start(){}}}});
   await vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/background.js'),'utf8'),scope);
   assert.deepEqual(calls,[initial!==false]);
@@ -115,7 +115,7 @@ test('column headers default hidden, restore explicit choice and respond only to
   for (const saved of [undefined,true,false]) {
     const calls=[];let changed;
     const noop=async()=>{};
-    const scope=vm.createContext({console,browser:{runtime:{},storage:{local:{get:async()=>({showColumnHeaders:saved})},onChanged:{addListener(fn){changed=fn}}},inlineLabels:{
+    const scope=require('./localization-context.cjs').createContext({console,browser:{runtime:{},storage:{local:{get:async()=>({showColumnHeaders:saved})},onChanged:{addListener(fn){changed=fn}}},inlineLabels:{
       onDkimRequest:{addListener(){}},setShowColumnHeaders:async value=>calls.push(value),
       setHideTodayPane:noop,setComposeAutosave:noop,setMessagesPerPage:noop,setCompactConversations:noop,setIndependentReader:noop,start:noop
     }}});
@@ -131,7 +131,7 @@ test('column headers default hidden, restore explicit choice and respond only to
 });
 
 test('mail tab watcher scans existing and newly opened search browsers and cleans listeners',()=>{
- const scope=vm.createContext({console});const source=fs.readFileSync(path.join(__dirname,'../thunder-g/experiments/api.js'),'utf8');
+ const scope=require('./localization-context.cjs').createContext({console});const source=fs.readFileSync(path.join(__dirname,'../thunder-g/experiments/api.js'),'utf8');
  vm.runInContext(source.slice(source.indexOf('function watchMailTabs'),source.indexOf('var inlineLabels = class')),scope);
  const scans=[],listeners=new Map();let monitor,removed;
  const browser={contentDocument:{name:'existing search'},addEventListener(name,fn){listeners.set(this,fn)},removeEventListener(){listeners.delete(this)}};
@@ -147,7 +147,7 @@ test('mail tab watcher scans existing and newly opened search browsers and clean
 });
 
 test('search lists use the complete native result set once, only after results are ready and while enabled',()=>{
- const scope=vm.createContext({console});const source=fs.readFileSync(path.join(__dirname,'../thunder-g/experiments/api.js'),'utf8');
+ const scope=require('./localization-context.cjs').createContext({console});const source=fs.readFileSync(path.join(__dirname,'../thunder-g/experiments/api.js'),'utf8');
  vm.runInContext(source.slice(source.indexOf('function installSearchListDefault'),source.indexOf('var inlineLabels = class')),scope);
  let enabled=true,closed=0,opened=0,loaded=0;const events={};
  const tab={},tabmail={currentTabInfo:tab,closeTab(value){assert.equal(value,tab);closed++}};
@@ -164,14 +164,14 @@ test('search lists use the complete native result set once, only after results a
 test('search-list preference defaults on and live opt-out is preserved',async()=>{
  for(const initial of [undefined,false]){
   let changed;const calls=[];
-  const scope=vm.createContext({console,browser:{storage:{local:{async get(defaults){return {...defaults,...(initial===undefined?{}:{searchResultsAsList:initial})}}},onChanged:{addListener(fn){changed=fn}}},inlineLabels:{onDkimRequest:{addListener(){}},async setSearchResultsAsList(value){calls.push(value)},async setHideTodayPane(){},async setComposeAutosave(){},async setMessagesPerPage(){},async setCompactConversations(){},async setIndependentReader(){},async start(){}}}});
+  const scope=require('./localization-context.cjs').createContext({console,browser:{storage:{local:{async get(defaults){return {...defaults,...(initial===undefined?{}:{searchResultsAsList:initial})}}},onChanged:{addListener(fn){changed=fn}}},inlineLabels:{onDkimRequest:{addListener(){}},async setSearchResultsAsList(value){calls.push(value)},async setHideTodayPane(){},async setComposeAutosave(){},async setMessagesPerPage(){},async setCompactConversations(){},async setIndependentReader(){},async start(){}}}});
   await vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/background.js'),'utf8'),scope);
   assert.deepEqual(calls,[initial!==false]);changed({searchResultsAsList:{newValue:false}},'local');assert.equal(calls.at(-1),false);changed({searchResultsAsList:{newValue:undefined}},'local');assert.equal(calls.at(-1),true);
  }
 });
 
 test('search startup waits for late page scripts, wraps native completion and cancels startup on close',()=>{
- const scope=vm.createContext({console});const source=fs.readFileSync(path.join(__dirname,'../thunder-g/experiments/api.js'),'utf8');
+ const scope=require('./localization-context.cjs').createContext({console});const source=fs.readFileSync(path.join(__dirname,'../thunder-g/experiments/api.js'),'utf8');
  vm.runInContext(source.slice(source.indexOf('function installSearchListDefault'),source.indexOf('var inlineLabels = class')),scope);
  const timers=new Map();let sequence=0,opened=0,closed=0;
  const tab={},tabmail={currentTabInfo:tab,closeTab(){closed++}};
@@ -183,7 +183,7 @@ test('search startup waits for late page scripts, wraps native completion and ca
  delete win.FacetContext;const pending=scope.installSearchListDefault(win,()=>true);pending.refresh();assert.equal(timers.size,1);pending.close();assert.equal(timers.size,0);
 });
 test('tab watcher observes nested search browser loads whose event targets are frame elements',()=>{
- const scope=vm.createContext({console});const source=fs.readFileSync(path.join(__dirname,'../thunder-g/experiments/api.js'),'utf8');vm.runInContext(source.slice(source.indexOf('function watchMailTabs'),source.indexOf('// Reuse Thunderbird')),scope);
+ const scope=require('./localization-context.cjs').createContext({console});const source=fs.readFileSync(path.join(__dirname,'../thunder-g/experiments/api.js'),'utf8');vm.runInContext(source.slice(source.indexOf('function watchMailTabs'),source.indexOf('// Reuse Thunderbird')),scope);
  const listeners=new Map(),scans=[];
  const frame=()=>({addEventListener(_name,fn){listeners.set(this,fn)},removeEventListener(){listeners.delete(this)}});
  const outer=frame(),inner=frame(),tab={iframe:outer};let monitor;
@@ -195,7 +195,7 @@ test('tab watcher observes nested search browser loads whose event targets are f
 });
 
 test('timed-out mail panes release pending state and can attach on a later activation',()=>{
- const scope=vm.createContext({console:{warn(){}},ChromeUtils:{importESModule:()=>({ExtensionCommon:{ExtensionAPI:class{}}})}});
+ const scope=require('./localization-context.cjs').createContext({console:{warn(){}},ChromeUtils:{importESModule:()=>({ExtensionCommon:{ExtensionAPI:class{}}})}});
  vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/experiments/api.js'),'utf8'),scope);
  const tasks=new Map();let sequence=0,closed=0,attached=0;
  const win={setTimeout(fn){tasks.set(++sequence,fn);return sequence},clearTimeout(id){tasks.delete(id)},addEventListener(){},removeEventListener(){}};
@@ -212,8 +212,19 @@ test('timed-out mail panes release pending state and can attach on a later activ
 test('compaction preference defaults on and live opt-out is preserved',async()=>{
  for(const initial of [undefined,false]){
   let changed;const calls=[];
-  const scope=vm.createContext({console,browser:{storage:{local:{async get(defaults){return {...defaults,...(initial===undefined?{}:{compactConversations:initial})}}},onChanged:{addListener(fn){changed=fn}}},inlineLabels:{onDkimRequest:{addListener(){}},async setCompactConversations(value){calls.push(value)},async setHideTodayPane(){},async setComposeAutosave(){},async setMessagesPerPage(){},async setIndependentReader(){},async start(){}}}});
+  const scope=require('./localization-context.cjs').createContext({console,browser:{storage:{local:{async get(defaults){return {...defaults,...(initial===undefined?{}:{compactConversations:initial})}}},onChanged:{addListener(fn){changed=fn}}},inlineLabels:{onDkimRequest:{addListener(){}},async setCompactConversations(value){calls.push(value)},async setHideTodayPane(){},async setComposeAutosave(){},async setMessagesPerPage(){},async setIndependentReader(){},async start(){}}}});
   await vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/background.js'),'utf8'),scope);
   assert.deepEqual(calls,[initial!==false]);changed({compactConversations:{newValue:false}},'local');assert.equal(calls.at(-1),false);changed({compactConversations:{newValue:undefined}},'local');assert.equal(calls.at(-1),true);
  }
+});
+
+test('language overrides propagate from storage to Thunderbird UI independently of system language',async()=>{
+ let changed;const calls=[];
+ const scope=require('./localization-context.cjs').createContext({console,browser:{i18n:{getUILanguage:()=> 'en-US'},
+ storage:{local:{get:async defaults=>defaults},onChanged:{addListener(fn){changed=fn}}},
+ inlineLabels:{onDkimRequest:{addListener(){}},async setLanguage(language){calls.push(language)},async setCompactConversations(){},async setIndependentReader(){},async setHideTodayPane(){},async setComposeAutosave(){},async setMessagesPerPage(){},async start(){}}}});
+ await vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/background.js'),'utf8'),scope);
+ assert.deepEqual(calls,['en']);changed({interfaceLanguage:{newValue:'it'}},'local');assert.deepEqual(calls,['en','it']);
+ changed({interfaceLanguage:{newValue:'en'}},'local');assert.equal(calls.at(-1),'en');
+ changed({interfaceLanguage:{newValue:'auto'}},'local');assert.equal(calls.at(-1),'en');
 });

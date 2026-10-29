@@ -8,7 +8,7 @@ test('settings confirmations expire, newer feedback replaces timers, and errors 
     if(!elements.has(id))elements.set(id,{dataset:{},textContent:'',addEventListener(){}});
     return elements.get(id);
   };
-  const scope=vm.createContext({
+  const scope=require('./localization-context.cjs').createContext({
     document:{getElementById:element},window:{addEventListener:(name,fn)=>events[name]=fn},
     browser:{runtime:{getManifest:()=>({version:'test'})},storage:{local:{get:()=>new Promise(()=>{})}}},
     setTimeout(fn,delay){timers.set(++sequence,{fn,delay});return sequence},
@@ -31,4 +31,30 @@ test('settings confirmations expire, newer feedback replaces timers, and errors 
   assert.equal(status.textContent,'Unable to save. Please try again.');
   scope.reportStatus('Saved.');assert.equal(timers.size,1);
   events.pagehide();assert.equal(timers.size,0,'closing settings cancels its timeout');
+});
+
+for(const fail of [false,true])test(`recommended preset updates settings atomically and preserves unrelated choices (save failure: ${fail})`,async()=>{
+ const elements=new Map(),writes=[];
+ const settings={interfaceLanguage:'it',bimiEnabled:true,hideTodayPane:false,independentReader:false,inlineReplyEnabled:false,inlineNewMessageEnabled:false,messagesPerPage:0,composeAutosave:false,composeAutosaveMinutes:10};
+ const element=id=>{
+  if(!elements.has(id))elements.set(id,{dataset:{},textContent:'',disabled:false,events:{},addEventListener(name,fn){this.events[name]=fn}});
+  return elements.get(id);
+ };
+ const scope=require('./localization-context.cjs').createContext({document:{getElementById:element},window:{addEventListener(){}},
+ browser:{runtime:{getManifest:()=>({version:'test'})},storage:{local:{get:async defaults=>({...defaults,...settings}),set:async values=>{writes.push(values);if(fail)throw Error('storage failure')}}}},setTimeout(){},clearTimeout(){}});
+ vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/options.js'),'utf8'),scope);
+ await Promise.resolve();await Promise.resolve();
+ await element('apply-recommended').events.click();
+ assert.equal(writes.length,1);assert.equal(Object.hasOwn(writes[0],'interfaceLanguage'),false);assert.equal(Object.hasOwn(writes[0],'bimiEnabled'),false);
+ assert.equal(Object.hasOwn(writes[0],'gmail'),false);
+ assert.equal(element('bimi-enabled').checked,true);assert.equal(element('interface-language').value,'it');
+ assert.equal(element('apply-recommended').disabled,false);
+ if(fail){
+  assert.equal(element('independent-reader').checked,false);assert.equal(element('messages-per-page').value,'0');
+  assert.equal(element('recommended-status').dataset.kind,'error');
+ }else{
+  for(const id of ['independent-reader','inline-reply-enabled','inline-new-message','hide-today-pane','compose-autosave'])assert.equal(element(id).checked,true,id);
+  assert.equal(element('messages-per-page').value,'50');assert.equal(element('compose-autosave-minutes').value,'1');assert.equal(element('compose-autosave-minutes').disabled,false);
+  assert.equal(element('show-column-headers').checked,false);assert.equal(element('recommended-status').dataset.kind,'success');
+ }
 });

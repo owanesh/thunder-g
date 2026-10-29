@@ -157,8 +157,8 @@ function installInboxIdleActions(win,reader=null) {
   const host=header?.querySelector?.('.list-header-bar-container-start');
   if(!host)return {close(){}};
   let closed=false,selectionFrame=null;
-  const bar=doc.createElement('div');bar.className='gm-inbox-idle-actions';bar.setAttribute('role','toolbar');bar.setAttribute('aria-label','Message list actions');
-  const select=doc.createElement('input');select.type='checkbox';select.title='Select all messages on this page';select.setAttribute('aria-label',select.title);
+  const bar=doc.createElement('div');bar.className='gm-inbox-idle-actions';bar.setAttribute('role','toolbar');gmBindAttribute(bar, 'aria-label', () => gmText("Message list actions"));
+  const select=doc.createElement('input');select.type='checkbox';gmBindValue(select, "title", () => gmText("Select all messages on this page"));gmBindAttribute(select,'aria-label',()=>select.title);
   function syncSelection(){
     if(closed)return;
     const tree=doc.getElementById('threadTree');
@@ -191,19 +191,19 @@ function installInboxIdleActions(win,reader=null) {
     });
   });
   function button(label,path,handler){
-    const node=doc.createElement('button');node.type='button';node.className='gm-inbox-action';node.title=label;node.setAttribute('aria-label',label);
+    const node=doc.createElement('button');node.type='button';node.className='gm-inbox-action';gmBindAction(node,'title',label);gmBindAction(node,'aria-label',label,true);
     const svg=doc.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('width','20');svg.setAttribute('height','20');svg.setAttribute('aria-hidden','true');
     const shape=doc.createElementNS('http://www.w3.org/2000/svg','path');shape.setAttribute('d',path);shape.setAttribute('fill','none');shape.setAttribute('stroke','currentColor');shape.setAttribute('stroke-width','1.8');shape.setAttribute('stroke-linecap','round');svg.append(shape);node.append(svg);
     if(handler)node.addEventListener('click',handler);return node;
   }
-  const refresh=button('Refresh','M20 7v5h-5 M19 12a7 7 0 1 0-1 5',()=>{
+  const refresh=button(gmText("Refresh"),'M20 7v5h-5 M19 12a7 7 0 1 0-1 5',()=>{
     const main=win.browsingContext?.topChromeWindow;
     try{
-      if(typeof main?.MsgGetMessage!=='function')throw new Error('Mail refresh is unavailable.');
+      if(typeof main?.MsgGetMessage!=='function')throw new Error(gmText("Mail refresh is unavailable."));
       main.MsgGetMessage(win.gFolder?[win.gFolder]:undefined);
       win.gFolder?.updateFolder?.(main.msgWindow);
-      refresh.title='Refresh';
-    }catch(error){refresh.title=error.message || 'Could not refresh mail.';}
+      gmBindValue(refresh, "title", () => gmText("Refresh"));
+    }catch(error){gmBindValue(refresh, "title", () => error.message || gmText("Could not refresh mail."));}
   });
   const group=doc.createElement('div');group.className='gm-inbox-select-group';
   const dropdown=button('Select messages','M8 10l4 4 4-4');dropdown.className='gm-inbox-select-dropdown';
@@ -233,7 +233,7 @@ function installInboxIdleActions(win,reader=null) {
     }
   });
   group.append(select,dropdown);
-  const more=button('More options (not available yet)','M12 5v.01 M12 12v.01 M12 19v.01');more.disabled=true;
+  const more=button(gmText("More options (not available yet)"),'M12 5v.01 M12 12v.01 M12 19v.01');more.disabled=true;
   bar.append(group,refresh,more);host.prepend(bar);
   reader?.setSelectionControl?.(group,bar);
   const labelBack=button('Back to previous message list','M14 5l-7 7 7 7',()=>returnFromNativeLabelView(win));
@@ -318,8 +318,8 @@ function installComposeLabel(doc) {
   const text = button.textContent;
   button.removeAttribute('data-l10n-id');
   button.removeAttribute('data-l10n-args');
-  button.textContent = 'Compose';
-  button.setAttribute('aria-label', 'Compose a new message');
+  gmBindValue(button, "textContent", () => gmText("Compose"));
+  gmBindAttribute(button, 'aria-label', () => gmText("Compose a new message"));
   return {close() {
     button.textContent = text;
     for (const [name, value] of saved) {
@@ -801,16 +801,16 @@ function installInboxControls(win,{threadGuides=true,reader=null}={}) {
     const actions = doc.createElement('div');
     actions.className = 'gm-row-actions';
     const commands = [
-      ['Archive conversation', 'cmd_archive', 'M4 8h16v13H4z M3 3h18v5H3z M9 12h6'],
-      ['Delete conversation', 'cmd_deleteMessage', 'M5 6h14 M9 6V3h6v3 M7 6l1 15h8l1-15'],
-      [header.isRead ? 'Mark conversation as unread' : 'Mark conversation as read',
+      [gmText("Archive conversation"), 'cmd_archive', 'M4 8h16v13H4z M3 3h18v5H3z M9 12h6'],
+      [gmText("Delete conversation"), 'cmd_deleteMessage', 'M5 6h14 M9 6V3h6v3 M7 6l1 15h8l1-15'],
+      [header.isRead ? gmText("Mark conversation as unread") : gmText("Mark conversation as read"),
         header.isRead ? 'cmd_markAsUnread' : 'cmd_markAsRead',
         header.isRead ? MATERIAL_MARK_EMAIL_UNREAD : 'M3 9l9-6 9 6v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9z M3 9l9 6 9-6']
     ];
     for (const [label, command, path] of commands) {
       const button = doc.createElement('button');
-      button.type = 'button'; button.title = label;
-      button.setAttribute('aria-label', label);
+      button.type = 'button'; gmBindAction(button,'title',label);
+      gmBindAction(button,'aria-label',label,true);
       const svg = doc.createElementNS('http://www.w3.org/2000/svg','svg');
       svg.setAttribute('viewBox','0 0 24 24'); svg.setAttribute('fill','none');
       svg.setAttribute('stroke','currentColor'); svg.setAttribute('stroke-width','1.8');
