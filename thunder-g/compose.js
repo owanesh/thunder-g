@@ -350,6 +350,54 @@ function installInlineSendStatus(native,clock,onState,saveDraft=()=>saveInlineRe
   }};
 }
 
+// Keep only label keys and bounded Sent-header candidates after the composer
+// closes. Exact Message-ID matching avoids labeling unrelated simultaneous sends.
+var sentReplyLabelTrackers=new Set();
+function installSentReplyLabels(native,headers,services=MailServices,clock={setTimeout,clearTimeout},flags=Ci.nsMsgFolderFlags) {
+  const definitions=services.tags.getAllTags(),keys=new Set();
+  const sources=typeof conversationPhysicalMessages==='function'?conversationPhysicalMessages(headers):headers;
+  for(const header of sources)for(const tag of assignedTags(header,definitions))keys.add(tag.key);
+  if(!keys.size || !services.mfn)return {update(){},close(){}};
+  const folders=new Set([native.gCurrentIdentity?.fccFolderURI,native.gCurrentIdentity?.fccFolderURI2].filter(Boolean));
+  let closed=false,delivered=false,messageId='',timer=null;
+  const candidates=new Map(),normalize=id=>String(id || '').trim().replace(/^<|>$/g,'');
+  function apply(header) {
+    if(!delivered || !messageId || normalize(header.messageId)!==messageId)return;
+    const existing=new Set((header.getStringProperty('keywords') || '').split(/\s+/));
+    if(header.label)existing.add(`$label${header.label}`);
+    const defined=new Set(services.tags.getAllTags().map(tag=>tag.key));
+    const missing=[...keys].filter(key=>defined.has(key) && !existing.has(key));
+    if(!missing.length)return;
+    try{header.folder.addKeywordsToMessages([header],missing.join(' '));}
+    catch(error){console.error('Thunder-G: could not inherit conversation labels on the Sent copy.',error);}
+  }
+  const listener={msgAdded(header){
+    if(closed || !header?.folder || header.folder.isSpecialFolder?.(flags.Drafts,false))return;
+    if(!folders.has(header.folder.URI) && !header.folder.isSpecialFolder?.(flags.SentMail,false))return;
+    const id=normalize(header.messageId);if(!id)return;
+    if(messageId && id!==messageId)return;
+    const key=JSON.stringify([header.folder.URI,header.messageKey]);
+    if(candidates.size>=20)candidates.delete(candidates.keys().next().value);
+    candidates.set(key,header);apply(header);
+  }};
+  function close(){
+    if(closed)return;closed=true;if(timer!==null)clock.clearTimeout(timer);
+    services.mfn.removeListener(listener);candidates.clear();sentReplyLabelTrackers.delete(controller);
+  }
+  const controller={close,update(state){
+    if(closed)return;
+    if(['saving-draft','draft-saved','draft-error'].includes(state.state)){close();return;}
+    messageId=normalize(state.messageId) || messageId;
+    if(state.state==='sent'){delivered=true;clock.clearTimeout(timer);timer=clock.setTimeout(close,120000);}
+    for(const header of candidates.values())apply(header);
+  }};
+  services.mfn.addListener(listener,Ci.nsIMsgFolderNotificationService.msgAdded);
+  // Native Sent filing can finish after transport success or reader navigation.
+  // Notifications do the work; this timer only bounds listener lifetime.
+  timer=clock.setTimeout(close,900000);sentReplyLabelTrackers.add(controller);
+  return controller;
+}
+
 // Floating panels are anchored beside the sidebar. Resize from their top/left
 // edges so the grip can move naturally without pushing the footer off screen.
 function installFloatingComposeResize(win,panel,prefs=typeof Services==='undefined'?null:Services.prefs) {
@@ -851,7 +899,14 @@ function createInlineCompose(win) {
         // Never replace another unsent message when navigating or pressing Reply again.
         panel.hidden=false;browser.focus();return;
       }
+      let replyLabels=null;
       const onSendState=state=>{
+        if(state.state==='sending' && placement.labelMessages && ['cmd_replySender','cmd_replyall','cmd_editDraft'].includes(command)){
+          replyLabels?.close();
+          try{replyLabels=installSentReplyLabels(browser.contentWindow,placement.labelMessages());}
+          catch(error){console.error('Thunder-G: could not start reply label inheritance.',error);}
+        }
+        replyLabels?.update(state);
         if(!sendNotice){
           sendNotice=doc.createElement('div');sendNotice.className='gm-send-notice';sendNotice.setAttribute('role','status');sendNotice.setAttribute('aria-live','polite');
           sendNotice.style.cssText='position:fixed;z-index:10000;bottom:24px;left:24px;max-width:min(440px,calc(100vw - 48px));box-sizing:border-box;padding:8px 10px;border-radius:4px;background:#202124;color:#fff;font:12px/1.35 sans-serif;display:flex;align-items:flex-start;gap:12px;box-shadow:0 4px 16px #0004;';

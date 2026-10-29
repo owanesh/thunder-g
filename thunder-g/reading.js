@@ -53,9 +53,34 @@ function sameLabelMessages(first, second) {
   const keys = new Set(first.map(message => JSON.stringify([message.folder?.URI, message.messageKey])));
   return second.every(message => keys.has(JSON.stringify([message.folder?.URI, message.messageKey])));
 }
+// Conversation rendering deduplicates Message-IDs, but Inbox and Sent still
+// hold separate physical messages. Resolve exact IDs in local summary databases
+// when labeling; never scan message bodies or match unrelated subjects.
+function conversationPhysicalMessages(messages,copyFolders=null) {
+  const physical=new Map(),folders=new Map();
+  const remember=message=>physical.set(JSON.stringify([message.folder.URI,message.messageKey]),message);
+  for(const message of messages){
+    remember(message);
+    try{
+      const inbox=typeof Ci!=='undefined' && message.folder.rootFolder?.getFolderWithFlags(Ci.nsMsgFolderFlags.Inbox);
+      if(inbox)folders.set(inbox.URI,inbox);
+    }catch(_){/* A provider may not expose a local Inbox summary. */}
+  }
+  const sent=copyFolders || (typeof independentSentFolders==='function'?independentSentFolders():[]);
+  for(const folder of sent)folders.set(folder.URI,folder);
+  for(const message of messages){
+    const id=String(message.messageId || '').trim().replace(/^<|>$/g,'');if(!id)continue;
+    for(const folder of folders.values()){
+      if(folder.URI===message.folder.URI)continue;
+      try{const copy=folder.msgDatabase?.getMsgHdrForMessageID(id);if(copy?.folder)remember(copy);}
+      catch(_){/* Missing/offline summaries must not block the selected messages. */}
+    }
+  }
+  return [...physical.values()];
+}
 function applyConversationLabel(messages, key, add) {
   const folders = new Map();
-  for (const message of messages) {
+  for (const message of conversationPhysicalMessages(messages)) {
     const uri = message.folder.URI;
     if (!folders.has(uri)) folders.set(uri, {folder:message.folder, messages:[]});
     folders.get(uri).messages.push(message);

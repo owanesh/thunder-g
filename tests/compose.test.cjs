@@ -529,3 +529,48 @@ test('embedded file drops attach once through native conversion from the panel, 
  const callback=native.listeners.get('drop');hook.close();for(const target of [panel,native,editor])assert.equal(target.listeners.size,0);
  callback(event());assert.equal(additions.length,3,'a closed composer cannot receive attachments');
 });
+
+function replyLabelFixture(){
+ const s=require('./localization-context.cjs').createContext({Ci:{nsIMsgFolderNotificationService:{msgAdded:1}}});
+ vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/labels.js'),'utf8'),s);
+ vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/compose.js'),'utf8'),s);
+ let listener=null,sequence=0;const timers=new Map(),writes=[],definitions=[{key:'visit',tag:'visiting-phd'},{key:'project',tag:'Project'},{key:'$label1',tag:'Important'}];
+ const services={tags:{getAllTags:()=>definitions},mfn:{addListener(value){listener=value},removeListener(value){assert.equal(listener,value);listener=null}}};
+ const clock={setTimeout(fn,ms){timers.set(++sequence,{fn,ms});return sequence},clearTimeout(id){timers.delete(id)}};
+ const folder={URI:'sent',isSpecialFolder:flag=>flag===512,addKeywordsToMessages(headers,keys){writes.push({headers,keys});for(const h of headers)h.keywords=[h.keywords,keys].filter(Boolean).join(' ')}};
+ const header=(id,keywords='',where=folder)=>({messageId:id,keywords,folder:where,messageKey:++sequence,getStringProperty(){return this.keywords}});
+ const sources=[header('incoming','visit project'),header('older-reply','visit')];sources[0].label=1;
+ const native={gCurrentIdentity:{fccFolderURI:'sent'}},flags={SentMail:512,Drafts:1024};
+ return {s,services,clock,folder,header,sources,native,flags,writes,definitions,timers,get listener(){return listener},start(){return s.installSentReplyLabels(native,sources,services,clock,flags)}};
+}
+test('new reply inherits defined conversation labels on its exact Sent copy, before or after transport success',()=>{
+ for(const copyFirst of [true,false]){
+  const f=replyLabelFixture(),watch=f.start(),copy=f.header('<reply-id>','existing visit');
+  watch.update({state:'sending',messageId:''});
+  if(copyFirst)f.listener.msgAdded(copy);
+  assert.equal(f.writes.length,0,'never label a copy until send succeeds');
+  watch.update({state:'sent',messageId:'reply-id'});
+  if(!copyFirst)f.listener.msgAdded(copy);
+  assert.equal(f.writes.length,1);assert.equal(f.writes[0].keys,'project $label1');assert.equal(f.writes[0].headers[0],copy);
+  assert.equal(copy.keywords,'existing visit project $label1','existing labels are preserved');
+  f.listener.msgAdded(copy);watch.update({state:'sent',messageId:'<reply-id>'});assert.equal(f.writes.length,1);
+  watch.close();assert.equal(f.listener,null);assert.equal(f.timers.size,0);assert.equal(f.s.sentReplyLabelTrackers.size,0);
+ }
+});
+test('reply inheritance excludes drafts, unrelated sends and deleted labels, and survives composer/reader disposal',()=>{
+ const f=replyLabelFixture(),watch=f.start();
+ f.listener.msgAdded(f.header('reply','',{URI:'drafts',isSpecialFolder:flag=>flag===1024}));
+ f.listener.msgAdded(f.header('unrelated'));
+ f.definitions.splice(1,1); // Project deleted while the send is in progress.
+ watch.update({state:'sent',messageId:'reply'});assert.equal(f.writes.length,0);
+ f.native.gCurrentIdentity=null;f.sources.length=0;
+ const copy=f.header('reply');f.listener.msgAdded(copy);assert.equal(f.writes.length,1);assert.equal(f.writes[0].keys,'visit $label1');
+ for(const task of [...f.timers.values()])task.fn();assert.equal(f.listener,null);assert.equal(f.s.sentReplyLabelTrackers.size,0);
+});
+test('failed sends and unlabelled conversations leave no inheritance listener behind',()=>{
+ for(const state of ['saving-draft','draft-saved','draft-error']){
+  const f=replyLabelFixture(),watch=f.start();f.listener.msgAdded(f.header('reply'));watch.update({state,messageId:'reply'});
+  assert.equal(f.writes.length,0);assert.equal(f.listener,null);assert.equal(f.timers.size,0);
+ }
+ const f=replyLabelFixture();f.sources.length=0;const watch=f.start();assert.equal(f.listener,null);assert.equal(f.timers.size,0);watch.close();
+});

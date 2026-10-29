@@ -686,3 +686,12 @@ test('unread messages load expanded and are never hidden inside compact conversa
  assert.equal(messages[1].isRead,false,'rendering does not override native read-marking preferences');
  f.reader.close();
 });
+
+test('resumed inline drafts retain conversation label sources after reader navigation',async()=>{
+ const f=readerFixture({tagged:true});let placement;
+ f.scope.resumeInlineDraft=async(win,draft,options)=>{placement=options};
+ const draft=f.prepare(message(9,'draft','drafts'));
+ await f.reader.open(f.anchor,{draft});
+ assert.equal(placement.labelMessages()[0],f.anchor);assert.equal(typeof placement.onSendState,'function');
+ f.reader.hide();assert.equal(placement.labelMessages()[0],f.anchor,'navigation retains the original conversation, not another thread');f.reader.close();
+});

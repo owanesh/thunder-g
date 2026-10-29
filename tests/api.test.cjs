@@ -10,7 +10,7 @@ test('native keyword notifications refresh open conversations and unsubscribe on
     ExtensionCommon:{ExtensionAPI:class{},EventManager:class{api(){return {}}}},ExtensionSupport:support,MailServices:mail,ExtensionParent:{}})},
     Services:{prefs:{addObserver(){},removeObserver(){}}},
     Ci:{nsIDOMWindowUtils:{USER_SHEET:1},nsIMsgFolderNotificationService:{msgPropertyChanged:8}},
-    GMAIL_SKIN_CSS:'',GMAIL_CONVERSATIONS_CSS:'',
+    sentReplyLabelTrackers:new Set(),GMAIL_SKIN_CSS:'',GMAIL_CONVERSATIONS_CSS:'',
     createComposeAutosave:()=>({set(enabled,minutes){assert.equal(enabled,true);assert.equal(minutes,1)},close(){}}),
     installMailZoom:()=>({close(){}}),
     installConversationStyle:()=>({refresh(){refreshed++},close(){disposed++}})});
@@ -71,7 +71,7 @@ test('mail-window startup uses the packaged logo, runs once and closes on unload
     ExtensionSupport:{registerWindowListener(id,value){windows=value},unregisterWindowListener(){}},
     MailServices:{mfn:{addListener(){},removeListener(){}}}})},
     Services:{prefs:{addObserver(){},removeObserver(){}}},Ci:{nsIDOMWindowUtils:{USER_SHEET:1},nsIMsgFolderNotificationService:{msgPropertyChanged:1}},
-    GMAIL_SKIN_CSS:'',GMAIL_CONVERSATIONS_CSS:'',
+    sentReplyLabelTrackers:new Set(),GMAIL_SKIN_CSS:'',GMAIL_CONVERSATIONS_CSS:'',
     createComposeAutosave:()=>({set(){},close(){}}),installMailZoom:()=>({close(){}}),
     installStartupSplash(win,options){const record={win,options,closed:0,refreshed:0};startups.push(record);return {close(){record.closed++},refresh(){record.refreshed++}}}});
   vm.runInContext(fs.readFileSync(path.join(__dirname,'../thunder-g/label-menu.js'),'utf8'),scope);

@@ -297,6 +297,7 @@ var inlineLabels = class extends ExtensionCommon.ExtensionAPI {
       for(const pending of dkimRequests.values()){clearTimeout(pending.timer);pending.reject(new Error(gmText("Reader closed")));}dkimRequests.clear();
       closed = true;
       for(const controller of nativeComposeAutosaves.values())controller.close();nativeComposeAutosaves.clear();
+      for(const controller of [...sentReplyLabelTrackers])controller.close();
       try { autosaveController?.close(); } catch (_) { console.warn('Thunder-G: could not restore draft autosave settings.'); }
       if (!started) return;
       ExtensionSupport.unregisterWindowListener(id);

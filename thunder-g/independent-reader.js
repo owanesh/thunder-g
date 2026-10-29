@@ -487,8 +487,9 @@ function installIndependentReader(win) {
     if(typeof inlineReplyEnabled!=='undefined' && inlineReplyEnabled && ['cmd_replySender','cmd_replyall','cmd_forwardInline'].includes(command)) {
       let composer=inlineComposeControllers.get(win);
       if(!composer){composer=createInlineCompose(win);inlineComposeControllers.set(win,composer);}
-      const token=ticket;
-      composer.open(target,command,{container:conversation,scrollHost:host,onSendState:state=>sendFeedback(state,token)});return;
+      const token=ticket,labelHeaders=currentHeaders.slice();
+      composer.open(target,command,{container:conversation,scrollHost:host,
+        labelMessages:()=>token===ticket?currentHeaders:labelHeaders,onSendState:state=>sendFeedback(state,token)});return;
     }
     const frame=frames.get(independentMessageKey(target || {}));
     const controller=frame?.contentWindow?.commandController;
@@ -970,9 +971,13 @@ function installIndependentReader(win) {
       status.textContent=gmCount('$1 message','$1 messages',result.messages.length);
       status.hidden=result.messages.length===1;
       gmBindValue(status, "title", () => result.indexed?'':gmText("Conversation assembled from this folder and locally available sent messages"));
-      if(draft && typeof resumeInlineDraft==='function')await resumeInlineDraft(win,draft,{
-        container:conversation,scrollHost:host,isCurrent:()=>!closed && token===ticket && !host.hidden
-      }).catch(error=>{if(!closed && token===ticket){status.hidden=false;status.textContent=error.message || 'Could not resume the saved draft.'}});
+      if(draft && typeof resumeInlineDraft==='function'){
+        const labelHeaders=currentHeaders.slice();
+        await resumeInlineDraft(win,draft,{
+          container:conversation,scrollHost:host,isCurrent:()=>!closed && token===ticket && !host.hidden,
+          labelMessages:()=>token===ticket?currentHeaders:labelHeaders,onSendState:state=>sendFeedback(state,token)
+        }).catch(error=>{if(!closed && token===ticket){status.hidden=false;status.textContent=error.message || 'Could not resume the saved draft.'}});
+      }
     },
     hide(){if(typeof inlineComposeControllers!=='undefined')inlineComposeControllers.get(win)?.float();++ticket;query?.cancel();query=null;resolving=false;host.hidden=true;layout.classList.remove('gm-independent-open');clearCards()},
     close(){this.hide();closed=true;contextMenu.close();sentCache.close();previews.close();win.removeEventListener?.('focus',refreshTags);MailServices.mfn?.removeListener(tagListener);stopLanguageRefresh();host.remove();layoutStyle.remove()},

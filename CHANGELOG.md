@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Show a startup splash while the visible mailbox becomes usable, then fade it away. Slow startup uses a dismissible waiting card; include English/Italian text, dark mode and reduced-motion support.
+
+- Apply label changes to separate local Inbox/Sent copies of the same Message-ID, and retain reply label inheritance when resuming a saved inline draft.
+
+- Let new inline replies inherit the conversation’s existing labels on their saved Sent copies, including after navigating away from the conversation.
+
 ## 0.20.1
 
 - Use the same message-list column layout in every account and folder, including Inbox, Drafts, Sent, Trash and searches. Restore saved native layouts when the add-on is disabled.

@@ -377,3 +377,19 @@ test('L accepts selection checkboxes and radio controls but still ignores writin
  }
  assert.equal(scope.isLabelShortcut({key:'l',target:{ownerDocument:{documentURI:'chrome://messenger/content/messengercompose/messengercompose.xhtml'},closest:()=>null}}),false);
 });
+
+test('labels reach hidden physical Sent copies without matching subjects or scanning messages',()=>{
+ const writes=[],inbox={URI:'Inbox',addKeywordsToMessages:(h,key)=>writes.push(['Inbox',h,key]),removeKeywordsFromMessages:(h,key)=>writes.push(['Inbox',h,key])};
+ const sent={URI:'Sent',addKeywordsToMessages:(h,key)=>writes.push(['Sent',h,key]),removeKeywordsFromMessages:(h,key)=>writes.push(['Sent',h,key])};
+ const original={folder:inbox,messageKey:1,messageId:'same'},copy={folder:sent,messageKey:2,messageId:'same'};
+ sent.msgDatabase={getMsgHdrForMessageID(id){assert.equal(id,'same');return copy}};
+ scope.independentSentFolders=()=>[sent];
+ for(const add of [true,false]){
+  writes.length=0;scope.applyConversationLabel([original],'test',add);
+  assert.equal(writes.length,2);assert.equal(writes[1][1][0],copy);assert.equal(writes[1][2],'test');
+ }
+ const result=scope.conversationPhysicalMessages([original,copy],[sent]);assert.equal(result.length,2,'copies are not written twice');
+ sent.msgDatabase.getMsgHdrForMessageID=()=>null;assert.equal(scope.conversationPhysicalMessages([original],[sent]).length,1);
+ Object.defineProperty(sent,'msgDatabase',{get(){throw Error('offline')}});assert.equal(scope.conversationPhysicalMessages([original],[sent]).length,1);
+ delete scope.independentSentFolders;
+});
