@@ -889,11 +889,11 @@ function installIndependentReader(win) {
     const selected=(focusMessage && headers.find(header=>independentMessageKey(header)===independentMessageKey(anchor))) || actionHeader;
     let selectedCard;
     for(const header of headers) {
-      const card=buildCard(header,header===selected || header===actionHeader,token);
+      const card=buildCard(header,header===selected || header===actionHeader || header.isRead===false,token);
       if(header===selected)selectedCard=card;
     }
     if((typeof compactConversationsEnabled==='undefined' || compactConversationsEnabled) && headers.length>=6 && !historyExpanded){
-      const hidden=headers.slice(1,-2).filter(header=>header!==selected).map(header=>messageCards.get(header)).filter(Boolean);
+      const hidden=headers.slice(1,-2).filter(header=>header!==selected && header.isRead!==false).map(header=>messageCards.get(header)).filter(Boolean);
       if(hidden.length){
         const gap=text('div','history-gap',''),expand=text('button','history-expand',String(hidden.length));
         expand.type='button';expand.setAttribute('aria-label',`Show ${hidden.length} earlier messages`);expand.title=`Show ${hidden.length} earlier messages`;

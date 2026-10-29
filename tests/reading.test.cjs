@@ -368,3 +368,12 @@ test('conversation tag add/remove writes exact headers to every folder, includin
   sent.addKeywordsToMessages=()=>{throw Error('read only')};
   assert.throws(()=>scope.applyConversationLabel(messages,'srds_sc',true),/read only/);
 });
+
+test('L accepts selection checkboxes and radio controls but still ignores writing fields and composer documents',()=>{
+ const selector='input:not([type="checkbox"]):not([type="radio"]), textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], search-textbox';
+ for(const type of ['checkbox','radio','text','search']){
+  const target={closest:value=>{assert.equal(value,selector);return ['checkbox','radio'].includes(type)?null:{};}};
+  assert.equal(scope.isLabelShortcut({key:'l',target}),['checkbox','radio'].includes(type));
+ }
+ assert.equal(scope.isLabelShortcut({key:'l',target:{ownerDocument:{documentURI:'chrome://messenger/content/messengercompose/messengercompose.xhtml'},closest:()=>null}}),false);
+});

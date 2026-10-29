@@ -18,7 +18,8 @@ function isLabelShortcut(event) {
   return event.key?.toLowerCase() === 'l' && !event.ctrlKey && !event.metaKey &&
     !event.altKey && !event.shiftKey && !event.repeat && !event.isComposing &&
     !event.defaultPrevented && !event.target?.isContentEditable &&
-    !event.target?.closest?.('input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], search-textbox');
+    !event.target?.ownerDocument?.documentURI?.includes('/messengercompose/') &&
+    !event.target?.closest?.('input:not([type="checkbox"]):not([type="radio"]), textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], search-textbox');
 }
 function labelMatchesQuery(name, query) {
   return name.normalize('NFKC').toLocaleLowerCase().includes(query.trim().normalize('NFKC').toLocaleLowerCase());
@@ -632,7 +633,7 @@ function installReadingMode(win) {
     layout.messagePaneVisible = false;
     // Reader selection can include every member of a collapsed conversation.
     // Returning to the inbox must not retain that implicit bulk selection.
-    if (restorePosition) clearBulk();
+    if (restorePosition) {clearBulk();tree.invalidate?.();}
     if (restorePosition && win.gFolder?.URI === previous.folderURI) {
       tree.scrollTop = previous.scrollTop;
       tree.scrollLeft = previous.scrollLeft;

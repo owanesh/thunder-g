@@ -4,6 +4,17 @@
 
 ## 0.20.0
 
+- Restore the skin when reopening mail windows and retry panes that finish initializing late.
+
+- Add Gmail-style All, None, Read, Unread, Starred and Unstarred selection controls, with clearer partial-selection behavior and animated row actions.
+
+- Add optional compaction for long conversations and preserve the return path from label views.
+
+- Add English and Italian localization with a live language selector and an Apply recommended settings preset.
+
+- Keep the label shortcut active from selection checkboxes; expand unread conversation messages, exclude them from compact history, and refresh list read-state styling on return.
+
+
 - Do not create drafts for empty replies: automatic saves and closing the inline composer require new non-whitespace body text beyond the initial quote/signature. Existing drafts still save deletions.
 
 - Prevent native button minimum sizes from expanding composer resize handles over the close button and other title-bar actions.

@@ -672,3 +672,17 @@ test('disabling compaction keeps every message card visible in a long conversati
  assert.equal(f.cards.children.some(card=>card.className==='history-gap'),false);
  f.reader.close();
 });
+
+test('unread messages load expanded and are never hidden inside compact conversation history',async()=>{
+ const f=readerFixture(),messages=[f.anchor,...Array.from({length:5},(_,i)=>f.prepare(message(i+2,`reply-${i}`,'sent',i+2)))];
+ for(const header of messages)header.isRead=true;
+ messages[1].isRead=false;messages[3].isRead=false;
+ f.anchor.folder.msgDatabase={getThreadContainingMsgHdr:()=>({numChildren:messages.length,getChildHdrAt:i=>messages[i]})};
+ await f.reader.open(f.anchor);f.flush();
+ const cards=f.cards.children.filter(card=>card.tag==='article');
+ for(const index of [1,3]){assert.equal(cards[index].hidden,false);assert.equal(cards[index].getAttribute('data-expanded'),'');}
+ assert.equal(cards[2].hidden,true,'read intermediate history still compacts');
+ assert.equal(f.browsers.length,3,'unread bodies and latest message load through native viewers');
+ assert.equal(messages[1].isRead,false,'rendering does not override native read-marking preferences');
+ f.reader.close();
+});
